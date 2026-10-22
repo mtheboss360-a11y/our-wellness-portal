@@ -1,0 +1,1208 @@
+[
+  {
+    "id": "2026-10",
+    "name": "October 2026",
+    "period": "October 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-10-06",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-10-06",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-10-06",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-10-20",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-10-20",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-087",
+        "name": "Esme Lowry",
+        "phone": "+16305550186",
+        "email": "esme.lowry@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-10-07",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-089",
+        "name": "Niko Ivers",
+        "phone": "+16305550188",
+        "email": "niko.ivers@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-10-09",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-084",
+        "name": "Caleb Lowry",
+        "phone": "+16305550183",
+        "email": "caleb.lowry@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-10-13",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-083",
+        "name": "Milo Aster",
+        "phone": "+16305550182",
+        "email": "milo.aster@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-10-15",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-085",
+        "name": "Ravi Winslow",
+        "phone": "+16305550184",
+        "email": "ravi.winslow@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-10-18",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-086",
+        "name": "Liv Jarrow",
+        "phone": "+16305550185",
+        "email": "liv.jarrow@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-10-18",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-082",
+        "name": "Theo Tilden",
+        "phone": "+16305550181",
+        "email": "theo.tilden@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-10-19",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-080",
+        "name": "Tova Frost",
+        "phone": "+16305550179",
+        "email": "tova.frost@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-10-21",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-081",
+        "name": "Reid Underhill",
+        "phone": "+16305550180",
+        "email": "reid.underhill@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-10-21",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-088",
+        "name": "Eero Quill",
+        "phone": "+16305550187",
+        "email": "eero.quill@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-10-21",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-090",
+        "name": "Zara Briar",
+        "phone": "+16305550189",
+        "email": "zara.briar@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-10-21",
+        "service": "Lymphatic drainage"
+      }
+    ]
+  },
+  {
+    "id": "2026-09",
+    "name": "September 2026",
+    "period": "September 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-09-01",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-09-01",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-09-01",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-09-15",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-09-15",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-076",
+        "name": "Caleb Wilder",
+        "phone": "+16305550175",
+        "email": "caleb.wilder@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-09-07",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-068",
+        "name": "Jo Vickery",
+        "phone": "+16305550167",
+        "email": "jo.vickery@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-09-09",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-066",
+        "name": "Jude Grove",
+        "phone": "+16305550165",
+        "email": "jude.grove@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-09-11",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-075",
+        "name": "Mae Arden",
+        "phone": "+16305550174",
+        "email": "mae.arden@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-09-14",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-073",
+        "name": "Kofi Underhill",
+        "phone": "+16305550172",
+        "email": "kofi.underhill@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-09-15",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-067",
+        "name": "Dex Wilder",
+        "phone": "+16305550166",
+        "email": "dex.wilder@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-09-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-072",
+        "name": "Vera Arden",
+        "phone": "+16305550171",
+        "email": "vera.arden@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-09-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-078",
+        "name": "Gus Underhill",
+        "phone": "+16305550177",
+        "email": "gus.underhill@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-09-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-069",
+        "name": "Halle Nash",
+        "phone": "+16305550168",
+        "email": "halle.nash@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-09-18",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-079",
+        "name": "June Sable",
+        "phone": "+16305550178",
+        "email": "june.sable@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-09-21",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-070",
+        "name": "Tobias Grove",
+        "phone": "+16305550169",
+        "email": "tobias.grove@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-09-26",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-074",
+        "name": "Opal Stroud",
+        "phone": "+16305550173",
+        "email": "opal.stroud@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-09-26",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-071",
+        "name": "Jude Underhill",
+        "phone": "+16305550170",
+        "email": "jude.underhill@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-09-30",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-077",
+        "name": "Kofi Arden",
+        "phone": "+16305550176",
+        "email": "kofi.arden@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-09-30",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-08",
+    "name": "August 2026",
+    "period": "August 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-08-04",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-08-04",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-08-04",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-08-18",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-08-18",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-057",
+        "name": "Ada Noble",
+        "phone": "+16305550156",
+        "email": "ada.noble@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-08-06",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-059",
+        "name": "Emil Prewitt",
+        "phone": "+16305550158",
+        "email": "emil.prewitt@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-08-06",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-055",
+        "name": "Bo Alder",
+        "phone": "+16305550154",
+        "email": "bo.alder@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-08-07",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-054",
+        "name": "Ada Moss",
+        "phone": "+16305550153",
+        "email": "ada.moss@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-08-08",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-064",
+        "name": "Nora Sable",
+        "phone": "+16305550163",
+        "email": "nora.sable@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-08-09",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-065",
+        "name": "Milo Prewitt",
+        "phone": "+16305550164",
+        "email": "milo.prewitt@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-08-11",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-060",
+        "name": "Ellis Grove",
+        "phone": "+16305550159",
+        "email": "ellis.grove@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-08-13",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-062",
+        "name": "Ezra Briar",
+        "phone": "+16305550161",
+        "email": "ezra.briar@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-08-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-061",
+        "name": "Vik Vale",
+        "phone": "+16305550160",
+        "email": "vik.vale@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-08-20",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-056",
+        "name": "Remy Vickery",
+        "phone": "+16305550155",
+        "email": "remy.vickery@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-08-23",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-058",
+        "name": "Hana Holt",
+        "phone": "+16305550157",
+        "email": "hana.holt@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-08-24",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-063",
+        "name": "Marco Ivers",
+        "phone": "+16305550162",
+        "email": "marco.ivers@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-08-29",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-07",
+    "name": "July 2026",
+    "period": "July 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-07-07",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-07-07",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-07-07",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-07-21",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-07-21",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-052",
+        "name": "Cleo Grove",
+        "phone": "+16305550151",
+        "email": "cleo.grove@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-07-13",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-047",
+        "name": "Vik Hale",
+        "phone": "+16305550146",
+        "email": "vik.hale@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-07-16",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-044",
+        "name": "Wade Stroud",
+        "phone": "+16305550143",
+        "email": "wade.stroud@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-07-17",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-045",
+        "name": "Cato Vesper",
+        "phone": "+16305550144",
+        "email": "cato.vesper@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-07-17",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-046",
+        "name": "Hugo Quill",
+        "phone": "+16305550145",
+        "email": "hugo.quill@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-07-18",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-051",
+        "name": "Halle Linden",
+        "phone": "+16305550150",
+        "email": "halle.linden@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-07-18",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-050",
+        "name": "Rune Prewitt",
+        "phone": "+16305550149",
+        "email": "rune.prewitt@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-07-19",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-048",
+        "name": "Yusuf Arden",
+        "phone": "+16305550147",
+        "email": "yusuf.arden@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-07-23",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-053",
+        "name": "Tobias Underhill",
+        "phone": "+16305550152",
+        "email": "tobias.underhill@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-07-24",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-049",
+        "name": "Cleo Rafferty",
+        "phone": "+16305550148",
+        "email": "cleo.rafferty@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-07-28",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-06",
+    "name": "June 2026",
+    "period": "June 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-06-02",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-06-02",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-06-02",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-06-16",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-06-16",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-033",
+        "name": "Ellis Thorne",
+        "phone": "+16305550132",
+        "email": "ellis.thorne@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-06-04",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-042",
+        "name": "Arlo Stroud",
+        "phone": "+16305550141",
+        "email": "arlo.stroud@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-06-05",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-041",
+        "name": "Soren Aster",
+        "phone": "+16305550140",
+        "email": "soren.aster@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-06-06",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-037",
+        "name": "Elke Tilden",
+        "phone": "+16305550136",
+        "email": "elke.tilden@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-06-08",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-035",
+        "name": "Elke Reeve",
+        "phone": "+16305550134",
+        "email": "elke.reeve@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-06-09",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-034",
+        "name": "Ellis Pike",
+        "phone": "+16305550133",
+        "email": "ellis.pike@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-06-18",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-043",
+        "name": "Pia Thorne",
+        "phone": "+16305550142",
+        "email": "pia.thorne@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-06-18",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-040",
+        "name": "Silas Jarrow",
+        "phone": "+16305550139",
+        "email": "silas.jarrow@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-06-22",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-036",
+        "name": "Otto Dell",
+        "phone": "+16305550135",
+        "email": "otto.dell@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-06-27",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-038",
+        "name": "Levi Jarrow",
+        "phone": "+16305550137",
+        "email": "levi.jarrow@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-06-28",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-039",
+        "name": "Dov Linden",
+        "phone": "+16305550138",
+        "email": "dov.linden@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-06-28",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-05",
+    "name": "May 2026",
+    "period": "May 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-05-05",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-05-05",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-05-05",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-05-19",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-05-19",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-025",
+        "name": "Zara Nash",
+        "phone": "+16305550124",
+        "email": "zara.nash@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-05-08",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-024",
+        "name": "Fay Underhill",
+        "phone": "+16305550123",
+        "email": "fay.underhill@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-05-10",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-023",
+        "name": "Cleo Fenwick",
+        "phone": "+16305550122",
+        "email": "cleo.fenwick@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-05-12",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-028",
+        "name": "Ada Dunn",
+        "phone": "+16305550127",
+        "email": "ada.dunn@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-05-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-030",
+        "name": "June Hale",
+        "phone": "+16305550129",
+        "email": "june.hale@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-05-20",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-031",
+        "name": "Hana Nash",
+        "phone": "+16305550130",
+        "email": "hana.nash@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-05-20",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-029",
+        "name": "Ike Finch",
+        "phone": "+16305550128",
+        "email": "ike.finch@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-05-24",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-026",
+        "name": "Anya Fenwick",
+        "phone": "+16305550125",
+        "email": "anya.fenwick@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-05-25",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-027",
+        "name": "Jo Tilden",
+        "phone": "+16305550126",
+        "email": "jo.tilden@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-05-31",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-032",
+        "name": "Hana Vance",
+        "phone": "+16305550131",
+        "email": "hana.vance@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-05-31",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-04",
+    "name": "April 2026",
+    "period": "April 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-04-07",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-04-07",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-04-07",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-04-21",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-04-21",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-016",
+        "name": "Alma Sable",
+        "phone": "+16305550115",
+        "email": "alma.sable@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-04-09",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-021",
+        "name": "Clara Quill",
+        "phone": "+16305550120",
+        "email": "clara.quill@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-04-12",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-014",
+        "name": "Nora Hale",
+        "phone": "+16305550113",
+        "email": "nora.hale@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-04-15",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-015",
+        "name": "Kofi Lowry",
+        "phone": "+16305550114",
+        "email": "kofi.lowry@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-04-16",
+        "service": "IV drip"
+      },
+      {
+        "id": "lead-020",
+        "name": "Oren Ember",
+        "phone": "+16305550119",
+        "email": "oren.ember@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-04-16",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-019",
+        "name": "Reid Fenwick",
+        "phone": "+16305550118",
+        "email": "reid.fenwick@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-04-21",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-018",
+        "name": "Xenia Finch",
+        "phone": "+16305550117",
+        "email": "xenia.finch@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-04-22",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-022",
+        "name": "Ike Rowan",
+        "phone": "+16305550121",
+        "email": "ike.rowan@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-04-22",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-017",
+        "name": "Eero Stroud",
+        "phone": "+16305550116",
+        "email": "eero.stroud@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-04-25",
+        "service": "Lymphatic drainage"
+      }
+    ]
+  },
+  {
+    "id": "2026-03",
+    "name": "March 2026",
+    "period": "March 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-03-03",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-03-03",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-03-03",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-03-17",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-03-17",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-008",
+        "name": "Kai Noble",
+        "phone": "+16305550107",
+        "email": "kai.noble@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-03-08",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-012",
+        "name": "Nadia Calder",
+        "phone": "+16305550111",
+        "email": "nadia.calder@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-03-10",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-007",
+        "name": "Kofi Ivers",
+        "phone": "+16305550106",
+        "email": "kofi.ivers@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-03-20",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-011",
+        "name": "Marco Kerrin",
+        "phone": "+16305550110",
+        "email": "marco.kerrin@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-03-22",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-013",
+        "name": "Owen Aster",
+        "phone": "+16305550112",
+        "email": "owen.aster@example.invalid",
+        "locationId": "northgate-athletic",
+        "receivedDate": "2026-03-25",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-009",
+        "name": "Dara Prewitt",
+        "phone": "+16305550108",
+        "email": "dara.prewitt@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-03-29",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-010",
+        "name": "Jun Orrin",
+        "phone": "+16305550109",
+        "email": "jun.orrin@example.invalid",
+        "locationId": "copper-leaf-salon",
+        "receivedDate": "2026-03-29",
+        "service": "Infrared sauna"
+      }
+    ]
+  },
+  {
+    "id": "2026-02",
+    "name": "February 2026",
+    "period": "February 2026 \u00b7 2 field days \u00b7 500 marketing materials",
+    "locations": [
+      {
+        "id": "ridgeline-strength",
+        "name": "Ridgeline Strength",
+        "area": "Oak Brook",
+        "dropDate": "2026-02-03",
+        "flyers": 100
+      },
+      {
+        "id": "stillwater-pilates",
+        "name": "Stillwater Pilates",
+        "area": "Hinsdale",
+        "dropDate": "2026-02-03",
+        "flyers": 100
+      },
+      {
+        "id": "copper-leaf-salon",
+        "name": "Copper Leaf Salon",
+        "area": "Downers Grove",
+        "dropDate": "2026-02-03",
+        "flyers": 100
+      },
+      {
+        "id": "northgate-athletic",
+        "name": "Northgate Athletic Club",
+        "area": "Elmhurst",
+        "dropDate": "2026-02-17",
+        "flyers": 100
+      },
+      {
+        "id": "harbor-row-studio",
+        "name": "Harbor Row Studio",
+        "area": "Westmont",
+        "dropDate": "2026-02-17",
+        "flyers": 100
+      }
+    ],
+    "leads": [
+      {
+        "id": "lead-006",
+        "name": "Hana Mercer",
+        "phone": "+16305550105",
+        "email": "hana.mercer@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-02-16",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-005",
+        "name": "Kai Ember",
+        "phone": "+16305550104",
+        "email": "kai.ember@example.invalid",
+        "locationId": "harbor-row-studio",
+        "receivedDate": "2026-02-18",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-001",
+        "name": "Vera Sorrel",
+        "phone": "+16305550100",
+        "email": "vera.sorrel@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-02-19",
+        "service": "Lymphatic drainage"
+      },
+      {
+        "id": "lead-003",
+        "name": "Pia Stroud",
+        "phone": "+16305550102",
+        "email": "pia.stroud@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-02-20",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-004",
+        "name": "Finn Dunn",
+        "phone": "+16305550103",
+        "email": "finn.dunn@example.invalid",
+        "locationId": "ridgeline-strength",
+        "receivedDate": "2026-02-21",
+        "service": "Infrared sauna"
+      },
+      {
+        "id": "lead-002",
+        "name": "Remy Marlow",
+        "phone": "+16305550101",
+        "email": "remy.marlow@example.invalid",
+        "locationId": "stillwater-pilates",
+        "receivedDate": "2026-02-25",
+        "service": "Infrared sauna"
+      }
+    ]
+  }
+]
