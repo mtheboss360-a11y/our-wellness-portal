@@ -5,7 +5,7 @@ services:
     name: our-wellness-portal
     runtime: node
     plan: starter            # a disk requires a paid instance; free wipes the database
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build  # NODE_ENV=production would skip vite and tsc
     startCommand: npm start
     healthCheckPath: /
     disk:
@@ -13,6 +13,8 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
+      - key: NODE_VERSION
+        value: "24"          # node:sqlite is stable from 24
       - key: APP_ORIGIN
         value: https://ournetworkportal.com
       - key: NODE_ENV

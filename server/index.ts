@@ -6,11 +6,13 @@ import { createPortalServer } from './http';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 if (existsSync(resolve(root, '.env'))) process.loadEnvFile(resolve(root, '.env'));
 const port = Number(process.env.PORT ?? 3000);
-const host = process.env.HOST ?? '127.0.0.1';
 const origin = process.env.APP_ORIGIN ?? `http://localhost:${port}`;
 const originUrl = new URL(origin);
 if (originUrl.origin !== origin) throw new Error('APP_ORIGIN must contain only scheme, host and optional port.');
 const local = ['localhost', '127.0.0.1', '[::1]'].includes(originUrl.hostname);
+// A managed host routes traffic in from outside the container, so bind every
+// interface there; keep local runs on loopback so a dev server stays off the LAN.
+const host = process.env.HOST ?? (local ? '127.0.0.1' : '0.0.0.0');
 if (!local && originUrl.protocol !== 'https:') throw new Error('Public hosting requires HTTPS in APP_ORIGIN.');
 const sample = process.env.ENABLE_SAMPLE_DATA === 'true' || (process.env.ENABLE_SAMPLE_DATA !== 'false' && process.env.NODE_ENV !== 'production');
 const store = openStore(resolve(root, process.env.DATABASE_PATH ?? 'var/portal.sqlite'), sample);
