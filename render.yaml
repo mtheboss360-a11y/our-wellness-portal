@@ -1,0 +1,25 @@
+# One-click setup on Render. The disk is the important part: the SQLite database
+# must survive restarts and deploys, and a free instance has no disk.
+services:
+  - type: web
+    name: our-wellness-portal
+    runtime: node
+    plan: starter            # a disk requires a paid instance; free wipes the database
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    disk:
+      name: portal-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: APP_ORIGIN
+        value: https://ournetworkportal.com
+      - key: NODE_ENV
+        value: production
+      - key: ENABLE_SAMPLE_DATA
+        value: "false"
+      - key: DATABASE_PATH
+        value: /data/portal.sqlite
+      - key: TRUST_PROXY
+        value: "true"

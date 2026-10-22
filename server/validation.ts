@@ -1,0 +1,9 @@
+import { z } from 'zod';
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => { const parsed = new Date(value); return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0,10) === value; }, 'Use a valid ISO date.');
+const location = z.object({ id: z.string().min(1).max(100), name: z.string().min(1).max(160), area: z.string().min(1).max(100), dropDate: day, flyers: z.number().int().min(0).max(100000000) }).strict();
+const lead = z.object({ id: z.string().min(1).max(100), name: z.string().min(1).max(160), phone: z.string().regex(/^\+[1-9]\d{7,14}$/), email: z.email().max(254), locationId: z.string().min(1).max(100), receivedDate: day, service: z.string().min(1).max(80) }).strict();
+export const campaignFeed = z.array(z.object({ id: z.string().min(1).max(100), name: z.string().min(1).max(160), period: z.string().max(100), locations: z.array(location).max(1000), leads: z.array(lead).max(100000) }).strict().superRefine((campaign, ctx) => {
+  if (new Set(campaign.locations.map(l => l.id)).size !== campaign.locations.length) ctx.addIssue({ code: 'custom', message: 'Location IDs must be unique within a campaign.' });
+  if (new Set(campaign.leads.map(l => l.id)).size !== campaign.leads.length) ctx.addIssue({ code: 'custom', message: 'Lead IDs must be unique within a campaign.' });
+  campaign.leads.forEach((lead, index) => { const target = campaign.locations.find(l => l.id === lead.locationId); if (!target) ctx.addIssue({ code: 'custom', path: ['leads',index,'locationId'], message: 'Lead refers to a missing location.' }); else if (lead.receivedDate < target.dropDate) ctx.addIssue({ code:'custom',path:['leads',index,'receivedDate'],message:'A lead cannot precede its drop.' }); });
+})).max(1000).refine(values => new Set(values.map(v => v.id)).size === values.length, 'Campaign IDs must be unique.');
