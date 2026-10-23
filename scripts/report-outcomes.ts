@@ -20,6 +20,7 @@ if (statSync(values.file).size > 5000000) { console.error('Reports are limited t
 const parsed = outcomeReport.safeParse(JSON.parse(readFileSync(values.file, 'utf8')));
 if (!parsed.success) { console.error(parsed.error.issues.slice(0, 20).map(i => `${i.path.join('.')}: ${i.message}`).join('\n')); process.exit(1); }
 const store = openStore(resolve(process.env.DATABASE_PATH ?? 'var/portal.sqlite'), false);
+store.db.exec('PRAGMA busy_timeout = 10000');
 try { const rows = store.partners.reportOutcomes(values.clinic, parsed.data); console.log(`Saved ${rows} count${rows === 1 ? '' : 's'} covering ${parsed.data.from} to ${parsed.data.to} (${parsed.data.reports.join(' and ')}).`); }
 catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
 finally { store.close(); }

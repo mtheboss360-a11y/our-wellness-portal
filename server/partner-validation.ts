@@ -3,9 +3,14 @@ import { z } from 'zod';
 // spaces) before the length checks, so what is stored is what was checked. There is deliberately no free-text field
 // anywhere on the partner side: nothing a partner types can carry health information about anyone.
 export function cleanText(value: unknown) {
-  return typeof value === 'string' ? value.normalize('NFC').replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u2028-\u202E\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  return typeof value === 'string' ? value.normalize('NFC').replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/gu, ' ').replace(/\s+/g, ' ').trim() : '';
 }
-const text = (label: string, min: number, max: number) => z.preprocess(cleanText, z.string().min(min, `Enter ${label}.`).max(max, `Keep ${label} under ${max} characters.`));
+// A name needs at least one letter or digit, and no word may mix Latin letters with look-alike Cyrillic or Greek ones
+// ("Ir\u043En Room" with a Cyrillic o would otherwise pass as a different business from "Iron Room").
+const mixedScript = (value: string) => value.split(' ').some(w => /\p{Script=Latin}/u.test(w) && /[\p{Script=Cyrillic}\p{Script=Greek}]/u.test(w));
+const text = (label: string, min: number, max: number) => z.preprocess(cleanText, z.string().min(min, `Enter ${label}.`).max(max, `Keep ${label} under ${max} characters.`)
+  .refine(v => /[\p{L}\p{N}]/u.test(v), `Enter ${label}.`)
+  .refine(v => !mixedScript(v), 'Please type this with one alphabet per word.'));
 const email = z.preprocess(v => cleanText(v).toLowerCase(), z.email('Enter a work email address, like name@yourbusiness.com.').max(254, 'That email address is too long.'));
 // Partners choose their own password on a public page, so unlike the clinic accounts (made by the owner on the server)
 // there is a floor: 10 characters, the length NIST SP 800-63B suggests for user-chosen secrets without other rules.

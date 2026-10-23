@@ -6,7 +6,7 @@ import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
 import { handlePartner } from './partner-http';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
-type Options = { store: PortalStore; origin: string; secure: boolean; root: string; vite?: ViteDevServer; trustProxy?: boolean };
+type Options = { store: PortalStore; origin: string; secure: boolean; root: string; vite?: ViteDevServer; trustProxy?: boolean; proxyHops?: number };
 const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
 /* Sign-ins may come from the configured origin or its www twin: the host redirects one to the other, so the page runs on
    whichever is canonical. Any other origin is refused. A local origin has no twin. */
@@ -46,6 +46,9 @@ export function createPortalServer(options: Options) {
           let input;
           try { input = loginInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'Please check your sign-in details.' }); return; }
           if (!input.success) { json(response, 200, { ok: false, message: "Those details didn't match. Please check your email and password and try again." }); return; }
+          // FOLLOW-UP (security): this keeps the original behaviour for clinic sign-ins, which trusts the leftmost
+          // X-Forwarded-For entry, so the per-IP limit can be sidestepped (the per-username limit still holds). Switch to
+          // clientIp() from ./client-ip once TRUST_PROXY_HOPS has been checked against the live proxy chain.
           const forwarded = request.headers['x-forwarded-for'];
           const ip = options.trustProxy && typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : request.socket.remoteAddress ?? 'unknown';
           const result = store.signIn(input.data.username, input.data.password, ip, cookie);
@@ -56,7 +59,7 @@ export function createPortalServer(options: Options) {
         json(response, 404, { error: 'Not found.' }); return;
       }
       // Partner businesses: the invitation, their dashboard and the referral link (server/partner-http.ts).
-      if (await handlePartner(request, response, url, { store, origin, allowed, secure, trustProxy: options.trustProxy })) return;
+      if (await handlePartner(request, response, url, { store, origin, allowed, secure, trustProxy: options.trustProxy, proxyHops: options.proxyHops })) return;
       if (request.method !== 'GET' && request.method !== 'HEAD') { json(response, 405, { error: 'Method not allowed.' }); return; }
       if (url.pathname === '/robots.txt') { response.setHeader('Content-Type', 'text/plain'); response.end('User-agent: *\nDisallow: /\n'); return; }
       if (vite) {

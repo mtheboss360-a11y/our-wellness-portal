@@ -14,6 +14,7 @@ if (!values.clinic || !/^[a-z0-9-]{3,80}$/.test(values.clinic)) { console.error(
 const input = destinationInput.safeParse({ bookingUrl: values['booking-url'], phone: values.phone, refParam: values['ref-param'] });
 if (!input.success) { console.error(input.error.issues.map(i => i.message).join('\n')); process.exit(1); }
 const store = openStore(resolve(process.env.DATABASE_PATH ?? 'var/portal.sqlite'), false);
+store.db.exec('PRAGMA busy_timeout = 10000');
 try { store.partners.setDestination(values.clinic, input.data); console.log('Saved. Partner links for this clinic now go to', input.data.bookingUrl ?? `a call page for ${input.data.phone}`); }
 catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
 finally { store.close(); }

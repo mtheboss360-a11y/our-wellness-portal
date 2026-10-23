@@ -13,7 +13,9 @@ export function verifyPassword(password: string, salt: string, hash: string) { c
 export function openStore(filename: string, enableSample = true) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(filename);
-  db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;
+  // A short busy wait: a clinic command writing to the database delays a request by at most 1.5 s instead of failing it.
+  // (The command-line scripts raise it, since nobody is waiting on them.)
+  db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 1500;
     CREATE TABLE IF NOT EXISTS clinics (id TEXT PRIMARY KEY, name TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, clinic_id TEXT NOT NULL REFERENCES clinics(id), email TEXT NOT NULL UNIQUE, hash TEXT NOT NULL, salt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS campaigns (id TEXT NOT NULL, clinic_id TEXT NOT NULL REFERENCES clinics(id), name TEXT NOT NULL, period TEXT NOT NULL, locations TEXT NOT NULL, leads TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(id,clinic_id));

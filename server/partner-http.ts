@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { PortalStore } from './store';
-import { dayOf, monthsBetween } from './partner-store';
+import { dayOf, monthsBetween, CODE_PATTERN } from './partner-store';
+import { clientIp } from './client-ip';
 import { joinInput, signInInput, detailsInput, accountInput, reportRange } from './partner-validation';
 import { qrSvg, qrPng } from './qr';
 import * as view from './partner-views';
@@ -9,15 +10,11 @@ import * as view from './partner-views';
 // Access is enforced here on the server for every request: each protected route resolves the partner from the session
 // cookie and passes that session to the store, which scopes every query by the partner's own id. Nothing a request
 // carries (a query string, a form field) can name another partner or clinic.
-export type PartnerContext = { store: PortalStore; origin: string; allowed: Set<string>; secure: boolean; trustProxy?: boolean };
+export type PartnerContext = { store: PortalStore; origin: string; allowed: Set<string>; secure: boolean; trustProxy?: boolean; proxyHops?: number };
 type Req = IncomingMessage; type Res = ServerResponse;
 
 function send(res: Res, status: number, html: string) { res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(html); }
 function redirect(res: Res, location: string, status = 303) { res.writeHead(status, { Location: location }); res.end(); }
-function clientIp(req: Req, trustProxy?: boolean) {
-  const forwarded = req.headers['x-forwarded-for'];
-  return trustProxy && typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress ?? 'unknown';
-}
 function readCookie(req: Req, name: string) {
   return req.headers.cookie?.split(';').map(p => p.trim()).find(p => p.startsWith(name + '='))?.slice(name.length + 1);
 }
@@ -37,7 +34,7 @@ function issues(error: { issues: Array<{ path: PropertyKey[]; message: string }>
 }
 const safeNext = (value: unknown) => (typeof value === 'string' && /^\/partner(\/[a-z.]*)?(\?[A-Za-z0-9=&-]*)?$/.test(value) ? value : '/partner');
 /** Link previews and prefetches are not people choosing to open the link, so they are not counted as visits. */
-const NOT_A_VISIT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|skype|embedly|vkshare|quora|pinterest|bitlybot|headless|curl|wget|python-requests|httpclient|okhttp/i;
+const NOT_A_VISIT = /(?<!cu)bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|skype|embedly|vkshare|quora|pinterest|bitlybot|headless|curl|wget|python-requests|httpclient|okhttp/i;
 const displayPhone = (e164: string) => { const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164); return m ? `(${m[1]}) ${m[2]}-${m[3]}` : e164; };
 
 export async function handlePartner(req: Req, res: Res, url: URL, ctx: PartnerContext): Promise<boolean> {
@@ -55,15 +52,20 @@ export async function handlePartner(req: Req, res: Res, url: URL, ctx: PartnerCo
   try {
     // ---- The referral link: /r/<CODE>. Public. Records one visit, then hands the person to the clinic. ----
     if (path.startsWith('/r/')) {
-      if (method !== 'GET' && method !== 'HEAD') { send(res, 405, view.messagePage('Not available', 'This page only opens in a browser.')); return true; }
-      const code = decodeURIComponent(path.slice(3)).toUpperCase();
-      const target = partners.resolveCode(code);
+      if (method !== 'GET' && method !== 'HEAD') { send(res, 405, view.visitorMessage('Not available', 'This page only opens in a browser.')); return true; }
+      // Codes are plain letters and digits, so the path is matched as it is, never decoded. A lower-case link is sent to
+      // the canonical upper-case one first, so the one-visit-a-day cookie (scoped to that path) works for both.
+      const raw = path.slice(3);
+      if (/^[A-Za-z0-9]{8}$/.test(raw) && raw !== raw.toUpperCase() && CODE_PATTERN.test(raw.toUpperCase())) { redirect(res, `/r/${raw.toUpperCase()}${url.search}`, 301); return true; }
+      const target = partners.resolveCode(raw);
       if (!target) { send(res, 404, view.codeInactivePage()); return true; }
+      const routable = !!(target.booking_url || target.phone);
       const seenCookie = `owc-v-${target.code}`;
       const purpose = `${req.headers['purpose'] ?? ''} ${req.headers['sec-purpose'] ?? ''} ${req.headers['x-purpose'] ?? ''}`;
-      const counted = method === 'GET' && !readCookie(req, seenCookie) && !/prefetch|preview/i.test(purpose) && !NOT_A_VISIT.test(String(req.headers['user-agent'] ?? ''));
-      if (counted) {
-        partners.recordVisit(target.code, url.searchParams.get('via') === 'qr' ? 'qr' : 'link');
+      const counting = routable && method === 'GET' && !readCookie(req, seenCookie) && !/prefetch|preview/i.test(purpose) && !NOT_A_VISIT.test(String(req.headers['user-agent'] ?? ''));
+      if (counting) {
+        // Counting never stands between the person and the clinic: if the visit cannot be stored, they are sent on anyway.
+        try { partners.recordVisit(target.code, url.searchParams.get('via') === 'qr' ? 'qr' : 'link', clientIp(req, ctx.trustProxy, ctx.proxyHops)); } catch { /* not counted */ }
         // A plain marker, not an identifier: it only stops one browser from counting twice in a day.
         // LEGAL/PRIVACY REVIEW: this is a functional first-party cookie on the portal domain; confirm it is covered by
         // the portal's privacy notice.
@@ -75,14 +77,14 @@ export async function handlePartner(req: Req, res: Res, url: URL, ctx: PartnerCo
         redirect(res, to.toString(), 302); return true;
       }
       if (target.phone) { send(res, 200, view.callPage(target.clinic_name, target.phone, displayPhone(target.phone))); return true; }
-      send(res, 200, view.messagePage(target.clinic_name, 'This clinic hasn’t added its booking details yet. Please contact the clinic directly.'));
+      send(res, 200, view.visitorMessage(target.clinic_name, 'This clinic hasn\u2019t added its booking details yet. Please contact the clinic directly.'));
       return true;
     }
 
     // ---- Every other partner route. State changes need a POST from this site. ----
     if (method === 'POST' && !ctx.allowed.has(req.headers.origin ?? '')) { send(res, 403, view.messagePage('Please try again', 'This form was sent from somewhere we don’t recognise. Refresh the page and try again.')); return true; }
     if (method !== 'GET' && method !== 'HEAD' && method !== 'POST') { send(res, 405, view.messagePage('Not available', 'That action is not available here.')); return true; }
-    const ip = clientIp(req, ctx.trustProxy);
+    const ip = clientIp(req, ctx.trustProxy, ctx.proxyHops);
 
     // Joining from an invitation.
     const join = /^\/join\/([^/]+)$/.exec(path);
@@ -162,10 +164,10 @@ export async function handlePartner(req: Req, res: Res, url: URL, ctx: PartnerCo
     const data = partners.dashboard(session);
     const primary = data.codes.find(c => c.active) ?? data.codes[0];
     const shareLink = (via?: 'qr') => (primary ? `${ctx.origin}/r/${primary.code}${via ? '?via=qr' : ''}` : '');
-    const qrLabel = `QR code that opens ${session.clinicName}'s booking page`;
+    const qrLabel = data.destination === 'phone' ? `QR code that opens a page with ${session.clinicName}'s phone number` : `QR code that opens ${session.clinicName}'s booking page`;
 
     if (path === '/partner') {
-      send(res, 200, view.dashboardPage(session, data, { origin: ctx.origin, qr: primary ? qrSvg(shareLink('qr'), qrLabel) : '', welcome: url.searchParams.get('welcome') === '1', joinedDay }));
+      send(res, 200, view.dashboardPage(session, data, { origin: ctx.origin, qr: primary ? qrSvg(shareLink('qr'), qrLabel) : '', welcome: url.searchParams.get('welcome') === '1', joinedDay, destination: data.destination }));
       return true;
     }
     if ((path === '/partner/qr.svg' || path === '/partner/qr.png') && primary) {
@@ -174,7 +176,7 @@ export async function handlePartner(req: Req, res: Res, url: URL, ctx: PartnerCo
       res.end(png ? qrPng(shareLink('qr')) : `<?xml version="1.0" encoding="UTF-8"?>\n${qrSvg(shareLink('qr'), qrLabel)}`);
       return true;
     }
-    if (path === '/partner/print' && primary) { send(res, 200, view.printPage(session, { code: primary.code, link: shareLink(), qr: qrSvg(shareLink('qr'), qrLabel) })); return true; }
+    if (path === '/partner/print' && primary) { send(res, 200, view.printPage(session, { code: primary.code, link: shareLink(), qr: qrSvg(shareLink('qr'), qrLabel), destination: data.destination, paused: session.status !== 'active' || !primary.active })); return true; }
     if (path === '/partner/details') { const saved = url.searchParams.get('saved'); send(res, 200, view.detailsPage(session, { saved: saved === 'details' || saved === 'account' ? saved : undefined })); return true; }
     if (path === '/partner/report' || path === '/partner/report.csv') {
       const current = dayOf(Date.now()).slice(0, 7), first = joinedDay.slice(0, 7);

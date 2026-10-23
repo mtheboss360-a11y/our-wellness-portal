@@ -47,14 +47,24 @@ Checked 22 October 2026. This report distinguishes automated checks from hosting
 
 ## Partner network checks (23 October 2026)
 
-- `npm test`: 41 passed, 0 failed (19 existing, 22 new in `tests/partner.test.ts`: joining, invitation limits,
-  duplicates, validation and escaping, partner isolation, clinic/partner session separation, CSRF and Origin, account
-  changes, sign-in limits, referral attribution and redirect, phone-only call page, no personal fields in stored
-  activity, dashboard and report counts, "Not reported" months, QR output).
+- `npm test`: 49 passed, 0 failed (26 existing in `tests/portal.test.ts`, 23 in `tests/partner.test.ts`: joining,
+  invitation limits and withdrawal, no invitations before a destination, duplicates in any spelling or alphabet,
+  homoglyphs, validation and escaping, isolation with a second active partner (exact tiles, history, report and CSV,
+  QR content in all four places, renames), clinic/partner session separation, CSRF and Origin on every form, account
+  changes, sign-in limits that never count a correct password, the proxy address rule, referral attribution, the
+  canonical link, visit limits and bounded storage, counting never blocking the redirect, phone-only and
+  no-destination behaviour, no personal fields in stored activity, "Not reported" in the dashboard, report and CSV,
+  import date rules, leaving the network, QR output, and the stylesheet's hidden and contrast rules).
+- Mutation check: 18 deliberate defects (unscoped queries, no CSRF or Origin check, wrong QR link, rename hitting other
+  partners, no visit or probe limits, future imports, counting correct passwords, leftmost proxy address, visit errors
+  blocking the redirect, and others): 17 fail the suite. The one that passes removes a second guard (sessions of a
+  partner who left are also deleted when they leave).
+- An independent five-lens review (security, privacy against the brief, correctness, phone use and accessibility,
+  adversarial testing) confirmed 39 findings, each re-checked by a second reviewer; all are fixed or, where noted in
+  the README, documented. One is left as a follow-up by choice: the clinic sign-in's reading of X-Forwarded-For.
 - `npm run typecheck` and `npm run build`: pass.
 - QR codes: SVG and PNG output decoded back to the exact link with an independent decoder (jsQR), including the PNG
   downloaded from the dashboard.
 - Manual run against a throwaway database (`npm run build`, `npm start`, clinic and invitation made with the CLI):
   join, error states, dashboard, copy link, print card, details, monthly report and CSV, sign in and out, the referral
-  link redirect and the "not active" page, at 390 and 1280 px. axe-core: no violations on any partner page. No
-  sideways scrolling.
+  link redirect and the "not active" page, at 390 and 1280 px; axe-core on every partner page; no sideways scrolling.

@@ -3,8 +3,10 @@
    from a QR code on a phone. */
 @font-face{font-family:"Inter";font-style:normal;font-weight:100 900;font-display:swap;src:url("/assets/fonts/inter-latin-opsz-normal.woff2") format("woff2")}
 @font-face{font-family:"Playfair Display";font-style:normal;font-weight:400 900;font-display:swap;src:url("/assets/fonts/playfair-display-latin-wght-normal.woff2") format("woff2")}
-:root{--hero:"Playfair Display",Georgia,"Times New Roman",serif;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--ink:#1C3A2C;--body:#3D5748;--muted:#5F6F64;--accent:#BD7189;--accent-text:#9E4F68;--page:#F3F6F2;--card:#FFF;--border:#E3EAE2;--field:#CCD8CE;--surface:#F9FBF8;--ok-bg:#EDF5EE;--ok:#2A6141;--warn-bg:#FBF4E6;--warn:#7A5A17;--err-bg:#F9EEF1;--err:#853F57;--radius:20px;color-scheme:light}
+:root{--hero:"Playfair Display",Georgia,"Times New Roman",serif;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;--ink:#1C3A2C;--body:#3D5748;--muted:#5F6F64;--accent:#BD7189;--accent-text:#9E4F68;--page:#F3F6F2;--card:#FFF;--border:#E3EAE2;--field:#CCD8CE;--control:#7F9184;--surface:#F9FBF8;--ok-bg:#EDF5EE;--ok:#2A6141;--warn-bg:#FBF4E6;--warn:#7A5A17;--err-bg:#F9EEF1;--err:#853F57;--radius:20px;color-scheme:light}
 *,*::before,*::after{box-sizing:border-box}
+/* The hidden attribute always wins: the copy and print buttons stay hidden until partner.js can make them work. */
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--page);color:var(--body);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;min-height:100dvh;display:flex;flex-direction:column}
 .pt{background:radial-gradient(ellipse 70% 420px at 100% 0,rgba(204,222,204,.35),transparent 72%) var(--page)}
@@ -47,13 +49,14 @@ form{margin-top:14px}
 .pt-field{margin-top:16px}
 .pt-field label,.pt-label{display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px}
 .pt-field .pt-hint{margin:-2px 0 8px;font-size:14px}
-.pt-field input,.pt-field select,.pt-copy input{width:100%;min-height:50px;border:1px solid var(--field);border-radius:12px;background:#FDFEFC;color:var(--ink);padding:0 14px;font-size:16px}
+.pt-field input,.pt-field select,.pt-copy input{width:100%;min-height:50px;border:1px solid var(--control);border-radius:12px;background:#FDFEFC;color:var(--ink);padding:0 14px;font-size:16px}
 .pt-field input:focus,.pt-field select:focus,.pt-copy input:focus{border-color:var(--ink);outline:2px solid transparent}
 .has-error input{border-color:var(--err);background:#FFFBFC}
 .pt-error{color:var(--err);font-size:14px;font-weight:550;margin:0 0 6px}
 .pt-check{display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;margin-top:20px;font-size:15px}
 .pt-check .pt-error{grid-column:1/-1}
 .pt-check input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--ink)}
+.pt-range button.btn{font:inherit;font-weight:600}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--field);background:#fff;color:var(--ink);font-weight:600;font-size:15px;text-decoration:none;cursor:pointer;transition:background-color .14s,border-color .14s}
 .btn:hover{background:var(--surface);border-color:#92A797}
 .btn-primary{background:var(--ink);border-color:var(--ink);color:#fff}
