@@ -92,6 +92,18 @@ test('HTTP endpoints reject cross-origin sign-in and issue HttpOnly sessions',as
   }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));store.close();}
 });
 
+test('sign-in works from the bare domain and from www, and nowhere else',async()=>{
+  // The host redirects one of the two to the other, so the page can run on either (October 23, 2026).
+  const store=withAccount(openStore(':memory:')); const server=createPortalServer({store,origin:'https://ournetworkportal.com',secure:false,root:process.cwd()});
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const signIn=(origin:string)=>fetch(base+'/api/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({username:ACCOUNT.username,password:ACCOUNT.password})});
+  try{
+    for(const origin of ['https://ournetworkportal.com','https://www.ournetworkportal.com']){const response=await signIn(origin);assert.equal(response.status,200,origin);assert.equal((await response.json()).ok,true,origin);}
+    for(const origin of ['https://evil.ournetworkportal.com','https://wwwournetworkportal.com','http://www.ournetworkportal.com','https://www.ournetworkportal.com.evil.invalid','null']){assert.equal((await signIn(origin)).status,403,origin);}
+    assert.equal((await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,403,'no Origin header');
+  }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));store.close();}
+});
+
 test('field days count distinct trips, not locations', () => {
   assert.equal(fieldDays(dropsNoLeads), 2);
   assert.equal(fieldDays({ ...dropsNoLeads, locations: dropsNoLeads.locations.map(l => ({ ...l, dropDate: '2026-03-02' })) }), 1);

@@ -7,6 +7,14 @@ import type { PortalStore } from './store';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
 type Options = { store: PortalStore; origin: string; secure: boolean; root: string; vite?: ViteDevServer; trustProxy?: boolean };
 const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
+/* Sign-ins may come from the configured origin or its www twin: the host redirects one to the other, so the page runs on
+   whichever is canonical. Any other origin is refused. A local origin has no twin. */
+export function allowedOrigins(origin: string) {
+  const url = new URL(origin);
+  if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return new Set([origin]);
+  const twin = new URL(origin); twin.hostname = url.hostname.startsWith('www.') ? url.hostname.slice(4) : `www.${url.hostname}`;
+  return new Set([origin, twin.origin]);
+}
 function json(response: ServerResponse, status: number, value: unknown) { response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); response.end(JSON.stringify(value)); }
 async function body(request: IncomingMessage) {
   if (!request.headers['content-type']?.startsWith('application/json')) throw new Error('content-type');
@@ -16,6 +24,7 @@ async function body(request: IncomingMessage) {
 }
 export function createPortalServer(options: Options) {
   const { store, origin, secure, root, vite } = options;
+  const allowed = allowedOrigins(origin);
   const cookieName = secure ? '__Host-owo-session' : 'owo-local-session';
   const cookieFlags = `Path=/; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
   return createServer(async (request, response) => {
@@ -30,7 +39,7 @@ export function createPortalServer(options: Options) {
       const url = new URL(request.url ?? '/', origin);
       const cookie = request.headers.cookie?.split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
       if (url.pathname.startsWith('/api/')) {
-        if (request.method === 'POST' && request.headers.origin !== origin) { json(response, 403, { error: 'Please refresh and try again.' }); return; }
+        if (request.method === 'POST' && !allowed.has(request.headers.origin ?? '')) { json(response, 403, { error: 'Please refresh and try again.' }); return; }
         if (url.pathname === '/api/portal' && request.method === 'GET') { json(response, 200, store.snapshot(cookie)); return; }
         if (url.pathname === '/api/login' && request.method === 'POST') {
           let input;
