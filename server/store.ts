@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { publicPortal } from '../data/portal-data';
 import type { Campaign, PortalSnapshot } from '../data/portal-data';
+import { migratePartners, createPartnerStore } from './partner-store';
 export type PortalStore = ReturnType<typeof openStore>;
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
@@ -21,6 +22,9 @@ export function openStore(filename: string, enableSample = true) {
     CREATE TABLE IF NOT EXISTS seeds (id TEXT PRIMARY KEY);
     CREATE INDEX IF NOT EXISTS sessions_expiration ON sessions(expires_at);
   `);
+  // The partner network lives in its own tables (server/partner-store.ts). They are only ever added, never changed
+  // here, so an existing database picks them up on the next start without touching clinic data.
+  migratePartners(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
@@ -78,5 +82,5 @@ export function openStore(filename: string, enableSample = true) {
     return { ok: true as const, token, message: '' };
   }
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
-  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, partners: createPartnerStore(db), close: () => db.close() };
 }

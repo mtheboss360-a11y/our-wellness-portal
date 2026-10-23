@@ -44,3 +44,17 @@ Checked 22 October 2026. This report distinguishes automated checks from hosting
 - NEW badges follow the current UTC calendar date; they age out naturally.
 - Percentages are rounded individually (the provided sample intentionally displays 28/28/17/11/11/6 and can sum to 101).
 - The final ZIP is not deployed or publicly listed.
+
+## Partner network checks (23 October 2026)
+
+- `npm test`: 41 passed, 0 failed (19 existing, 22 new in `tests/partner.test.ts`: joining, invitation limits,
+  duplicates, validation and escaping, partner isolation, clinic/partner session separation, CSRF and Origin, account
+  changes, sign-in limits, referral attribution and redirect, phone-only call page, no personal fields in stored
+  activity, dashboard and report counts, "Not reported" months, QR output).
+- `npm run typecheck` and `npm run build`: pass.
+- QR codes: SVG and PNG output decoded back to the exact link with an independent decoder (jsQR), including the PNG
+  downloaded from the dashboard.
+- Manual run against a throwaway database (`npm run build`, `npm start`, clinic and invitation made with the CLI):
+  join, error states, dashboard, copy link, print card, details, monthly report and CSV, sign in and out, the referral
+  link redirect and the "not active" page, at 390 and 1280 px. axe-core: no violations on any partner page. No
+  sideways scrolling.

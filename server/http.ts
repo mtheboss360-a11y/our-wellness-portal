@@ -4,9 +4,10 @@ import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
+import { handlePartner } from './partner-http';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
 type Options = { store: PortalStore; origin: string; secure: boolean; root: string; vite?: ViteDevServer; trustProxy?: boolean };
-const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
+const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
 /* Sign-ins may come from the configured origin or its www twin: the host redirects one to the other, so the page runs on
    whichever is canonical. Any other origin is refused. A local origin has no twin. */
 export function allowedOrigins(origin: string) {
@@ -54,6 +55,8 @@ export function createPortalServer(options: Options) {
         if (url.pathname === '/api/logout' && request.method === 'POST') { store.signOut(cookie); response.setHeader('Set-Cookie', `${cookieName}=; ${cookieFlags}; Max-Age=0`); json(response, 200, { ok: true }); return; }
         json(response, 404, { error: 'Not found.' }); return;
       }
+      // Partner businesses: the invitation, their dashboard and the referral link (server/partner-http.ts).
+      if (await handlePartner(request, response, url, { store, origin, allowed, secure, trustProxy: options.trustProxy })) return;
       if (request.method !== 'GET' && request.method !== 'HEAD') { json(response, 405, { error: 'Method not allowed.' }); return; }
       if (url.pathname === '/robots.txt') { response.setHeader('Content-Type', 'text/plain'); response.end('User-agent: *\nDisallow: /\n'); return; }
       if (vite) {
