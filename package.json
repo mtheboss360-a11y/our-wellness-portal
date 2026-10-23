@@ -13,7 +13,11 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "create-client": "tsx scripts/create-client.ts",
-    "import-campaigns": "tsx scripts/import-campaigns.ts"
+    "import-campaigns": "tsx scripts/import-campaigns.ts",
+    "partner-invite": "tsx scripts/partner-invite.ts",
+    "clinic-destination": "tsx scripts/clinic-destination.ts",
+    "report-outcomes": "tsx scripts/report-outcomes.ts",
+    "partners": "tsx scripts/partners.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

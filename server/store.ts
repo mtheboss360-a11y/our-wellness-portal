@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { publicPortal } from '../data/portal-data';
 import type { Campaign, PortalSnapshot } from '../data/portal-data';
+import { migratePartners, createPartnerStore } from './partner-store';
 export type PortalStore = ReturnType<typeof openStore>;
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
@@ -12,7 +13,9 @@ export function verifyPassword(password: string, salt: string, hash: string) { c
 export function openStore(filename: string, enableSample = true) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(filename);
-  db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;
+  // A short busy wait: a clinic command writing to the database delays a request by at most 1.5 s instead of failing it.
+  // (The command-line scripts raise it, since nobody is waiting on them.)
+  db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 1500;
     CREATE TABLE IF NOT EXISTS clinics (id TEXT PRIMARY KEY, name TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, clinic_id TEXT NOT NULL REFERENCES clinics(id), email TEXT NOT NULL UNIQUE, hash TEXT NOT NULL, salt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS campaigns (id TEXT NOT NULL, clinic_id TEXT NOT NULL REFERENCES clinics(id), name TEXT NOT NULL, period TEXT NOT NULL, locations TEXT NOT NULL, leads TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(id,clinic_id));
@@ -21,6 +24,9 @@ export function openStore(filename: string, enableSample = true) {
     CREATE TABLE IF NOT EXISTS seeds (id TEXT PRIMARY KEY);
     CREATE INDEX IF NOT EXISTS sessions_expiration ON sessions(expires_at);
   `);
+  // The partner network lives in its own tables (server/partner-store.ts). They are only ever added, never changed
+  // here, so an existing database picks them up on the next start without touching clinic data.
+  migratePartners(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
@@ -78,5 +84,5 @@ export function openStore(filename: string, enableSample = true) {
     return { ok: true as const, token, message: '' };
   }
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
-  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, partners: createPartnerStore(db), close: () => db.close() };
 }

@@ -150,3 +150,118 @@ username and per IP in fifteen minutes, then a lockout — not a character count
 password still deserves thought before the portal is on a public address, and the tests cover both
 the freedom and the limit: `the owner chooses the username and the password` and
 `a weak password is still behind the rate limit`.
+
+## Partner network (the partner-facing side)
+
+A clinic is the hub of a local referral network. A nearby business that doesn't compete with it (a gym, a salon, a
+studio, a physical therapy office) joins for free as a **partner**, gets its own referral link and QR code, and sees the
+activity that code produces. The clinic's staff do all the calling and booking. This app records where referrals come
+from; it is not a patient record and holds nothing about the people who use a partner's link.
+
+### How it fits this codebase
+
+- **Same server, same database.** Partner pages are served by the existing Node server (`server/http.ts` hands
+  `/join/...`, `/partner/...` and `/r/...` to `server/partner-http.ts`) and stored in the same `node:sqlite` file, in new
+  tables only (`server/partner-store.ts`). An existing database gains them on the next start; no clinic data changes.
+- **No framework on the partner side.** The clinic report stays the React app it is. Partner pages are plain HTML from
+  the server (`server/partner-views.ts`) with one stylesheet and one small script (`public/assets/partner.css`,
+  `partner.js`), because they are opened from a QR code on a phone and must work fast, and with JavaScript off.
+- **Clinic actions are terminal commands**, like `create-client` and `import-campaigns`: there is still no admin UI.
+- There was no matching or approval module in this repo to reuse; the partner records stand on their own and can link
+  to one later.
+
+### Clinic setup (server terminal)
+
+```sh
+# 1. Where partner links send people. Prefer the clinic's own booking page: nothing is collected on the way.
+npm run clinic-destination -- --clinic clinic-slug --booking-url https://booking.example.com/clinic --ref-param ref
+#    (or --phone +16305550100 for a call page; --ref-param adds the partner's code to the booking link)
+
+# 2. An invitation for one business (the link goes on the clinic's introduction card; --qr writes it as a QR code).
+npm run partner-invite -- --clinic clinic-slug --business "The Iron Room" --qr iron-room-invite.svg
+#    --uses N lets one link onboard N businesses; --days sets how long it stays valid (default 30).
+
+#    No invitation until step 1 is done. --list shows every invitation; --revoke <id> stops one link at once.
+
+# 3. Who has joined, and each partner's code. --pause / --resume CODE turns a partner's link off and on;
+#    --remove CODE is how a partner leaves: their sign-in and contact name are deleted and the link stops,
+#    while the business name and the anonymous counts stay in the clinic's records.
+npm run partners -- --clinic clinic-slug
+
+# 4. Report back what referrals became: counts per code per day, never people.
+npm run report-outcomes -- --clinic clinic-slug --file october.json
+```
+
+```json
+{ "from": "2026-10-01", "to": "2026-10-31", "reports": ["received", "booked"],
+  "entries": [ { "code": "AB23CD45", "day": "2026-10-03", "received": 2, "booked": 1 } ] }
+```
+
+`reports` says which counts the file covers for every day from `from` to `to`: a covered day with no entry is a real
+zero, a day never covered shows as **Not reported**. Importing the same dates again replaces them. Several entries for
+the same code and day are added together. An entry with any other field (a name, a phone, a note) is refused, and so is
+a file that reaches past today (run a month's report once the month is over) or an entry dated before its code existed.
+
+### What a partner gets
+
+- **`/join/<invitation>`**: which clinic invited them, what the network is, that joining is free, what they receive, and
+  that nobody is paid per referral and nobody promises a number of referrals. They give a business name, their name, a
+  work email and a password (10+ characters), and are signed in. The partner row records the inviting clinic, the
+  invitation and the join time. One business per network (names are compared loosely: "The Iron Room, LLC" is "iron
+  room"), one account per email. Invitations are single-use by default, expire, and are stored only as a hash.
+- **`/partner`**: the clinic they belong to, their QR code and link (copy, download as SVG or PNG, print a counter
+  card at `/partner/print`), three counts with what each one means, an activity history, and an empty state when there
+  is nothing yet. **`/partner/report`**: month by month, per code, with a CSV download. **`/partner/details`**: business
+  and contact name (renaming changes the name shown, not the business the partner joined as); sign-in email and
+  password (current password required); how to leave.
+- **The counts are never mixed up.** *Visits through your link or QR code* are counted by this app (once per browser
+  per day; link previews, prefetches and `HEAD` requests are not visits). *Referrals the clinic recorded* and *Bookings
+  the clinic reported* come only from the clinic's reports, and show "Not reported yet" until the clinic reports them.
+  In the activity history they appear as monthly totals, never by day, so a partner who sent one person cannot read
+  off whether that person booked. Revenue is never shown.
+
+### The referral link
+
+`/r/<CODE>` (the QR code adds `?via=qr`) counts a visit and sends the person straight to the clinic's booking page, or
+to a call page when the clinic only gave a phone. Unknown codes, paused partners and partners who left get a "not
+active" page. Nothing asks the person for anything, and nothing about them is stored: visits are kept as one count per
+code, day and channel (`referral_visits`), with no IP address and no device details. A one-day cookie scoped to the code
+stops one browser counting twice; as a backstop one connection counts at most 3 times a day per code and a code at
+most 1,000 times a day, so a flood cannot inflate a partner's numbers or grow the database. The person is always sent
+on, even when the visit is not counted or cannot be stored. Visitor pages carry no partner-portal links.
+
+### Security and data rules
+
+- Partners have their **own tables, sessions and cookie** (`__Host-owc-partner`), so a partner session cannot open the
+  clinic report or `/api/portal`, by construction. Every partner query is scoped by the partner id from the session;
+  no request parameter can name another partner or clinic. A partner never sees other partners or anyone's details.
+- Every state change is a `POST` that must come from this site (the existing Origin check) and carry the session's
+  CSRF token. Cookies are `HttpOnly` and `SameSite=Lax`, `Secure` on HTTPS.
+- Input is validated on the server with zod and cleaned (no control characters, collapsed spaces, length limits).
+  All SQL is parameterised. Every value on a page is HTML-escaped. The existing CSP applies (no inline script).
+- Rate limits use the existing `attempts` table. Only failed sign-ins count (per address, per address and email, and a
+  much higher per-email ceiling, so a stranger cannot lock a partner out). Each invitation answers at most five "already
+  joined" questions, and renames are limited. Password checks are capped at 120 a minute across the server, so a flood
+  gets "busy" answers instead of tying up the server. Passwords use the existing salted scrypt hashing. Partner sessions
+  last 14 days; a new password ends the account's other sessions.
+- **Proxies:** with `TRUST_PROXY=true`, the client address is read `TRUST_PROXY_HOPS` entries from the right of
+  X-Forwarded-For (default 1: one proxy, such as Render alone; 2 for Cloudflare in front of Render). Never the leftmost
+  entry, which the client writes itself. Check the live chain before raising it. The clinic sign-in (`/api/login`) still
+  uses its original reading of the header; switching it to `server/client-ip.ts` is a follow-up once the chain is known.
+- The database waits up to 1.5 s for a clinic command to finish writing instead of failing a request; the commands
+  wait up to 10 s.
+- Comments marked `LEGAL/PRIVACY REVIEW` mark what counsel should look at before real partners join: the terms a
+  partner accepts, the courtesy the clinic offers partner staff (referral-payment rules), sharing aggregate counts with
+  partners, and the visit cookie. This app is not described as HIPAA compliant.
+
+### Known gaps
+
+- Clinic actions are command-line only; there is no clinic screen for partners or invitations yet.
+- One sign-in per email: a business in two clinics' networks needs a second email. Because emails are unique, the join
+  and account forms can confirm that an email already has an account (behind the rate limits); closing that fully needs
+  email verification.
+- Leaving goes through the clinic (`npm run partners -- --remove CODE`); there is no self-service button yet.
+- No self-service password reset (same as clinic accounts): partners are told to call or text.
+- Visits are counted per browser per day; someone clearing cookies or switching devices counts again.
+- The clinic report (React) still carries the old "Our Wellness Network" name; the partner pages use Our Wellness
+  Connections.
