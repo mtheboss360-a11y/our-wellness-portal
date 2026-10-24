@@ -22,8 +22,7 @@ export default function Drivers({ today, onClose }: { today: string; onClose: ()
 function Shell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return <section className="network-page drivers-page" aria-labelledby="drivers-title">
     <div className="network-head">
-      <div><p className="eyebrow">In your community</p><h1 id="drivers-title">Drivers &amp; routes</h1>
-        <p className="network-subtitle">The people out on your route, and everything they logged at each stop.</p></div>
+      <h1 id="drivers-title" className="sr-only">Drivers &amp; routes</h1>
       <button className="network-back" onClick={onClose}>Back to your report</button>
     </div>
     {children}
@@ -56,7 +55,6 @@ function Field({ log, today }: { log: FieldLog; today: string }) {
       <Signups log={log}/>
       <Partners log={log}/>
     </div>
-    <p className="network-data-note">Every number on this page is counted from two forms: the stop log each driver fills in before leaving a business, and the sign-up form behind each tap card and QR code. Bookings are the sign-ups your front desk marked as booked. Positions in the orb follow each stop’s real direction from your clinic; distances are drawn closer together so every stop fits.</p>
   </>;
 }
 
@@ -83,32 +81,32 @@ function Upcoming({ log, today, onShow }: { log: FieldLog; today: string; onShow
 }
 
 function RouteExplorer({ log, route, routes, onPick }: { log: FieldLog; route: FieldRoute; routes: FieldRoute[]; onPick: (id: string) => void }) {
-  const [hover, setHover] = useState<string | null>(null);
+  // Click, not hover: the route view is the default, and a stop's details open only when it's clicked.
   const [picked, setPicked] = useState<string | null>(null);
-  useEffect(() => { setPicked(null); setHover(null); }, [route.id]);
-  const activeId = hover ?? picked;
+  useEffect(() => { setPicked(null); }, [route.id]);
+  const activeId = picked;
   const stop = route.stops.find(s => s.id === activeId) ?? null;
   const driver = driverOf(log, route);
   const t = tally(log, [route]);
   return <section className="field-explorer" aria-labelledby="explorer-title">
     <div className="section-heading"><h2 id="explorer-title">Your route, stop by stop</h2>
-      <p className="section-subtitle">Pick a route. Hover a stop on the orb, or choose it from the list, to see what happened there.</p></div>
+      </div>
     <div className="field-route-picker" role="tablist" aria-label="Routes">
       {routes.map(r => { const d = driverOf(log, r); return <button key={r.id} role="tab" aria-selected={r.id === route.id} className={`field-route-tab ${r.id === route.id ? 'is-current' : ''}`} onClick={() => onPick(r.id)}>
         <Avatar driver={d} size={28}/><span><strong>{dayLabel(r.date)}</strong><small>{d?.name.split(' ')[0] ?? 'TBC'} · {r.stops.length} stops{r.status === 'scheduled' ? ' · scheduled' : ''}</small></span></button>; })}
     </div>
     <div className="field-explorer-grid">
       <div className="field-orb-wrap">
-        <RouteOrb clinic={log.clinic} stops={route.stops} activeId={activeId} onHover={setHover} onSelect={id => setPicked(picked === id ? null : id)}
+        <RouteOrb clinic={log.clinic} stops={route.stops} activeId={activeId} onHover={() => {}} onSelect={id => setPicked(picked === id ? null : id)}
           label={`${route.stops.length}-stop route on ${dayLabel(route.date)} around ${log.clinic.label}`}/>
         <div className="field-orb-legend"><span><i className="lg-clinic"/>Your clinic</span><span><i className="lg-joined"/>Joined</span><span><i className="lg-follow"/>Follow-up</span><span><i className="lg-pending"/>Scheduled</span></div>
       </div>
       <div className="field-side">
-        {stop ? <StopCard log={log} stop={stop} index={route.stops.indexOf(stop)} route={route}/> : <>
+        {stop ? <><button type="button" className="field-link field-back" onClick={() => setPicked(null)}>← Back to the route</button><StopCard log={log} stop={stop} index={route.stops.indexOf(stop)} route={route}/></> : <>
           <div className="field-route-head"><Avatar driver={driver} size={52}/><div><h3>{dayLabel(route.date)} with {driver?.name ?? 'a driver to be confirmed'}</h3>
             <p>{route.status === 'done' ? `${t.stops} stops · ${t.staff} staff met · ${t.cards} cards · ${t.signups} sign-ups so far` : `Starts ${timeLabel(route.start)}. Stops are planned; nothing is logged until the driver arrives.`}</p></div></div>
           <ol className="field-stop-list">{route.stops.map((s, i) => { const n = signupsAt(log, s).length; return <li key={s.id}>
-            <button onClick={() => setPicked(s.id)} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(s.id)} onBlur={() => setHover(null)}>
+            <button onClick={() => setPicked(s.id)}>
               <span className={`field-stop-num is-${s.outcome}`}>{i + 1}</span>
               <span className="field-stop-body"><strong>{s.name}</strong><small>{CATEGORY_LABEL[s.category]} · {s.town}{s.arrived ? ` · ${timeLabel(s.arrived)}` : ''}</small></span>
               <span className="field-stop-meta">{route.status === 'done' ? <>{n} <small>{n === 1 ? 'sign-up' : 'sign-ups'}</small></> : <small>planned</small>}</span>

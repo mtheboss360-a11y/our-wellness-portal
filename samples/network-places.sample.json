@@ -1,0 +1,272 @@
+{
+ "_note": "Fictional businesses for the sample clinic only. The server serves these instead of calling Google Places for any clinic listed in SAMPLE_CLINICS (default orchard-lantern).",
+ "clinic": {
+  "label": "Orchard Lantern Integrative Wellness \u00b7 Oak Brook",
+  "lat": 41.8328,
+  "lng": -87.929
+ },
+ "places": [
+  {
+   "placeId": "sample-ridgeline-strength",
+   "name": "Ridgeline Strength",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8401,
+   "lng": -87.9512,
+   "types": [
+    "gym",
+    "fitness_center"
+   ],
+   "primaryType": "gym",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 212,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-copperfield-yoga",
+   "name": "Copperfield Yoga Loft",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8452,
+   "lng": -87.9401,
+   "types": [
+    "yoga_studio"
+   ],
+   "primaryType": "yoga_studio",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 96,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-meadowlark-chiro",
+   "name": "Meadowlark Chiropractic",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8268,
+   "lng": -87.9455,
+   "types": [
+    "chiropractor"
+   ],
+   "primaryType": "chiropractor",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.7,
+   "reviewCount": 141,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-willow-barber",
+   "name": "Willow & Grain Barbers",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8389,
+   "lng": -87.915,
+   "types": [
+    "barber_shop"
+   ],
+   "primaryType": "barber_shop",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 188,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-brightwater-juice",
+   "name": "Brightwater Juice Bar",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8233,
+   "lng": -87.933,
+   "types": [
+    "juice_shop"
+   ],
+   "primaryType": "juice_shop",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.6,
+   "reviewCount": 74,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-harbor-row-studio",
+   "name": "Harbor Row Studio",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7959,
+   "lng": -87.9756,
+   "types": [
+    "yoga_studio"
+   ],
+   "primaryType": "yoga_studio",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 63,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-fieldstone-pt",
+   "name": "Fieldstone Physical Therapy",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7905,
+   "lng": -87.969,
+   "types": [
+    "physiotherapist"
+   ],
+   "primaryType": "physiotherapist",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 119,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-quarry-lane-fitness",
+   "name": "Quarry Lane Fitness",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7988,
+   "lng": -87.9821,
+   "types": [
+    "gym",
+    "fitness_center"
+   ],
+   "primaryType": "gym",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.7,
+   "reviewCount": 158,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-tamsin-salon",
+   "name": "Tamsin Hair Collective",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7921,
+   "lng": -87.9702,
+   "types": [
+    "hair_salon",
+    "beauty_salon"
+   ],
+   "primaryType": "hair_salon",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 201,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-ember-nail",
+   "name": "Ember Nail Studio",
+   "address": "Westmont, IL 60559",
+   "lat": 41.8012,
+   "lng": -87.974,
+   "types": [
+    "nail_salon",
+    "beauty_salon"
+   ],
+   "primaryType": "nail_salon",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.6,
+   "reviewCount": 88,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-copper-leaf-salon",
+   "name": "Copper Leaf Salon",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.7959,
+   "lng": -88.0107,
+   "types": [
+    "hair_salon",
+    "beauty_salon"
+   ],
+   "primaryType": "hair_salon",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 176,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-northwind-cycle",
+   "name": "Northwind Cycle",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.8089,
+   "lng": -88.0112,
+   "types": [
+    "gym",
+    "fitness_center"
+   ],
+   "primaryType": "gym",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 134,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-ashgrove-pt",
+   "name": "Ashgrove Physical Therapy",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.8031,
+   "lng": -88.0189,
+   "types": [
+    "physiotherapist"
+   ],
+   "primaryType": "physiotherapist",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 92,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-saltbox-yoga",
+   "name": "Saltbox Yoga",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.812,
+   "lng": -88.005,
+   "types": [
+    "yoga_studio"
+   ],
+   "primaryType": "yoga_studio",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.7,
+   "reviewCount": 57,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-cedar-spine",
+   "name": "Cedar Spine & Wellness Chiropractic",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.7998,
+   "lng": -88.0021,
+   "types": [
+    "chiropractor"
+   ],
+   "primaryType": "chiropractor",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 110,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-stillwater-pilates",
+   "name": "Stillwater Pilates",
+   "address": "Hinsdale, IL 60521",
+   "lat": 41.8009,
+   "lng": -87.937,
+   "types": [
+    "yoga_studio"
+   ],
+   "primaryType": "yoga_studio",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 81,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-sable-nail",
+   "name": "Sable Nail Lounge",
+   "address": "Elmhurst, IL 60126",
+   "lat": 41.8851,
+   "lng": -87.937,
+   "types": [
+    "nail_salon",
+    "beauty_salon"
+   ],
+   "primaryType": "nail_salon",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.6,
+   "reviewCount": 143,
+   "googleMapsUri": null
+  }
+ ]
+}
