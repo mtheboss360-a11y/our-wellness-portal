@@ -347,3 +347,15 @@
 .stat-value,.month-leads strong,.rank-number,.table-count,.field-stat-value,.field-driver-stats dd,.field-partner-n strong,.network-fit strong,.field-stop-meta,.month-table td.num,.donut-total,.lead-count strong,.drop-figures strong,.campaign-count,.network-route-count{font-family:var(--nums);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .field-stat-value,.stat-value{font-weight:600}
 .stat-value.stat-town{font-family:var(--hero);letter-spacing:-.012em}
+
+/* The Network Map's orb: big, your clinic in the middle, the network built around it */
+.network-orb-panel{display:flex;flex-direction:column;gap:14px;background:radial-gradient(circle at 50% 46%,#FFFFFF 0,#F6F9F5 58%,var(--page) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.network-orb-panel.is-loading{max-width:720px;margin:26px auto 0}
+.network-orb{display:block;width:100%;aspect-ratio:1;max-height:720px;touch-action:manipulation}
+.network-orb-towns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.network-orb-towns small{margin-left:6px;font-family:var(--nums,system-ui);font-variant-numeric:tabular-nums;opacity:.7}
+.network-orb-status{text-align:center;font-size:13.5px;color:var(--quiet);margin:0 auto;max-width:52ch}
+.network-orb-action{display:flex;justify-content:center}
+/* The orb gets the full width; the business list sits under it */
+.network-layout{grid-template-columns:minmax(0,1fr)}
+.network-orb-panel .network-orb{max-width:760px;margin:0 auto}

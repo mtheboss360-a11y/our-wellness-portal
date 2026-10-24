@@ -31,7 +31,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
     googleTypes: ['gym', 'fitness_center', 'sports_club', 'sports_activity_location'],
     reason: 'People training several times a week book recovery and wellness services more than any other group nearby.' },
   { id: 'yoga', label: 'Yoga & Pilates', icon: 'lotus', color: '#2E8B7A', weight: 58,
-    googleTypes: ['yoga_studio', 'pilates_studio'],
+    googleTypes: ['yoga_studio'], // Google has no pilates type; pilates studios are listed as yoga studios or gyms
     reason: 'A yoga or Pilates membership is already a recurring spend on the body; wellness sessions read as the same decision.' },
   { id: 'physical-therapy', label: 'Physical therapy', icon: 'hand', color: '#7FA96A', weight: 55,
     googleTypes: ['physiotherapist'],
@@ -43,7 +43,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
     googleTypes: ['hair_salon', 'beauty_salon', 'nail_salon', 'barber_shop', 'hair_care', 'makeup_artist'],
     reason: 'A standing appointment every few weeks, with time to talk, and a clientele that already pays for how it feels to look after itself.' },
   { id: 'wellness-retail', label: 'Wellness retail', icon: 'basket', color: '#9B3B3B', weight: 38,
-    googleTypes: ['health_food_store', 'juice_shop', 'vitamin_supplements_store', 'sporting_goods_store'],
+    googleTypes: ['health_food_store', 'juice_shop', 'sporting_goods_store'],
     reason: 'Someone buying supplements or sports nutrition is spending on their own health that same week.' },
   // Competitors are still discovered and still shown — that is the point of the status — but
   // the server refuses to put one on a route. Which categories compete is per-clinic: the

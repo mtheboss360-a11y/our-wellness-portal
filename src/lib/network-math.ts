@@ -117,3 +117,36 @@ export function spread(marker: Marker, radius = 0.09) {
 
 export const milesLabel = (miles: number) => (miles < 0.1 ? 'on the doorstep' : `${miles.toFixed(miles < 10 ? 1 : 0)} mi`);
 export const dateInputValue = (date: Date) => date.toISOString().slice(0, 10);
+
+/** The town in a Google formatted address: "12 Main St, Hinsdale, IL 60521, USA" gives "Hinsdale". */
+export function townOf(address: string | null): string | null {
+  if (!address) return null;
+  const parts = address.split(',').map(part => part.trim()).filter(Boolean);
+  const state = parts.findIndex(part => /^[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/.test(part));
+  const town = state > 0 ? parts[state - 1] : parts.length >= 3 ? parts[parts.length - 3] : null;
+  return town && !/\d/.test(town) ? town : null;
+}
+
+export type TownGroup = { town: string; businesses: MapBusiness[] };
+
+/**
+ * The orb's picks: the towns around the clinic with the most businesses we can route to, and in
+ * each, the best matches by fit score (then the nearest). Five a town and three towns is fifteen
+ * businesses: three routes of five. Competitors and businesses the network can't route to are
+ * never picked; a town with fewer than five shows what it has.
+ */
+export function townPicks(businesses: MapBusiness[], perTown = 5, towns = 3): TownGroup[] {
+  const byTown = new Map<string, MapBusiness[]>();
+  for (const business of businesses) {
+    if (!business.routable || business.status === 'competitor') continue;
+    const town = townOf(business.address);
+    if (!town) continue;
+    byTown.set(town, [...(byTown.get(town) ?? []), business]);
+  }
+  const best = (list: MapBusiness[]) => [...list].sort((a, b) => b.fit.score - a.fit.score || a.distanceMiles - b.distanceMiles);
+  return [...byTown.entries()]
+    .map(([town, list]) => ({ town, businesses: best(list).slice(0, perTown), depth: list.length, nearest: Math.min(...list.map(b => b.distanceMiles)) }))
+    .sort((a, b) => b.depth - a.depth || a.nearest - b.nearest || a.town.localeCompare(b.town))
+    .slice(0, towns)
+    .map(({ town, businesses: picked }) => ({ town, businesses: picked }));
+}
