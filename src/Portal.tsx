@@ -76,15 +76,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
-  const hero = useRef<HTMLHeadingElement>(null);
   const campaign = data.campaigns.find(c => c.id === campaignId) ?? { id: 'empty', name: 'Your campaigns', period: '', locations: [], leads: [] };
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame = 0;
-    const update = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { if (hero.current) hero.current.style.transform = media.matches ? 'none' : `translateY(${Math.min(window.scrollY * 0.01, 3)}px)`; }); };
-    window.addEventListener('scroll', update, { passive: true }); media.addEventListener('change', update);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update); media.removeEventListener('change', update); };
-  }, []);
   useEffect(() => {
     // Re-check a backgrounded session on return rather than leaving cached personal data on screen.
     const refresh = () => { if (document.visibilityState === 'visible') void router.invalidate().catch(() => setError('We couldn’t refresh the report. Please reload the page.')); };
@@ -110,7 +102,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
       {view === 'network' ? <NetworkMap onClose={() => setView('report')}/> : view === 'drivers' ? <Drivers today={data.today} onClose={() => setView('report')}/> : <>
-      <section className="hero"><h1 ref={hero}>Here's how far<br/><span>your marketing materials traveled.</span></h1><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
+      <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>
       </>}

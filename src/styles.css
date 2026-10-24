@@ -51,19 +51,6 @@
 .sample-button:disabled{opacity:.55;cursor:default}
 .sample-access p{margin:10px auto 0;max-width:38ch;font-size:12.5px;line-height:1.5;color:var(--muted)}
 
-/* Typography matched to ouroptimization.com: Playfair Display for display headings,
-   Inter for everything else, same files the site serves. */
-.hero h1,.signin-card h1,.report-panel h2,.section-heading h2,.leads-heading h2,
-.dialog-heading h2,.empty-panel h2,.nothing h2,.table-empty h3{
-  font-family:var(--hero);font-weight:500;letter-spacing:-.012em}
-.hero h1{font-size:clamp(2.3rem,1.25rem + 4.2vw,4.1rem);line-height:1.12;letter-spacing:-.01em;font-weight:500}
-.signin-card h1{font-size:clamp(1.9rem,1.2rem + 2vw,2.5rem);line-height:1.14}
-.report-panel h2,.section-heading h2,.leads-heading h2,.dialog-heading h2{font-size:clamp(1.35rem,1.1rem + .8vw,1.7rem);line-height:1.16}
-.eyebrow{font-weight:700;letter-spacing:.16em}
-/* Numbers stay in Inter, lining and tabular, so columns line up. */
-.stat-value,.donut-total,.month-table .num,.month-leads strong,.rank-number,.lead-count strong,
-.drop-figures strong,.table-count{font-family:var(--sans);font-variant-numeric:tabular-nums lining-nums}
-
 /* ===== Network Map =====
    Same tokens, same radii, same Playfair/Inter pairing as the report. Status colours are the
    verified palette: green for a fit, teal for already in network, gold for needs review,
@@ -395,3 +382,98 @@
 .network-locate-copy{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 8px 8px}
 .network-locate-copy h2{font-family:var(--hero);font-weight:500}
 .network-locate-copy p{max-width:48ch;color:var(--quiet);font-size:14px}
+
+/* ===========================================================================
+   Matched to ouroptimization.com, October 2026 rebuild.
+
+   The site moved to a quieter, flatter language than the one this portal was
+   first built against: hairline borders instead of shadows, Playfair for every
+   section title, a small gold rule above each one, and one pill button shape.
+   The tokens below are copied from the site's own assets/site.css so the two
+   never drift by eye. A client signs out of the portal and lands on the site;
+   it should feel like the same building.
+   =========================================================================== */
+:root{
+  --ground:#F3F6F2; --paper:#F9FBF8;
+  --ink:#1C3A2C; --ink-2:#3D5748; --ink-3:#4F6657;
+  --gold:#BD7189; --gold-sm:#9E4F68; --gold-bright:#EFBCCB;
+  --cream:#E3EDE4; --blush:#F7EDF0; --stone:#E6EDE5;
+  --line:#D5E0D5; --line-soft:#E2EAE1;
+  --wrap:1180px;
+  /* the portal's older names, kept so every existing rule follows along */
+  --body:var(--ink-2); --quiet:var(--ink-3); --muted:#6B7B70;
+  --accent:var(--gold); --accent-text:var(--gold-sm);
+  --page:var(--ground); --card:var(--paper); --surface:var(--stone);
+  --border:var(--line); --radius:18px;
+}
+
+/* The site's page is one flat colour: no wash behind the content. */
+.portal-page,.signin-page{background:var(--ground)}
+
+/* Width and gutters, the site's. */
+.report,.site-header{max-width:var(--wrap)}
+@media(min-width:1500px){.report,.site-header{max-width:var(--wrap)}}
+
+/* Header: sticky and translucent, the same height and logo size as the site. */
+.site-header{position:sticky;top:0;z-index:40;min-height:66px;padding:12px 0;
+  background:rgba(243,246,242,.93);-webkit-backdrop-filter:saturate(1.1) blur(10px);
+  backdrop-filter:saturate(1.1) blur(10px);border-bottom:1px solid var(--line)}
+.brand img{width:clamp(148px,40vw,186px)}
+@media(max-width:760px){.site-header{min-height:60px;padding:10px 0}.brand img{width:148px}}
+
+/* One button shape, the site's .btn: a pill with a hairline, filling on hover. */
+.signout-button,.past-jobs-button,.sample-button,.boot button,.campaign-option{
+  border-radius:999px;border:1px solid var(--ink);background:transparent;color:var(--ink);
+  font-weight:600;transition:background-color .3s ease,color .3s ease,border-color .3s ease}
+.signout-button:hover,.past-jobs-button:hover,.sample-button:hover:not(:disabled),.boot button:hover{
+  background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.past-jobs-button:hover svg,.signout-button:hover svg{color:inherit}
+.signin-button{border-radius:999px;min-height:50px;background:var(--ink);color:var(--ground)}
+.signin-button:hover{background:#2A5240}
+.campaign-option{border-radius:14px;background:var(--paper);border-color:var(--line);color:var(--ink-2)}
+.campaign-option:hover,.campaign-option.is-current{background:var(--stone);border-color:#C1D1C3;color:var(--ink-2)}
+
+/* Panels: the site has no drop shadows anywhere. Hairlines do the work. */
+.stat-card,.report-panel,.leads-section,.drop-card,.month-table-wrap,.empty-panel,.signin-card{
+  background:var(--paper);border:1px solid var(--line);box-shadow:none}
+.stat-card,.report-panel,.leads-section,.empty-panel{border-radius:var(--radius)}
+.signin-card{border-radius:var(--radius)}
+.drop-card{border-radius:14px}
+.drop-card:hover{border-color:#B7CABB;background:var(--ground)}
+.ranked-row:hover,.month-table tbody tr:hover,tbody tr:hover{background:var(--stone)}
+.campaign-dialog{background:var(--paper);border-color:var(--line);border-radius:var(--radius);
+  box-shadow:0 16px 80px rgba(28,58,44,.13)}
+
+/* The section head: a 52px gold rule, the eyebrow, then a Playfair title. */
+.eyebrow{font:700 .74rem/1.5 var(--sans);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold-sm);margin-bottom:14px}
+.section-heading::before,.leads-section::before{
+  content:"";display:block;width:52px;height:1px;background:var(--gold);margin-bottom:22px}
+/* .leads-heading is a flex row, so its rule hangs off the section, not the row. */
+.leads-section::before{margin-bottom:20px}
+.section-heading h2,.leads-heading h2,.report-panel h2,.empty-panel h2,.dialog-heading h2{
+  font-family:var(--hero);font-weight:500;letter-spacing:-.012em;
+  font-size:clamp(1.4rem,1.05rem + 1.5vw,2.1rem);line-height:1.18}
+.section-subtitle,.panel-footnote{color:var(--ink-3)}
+
+/* Inputs, to the site's line colour. */
+.field input{border-color:var(--line);background:var(--paper)}
+.field input:focus{border-color:var(--ink)}
+.table-controls select{background:var(--paper);border-color:var(--line)}
+:focus-visible{outline:2px solid var(--gold-sm);outline-offset:3px}
+
+/* The month table reads as part of the same family. */
+.month-table thead th,.month-table tfoot td,.month-table tfoot th{background:var(--stone)}
+.month-bar{background:var(--cream)}
+.month-table tbody tr.is-current{background:var(--stone)}
+
+/* The report opens on the figures. With the heading gone the clinic line and the
+   Past jobs button sit directly under the header, and everything moves up. */
+.hero{padding:24px 0 20px}
+.hero .campaign-line{margin-top:0}
+.stat-grid{margin-top:22px}
+@media(max-width:760px){
+  .hero{padding:16px 0 14px}
+  .hero .campaign-line{margin-top:0}
+  .stat-grid{margin-top:16px}
+}
