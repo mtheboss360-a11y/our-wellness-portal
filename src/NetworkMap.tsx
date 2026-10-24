@@ -190,7 +190,6 @@ function LocateClinic({ name, onDone }: { name: string; onDone: (value: NetworkM
     <NetworkOrb loading={working} groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName={name}/>
     <div className="network-locate-copy">
       <h2>{working ? (step === 'locating' ? 'Finding your clinic\u2026' : 'Finding the businesses that share your clients\u2026') : 'Build your map from your clinic.'}</h2>
-      {!working && <p>Share your location while you&rsquo;re at the clinic. We&rsquo;ll find the businesses around you, check them against the network and build your map. You only do this once.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
       {!working && <button type="button" className="network-primary" onClick={locate}><Icon name="map" size={17}/> Use my location</button>}
     </div>
