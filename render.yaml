@@ -25,3 +25,5 @@ services:
         value: /data/portal.sqlite
       - key: TRUST_PROXY
         value: "true"
+      - key: Google_places_API
+        sync: false          # set in the Render dashboard; the value never enters this file

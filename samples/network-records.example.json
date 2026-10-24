@@ -1,0 +1,47 @@
+[
+  {
+    "id": "example-own-partner",
+    "kind": "partner",
+    "ownerClinicId": "orchard-lantern",
+    "placeId": null,
+    "name": "Example Hair Studio",
+    "address": "22 Example Ave, Naperville, IL 60540",
+    "note": "Signed September 2026. The clinic that holds it sees Already in network."
+  },
+  {
+    "id": "example-other-partner",
+    "kind": "partner",
+    "ownerClinicId": "another-clinic-slug",
+    "placeId": null,
+    "name": "Example Yoga Loft",
+    "address": "55 Example St, Naperville, IL 60540",
+    "note": "Every other clinic sees Possible conflict, and never whose partner it is."
+  },
+  {
+    "id": "example-exclusivity",
+    "kind": "exclusive",
+    "ownerClinicId": "another-clinic-slug",
+    "placeId": null,
+    "name": "Example Motion Therapy",
+    "address": "300 Example Rd, Westmont, IL 60559",
+    "note": "Territory agreement. Other clinics see Unavailable and cannot route to it."
+  },
+  {
+    "id": "example-competitor",
+    "kind": "competitor",
+    "ownerClinicId": null,
+    "placeId": null,
+    "name": "Example Wellness Rooms",
+    "address": "8 Example Blvd, Naperville, IL 60540",
+    "note": "Network-wide: nobody routes here. Category rules catch most of these on their own."
+  },
+  {
+    "id": "example-do-not-approach",
+    "kind": "blocked",
+    "ownerClinicId": null,
+    "placeId": null,
+    "name": "Example Supplements",
+    "address": "1500 Example Rd, Naperville, IL 60563",
+    "note": "Asked not to be approached. Unavailable to everyone, including the clinic that filed it."
+  }
+]

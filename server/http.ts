@@ -2,6 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
+import { routeRequestInput, selectionInput } from './validation';
+import { ensureDiscovery } from './network/map';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
@@ -41,6 +43,41 @@ export function createPortalServer(options: Options) {
           const result = store.signIn(input.data.username, input.data.password, ip, cookie);
           if (result.ok) response.setHeader('Set-Cookie', `${cookieName}=${result.token}; ${cookieFlags}; Max-Age=28800`);
           json(response, 200, { ok: result.ok, message: result.message }); return;
+        }
+        // THE NETWORK MAP. Every endpoint below resolves the clinic from the session cookie and
+        // from nowhere else, so `?clinicId=` and a borrowed place ID are both simply ignored.
+        if (url.pathname.startsWith('/api/network/')) {
+          const clinic = store.clinicFromToken(cookie);
+          if (!clinic) { json(response, 401, { error: 'Please sign in again to open your network map.' }); return; }
+          if (url.pathname === '/api/network/map' && request.method === 'GET') {
+            const refresh = await ensureDiscovery(store, clinic.id);
+            json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
+            return;
+          }
+          if (url.pathname === '/api/network/refresh' && request.method === 'POST') {
+            // Deliberately not a forced search: the cooldown in ensureDiscovery still applies, so
+            // clicking this cannot spend Places calls repeatedly. A forced pass is a terminal job.
+            const refresh = await ensureDiscovery(store, clinic.id);
+            json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
+            return;
+          }
+          if (url.pathname === '/api/network/selection' && request.method === 'POST') {
+            let input;
+            try { input = selectionInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That selection could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That selection could not be read.' }); return; }
+            json(response, 200, store.saveSelection(clinic.id, input.data.placeIds));
+            return;
+          }
+          if (url.pathname === '/api/network/route-request' && request.method === 'POST') {
+            let input;
+            try { input = routeRequestInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That request could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: input.error.issues[0]?.message ?? 'Please check the dates and contact name.' }); return; }
+            const result = store.createRouteRequest(clinic.id, input.data);
+            if (!result.ok) { json(response, 400, { error: result.message }); return; }
+            json(response, 200, { request: result.request, requests: store.routeRequests(clinic.id), selection: store.selection(clinic.id) });
+            return;
+          }
+          json(response, 404, { error: 'Not found.' }); return;
         }
         if (url.pathname === '/api/logout' && request.method === 'POST') { store.signOut(cookie); response.setHeader('Set-Cookie', `${cookieName}=; ${cookieFlags}; Max-Age=0`); json(response, 200, { ok: true }); return; }
         json(response, 404, { error: 'Not found.' }); return;

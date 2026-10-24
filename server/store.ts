@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { publicPortal } from '../data/portal-data';
 import type { Campaign, PortalSnapshot } from '../data/portal-data';
+import { openNetwork } from './network/db';
 export type PortalStore = ReturnType<typeof openStore>;
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
@@ -21,6 +22,9 @@ export function openStore(filename: string, enableSample = true) {
     CREATE TABLE IF NOT EXISTS seeds (id TEXT PRIMARY KEY);
     CREATE INDEX IF NOT EXISTS sessions_expiration ON sessions(expires_at);
   `);
+  // The Network Map's own tables. Additive: every statement is CREATE ... IF NOT EXISTS, so an
+  // existing database keeps its clinics, users, campaigns and sessions untouched.
+  const network = openNetwork(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
@@ -78,5 +82,7 @@ export function openStore(filename: string, enableSample = true) {
     return { ok: true as const, token, message: '' };
   }
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
-  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, close: () => db.close() };
+  // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
+  // the session row and nothing else: there is no code path that takes a clinic from a request.
+  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, clinicFromToken: session, ...network, close: () => db.close() };
 }
