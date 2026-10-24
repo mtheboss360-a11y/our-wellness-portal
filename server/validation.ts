@@ -67,3 +67,10 @@ export const fieldLogFeed = z.object({
   feed.routes.forEach((route, i) => { if (!drivers.has(route.driverId)) ctx.addIssue({ code: 'custom', path: ['routes', i, 'driverId'], message: 'Route refers to a missing driver.' }); });
   feed.signups.forEach((signup, i) => { if (stops.get(signup.stopId) !== signup.routeId) ctx.addIssue({ code: 'custom', path: ['signups', i, 'stopId'], message: 'Sign-up refers to a stop that is not on its route.' }); });
 });
+
+// A clinic's location from its own device, used once, when the team has not saved one yet.
+export const deviceLocationInput = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).max(100000).optional(),
+}).strict();

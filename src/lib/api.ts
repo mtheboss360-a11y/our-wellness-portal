@@ -15,6 +15,7 @@ export const logout = () => request<{ ok: boolean }>('/api/logout', 'POST');
 import type { NetworkMapPayload } from './network-math';
 export const getNetworkMap = () => request<NetworkMapPayload>('/api/network/map');
 export const refreshNetworkMap = () => request<NetworkMapPayload>('/api/network/refresh', 'POST', {});
+export const setDeviceLocation = (input: { lat: number; lng: number; accuracy?: number }) => request<NetworkMapPayload>('/api/network/location', 'POST', input);
 export const saveSelection = (placeIds: string[]) => request<{ selection: string[]; refused: Array<{ placeId: string; reason: string }> }>('/api/network/selection', 'POST', { placeIds });
 export const requestRoute = (input: { contactName: string; contactPhone: string; notes: string; preferredFrom: string; preferredTo: string }) =>
   request<{ request: NetworkMapPayload['requests'][number]; requests: NetworkMapPayload['requests']; selection: string[] }>('/api/network/route-request', 'POST', input);
