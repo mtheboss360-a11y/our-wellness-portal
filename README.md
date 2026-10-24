@@ -223,7 +223,7 @@ what ships.
 This is a runnable foundation with real server-side authentication, not a compliance certification. Before putting real client data online:
 
 1. Host on a Node-compatible server with persistent storage, HTTPS, and encrypted backups.
-2. Copy `.env.example` to `.env`, then set `NODE_ENV=production`, `ENABLE_SAMPLE_DATA=false`, and `APP_ORIGIN=https://your-portal-domain` (no trailing slash).
+2. Copy `.env.example` to `.env`, then set `NODE_ENV=production`, `ENABLE_SAMPLE_DATA=false`, and `APP_ORIGIN=https://your-portal-domain` (no trailing slash). Sign-ins are accepted from that origin and its www twin (`https://www.your-portal-domain`, or the bare domain if `APP_ORIGIN` starts with `www.`), because the host redirects one to the other; every other origin gets a 403.
 3. Keep `HOST=127.0.0.1` behind your HTTPS reverse proxy, or configure container networking deliberately.
 4. With HTTPS, cookies use `HttpOnly; Secure; SameSite=Strict` and the `__Host-` prefix. HTTP cookies are allowed only for localhost development.
 5. Leave `TRUST_PROXY=false` unless your trusted proxy overwrites X-Forwarded-For and direct access to Node is blocked. The rate limit otherwise uses the socket IP.
