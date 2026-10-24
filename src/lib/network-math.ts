@@ -150,3 +150,13 @@ export function townPicks(businesses: MapBusiness[], perTown = 5, towns = 3): To
     .slice(0, towns)
     .map(({ town, businesses: picked }) => ({ town, businesses: picked }));
 }
+
+/**
+ * The best fifteen, in three fives: the top 5, then 6–10, then 11–15. Routable businesses only, ranked by
+ * fit and then distance. Each five is one route and one side of the orb.
+ */
+export const TIERS = ['Top 5', 'Top 10', 'Top 15'] as const;
+export function bestFifteen(businesses: MapBusiness[]): TownGroup[] {
+  const ranked = businesses.filter(b => b.routable).sort((a, b) => b.fit.score - a.fit.score || a.distanceMiles - b.distanceMiles).slice(0, 15);
+  return TIERS.map((label, i) => ({ town: label, businesses: ranked.slice(i * 5, i * 5 + 5) })).filter(group => group.businesses.length);
+}
