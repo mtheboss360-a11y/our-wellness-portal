@@ -5,14 +5,16 @@ import type { Campaign, PortalSnapshot, PublicPortal } from '../data/portal-data
 import { accumulation, dateLabel, filterLeads, isNew, number, phoneLabel, summarize , monthly, fieldDays } from './lib/portal-math';
 import NetworkMap from './NetworkMap';
 import Drivers from './Drivers';
+import BakeryNetwork from './BakeryNetwork';
 
 
 
-type IconName = 'pin' | 'people' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock';
+type IconName = 'pin' | 'people' | 'cake' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock';
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths = {
     pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
     people: <><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3H3ZM16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3h-3"/></>,
+    cake: <><path d="M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V8M12 5.5v.01"/></>,
     trophy: <><path d="M7 3h10v7a5 5 0 0 1-10 0V3ZM7 5H3v3a4 4 0 0 0 4 4M17 5h4v3a4 4 0 0 1-4 4M12 15v5M7 21h10"/></>,
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
     arrow: <><path d="M5 12h14M14 7l5 5-5 5"/></>,
@@ -70,7 +72,7 @@ function SignIn({ config }: { config: PublicPortal }) {
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
-  const [view, setView] = useState<'report' | 'drivers' | 'network'>('report');
+  const [view, setView] = useState<'report' | 'drivers' | 'network' | 'bakeries'>('report');
   const [campaignId, setCampaignId] = useState(data.campaigns[0]?.id ?? '');
   const [selected, setSelected] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -97,11 +99,12 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
         <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
         <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> Drivers &amp; routes</button>
         <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Referral network</button>
+        <button className={view === 'bakeries' ? 'is-current' : ''} aria-current={view === 'bakeries' ? 'page' : undefined} onClick={() => setView('bakeries')}><Icon name="cake" size={16}/> Bakery network</button>
       </nav>
       <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {view === 'network' ? <NetworkMap onClose={() => setView('report')}/> : view === 'drivers' ? <Drivers today={data.today} onClose={() => setView('report')}/> : <>
+      {view === 'bakeries' ? <BakeryNetwork onClose={() => setView('report')}/> : view === 'network' ? <NetworkMap onClose={() => setView('report')}/> : view === 'drivers' ? <Drivers today={data.today} onClose={() => setView('report')}/> : <>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>

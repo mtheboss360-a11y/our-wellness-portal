@@ -23,3 +23,7 @@ export const requestRoute = (input: { contactName: string; contactPhone: string;
 // The field log: drivers, routes and sign-ups. Null until a clinic's log has been imported.
 import type { FieldLog } from '../../data/field-data';
 export const getField = () => request<{ field: FieldLog | null }>('/api/field');
+export type BakeryRow = { placeId: string; name: string | null; address: string | null; town: string | null; kind: 'local' | 'panera' | 'krispy-kreme'; label: string; category: { color: string }; distanceMiles: number; rating: number | null; reviewCount: number | null; googleMapsUri: string | null };
+export type BakeryPayload = { clinic: { name: string; location: { label: string } | null }; bakeries: BakeryRow[]; choice: string | null; placesConfigured: boolean };
+export const getBakeries = () => request<BakeryPayload>('/api/network/bakeries');
+export const chooseBakery = (placeId: string | null) => request<BakeryPayload>('/api/network/bakery', 'POST', { placeId });

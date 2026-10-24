@@ -12,6 +12,7 @@ export const campaignFeed = z.array(z.object({ id: z.string().min(1).max(100), n
 // server looks every one up in that clinic's own cached map, so a made-up or borrowed ID simply
 // is not found. Names, addresses and statuses are never accepted from the browser.
 export const selectionInput = z.object({ placeIds: z.array(z.string().min(1).max(255)).max(40) }).strict();
+export const bakeryChoiceInput = z.object({ placeId: z.string().min(1).max(255).nullable() }).strict();
 export const routeRequestInput = z.object({
   contactName: z.string().trim().min(1).max(120),
   contactPhone: z.string().trim().max(40).default(''),

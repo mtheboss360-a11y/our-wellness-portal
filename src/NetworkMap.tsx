@@ -114,7 +114,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
  * there. The browser asks for permission; nothing is sent until the clinic agrees. The big orb and one
  * button; the orb stays big while the clinic is found and its best fifteen are looked up.
  */
-function LocateClinic({ onDone }: { onDone: (value: NetworkMapPayload) => void }) {
+export function LocateClinic({ onDone }: { onDone: (value: NetworkMapPayload) => void }) {
   const [step, setStep] = useState<'idle' | 'locating' | 'searching'>('idle');
   const [error, setError] = useState('');
   function locate() {

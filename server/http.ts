@@ -2,9 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { deviceLocationInput, routeRequestInput, selectionInput } from './validation';
+import { bakeryChoiceInput, deviceLocationInput, routeRequestInput, selectionInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
+import { bakeryPayload, ensureBakeries } from './network/bakeries';
 import { configured as placesConfigured } from './network/places';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
@@ -95,6 +96,19 @@ export function createPortalServer(options: Options) {
             store.setClinicLocation({ clinicId: clinic.id, label: 'Set from your device', lat: input.data.lat, lng: input.data.lng, radiusMiles: DEFAULT_RADIUS_MILES, placeId: null, competitorCategories: [] });
             const refresh = await ensureDiscovery(store, clinic.id);
             json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
+            return;
+          }
+          // The bakery network: where the clinic's treats come from. One bakery chosen at a time.
+          if (url.pathname === '/api/network/bakeries' && request.method === 'GET') {
+            await ensureBakeries(store, clinic.id);
+            json(response, 200, bakeryPayload(store, clinic.id, clinic.name));
+            return;
+          }
+          if (url.pathname === '/api/network/bakery' && request.method === 'POST') {
+            let input;
+            try { input = bakeryChoiceInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That choice could not be read.' }); return; }
+            if (!input.success || !store.chooseBakery(clinic.id, input.data.placeId)) { json(response, 400, { error: 'That bakery is no longer on your list.' }); return; }
+            json(response, 200, bakeryPayload(store, clinic.id, clinic.name));
             return;
           }
           if (url.pathname === '/api/network/selection' && request.method === 'POST') {
