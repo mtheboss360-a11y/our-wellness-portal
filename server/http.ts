@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { deviceLocationInput, routeRequestInput, selectionInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
+import { configured as placesConfigured } from './network/places';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
@@ -43,6 +44,12 @@ export function createPortalServer(options: Options) {
       const cookie = request.headers.cookie?.split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
       if (url.pathname.startsWith('/api/')) {
         if (request.method === 'POST' && !allowed.has(request.headers.origin ?? '')) { json(response, 403, { error: 'Please refresh and try again.' }); return; }
+        // A health check anyone can read: whether the server sees a Places key, never the key itself, and the
+        // NAMES (no values) of any environment variables that look like one, so a misnamed key can be spotted.
+        if (url.pathname === '/api/health' && request.method === 'GET') {
+          json(response, 200, { ok: true, placesKey: placesConfigured(), placesVariableNames: Object.keys(process.env).filter(name => /place/i.test(name)).sort() });
+          return;
+        }
         if (url.pathname === '/api/portal' && request.method === 'GET') { json(response, 200, store.snapshot(cookie)); return; }
         if (url.pathname === '/api/login' && request.method === 'POST') {
           let input;
