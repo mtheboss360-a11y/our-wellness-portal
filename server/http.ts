@@ -2,7 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { routeRequestInput, selectionInput } from './validation';
+import { deviceLocationInput, routeRequestInput, selectionInput } from './validation';
+import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
@@ -32,7 +33,7 @@ export function createPortalServer(options: Options) {
   return createServer(async (request, response) => {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'same-origin');
-    response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)'); // the Network Map may ask for the clinic's location
     response.setHeader('X-Robots-Tag', 'noindex, nofollow');
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'${vite ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'${vite ? ' ws://localhost:* ws://127.0.0.1:*' : ''}; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'`);
@@ -72,6 +73,19 @@ export function createPortalServer(options: Options) {
           if (url.pathname === '/api/network/refresh' && request.method === 'POST') {
             // Deliberately not a forced search: the cooldown in ensureDiscovery still applies, so
             // clicking this cannot spend Places calls repeatedly. A forced pass is a terminal job.
+            const refresh = await ensureDiscovery(store, clinic.id);
+            json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
+            return;
+          }
+          // The clinic's spot from its own device: allowed once, while no location is saved. After that only the
+          // team changes it (scripts/set-clinic-location.ts), so a phone opened at home can't move a clinic's map.
+          if (url.pathname === '/api/network/location' && request.method === 'POST') {
+            let input;
+            try { input = deviceLocationInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That location could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That location could not be read.' }); return; }
+            if (store.clinicLocation(clinic.id)) { json(response, 409, { error: 'Your clinic\u2019s location is already set. Call the team to change it.' }); return; }
+            if ((input.data.accuracy ?? 0) > 2000) { json(response, 400, { error: 'Your device couldn\u2019t pin your location closely enough. Try again with location set to precise, or call the team.' }); return; }
+            store.setClinicLocation({ clinicId: clinic.id, label: 'Set from your device', lat: input.data.lat, lng: input.data.lng, radiusMiles: DEFAULT_RADIUS_MILES, placeId: null, competitorCategories: [] });
             const refresh = await ensureDiscovery(store, clinic.id);
             json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
             return;

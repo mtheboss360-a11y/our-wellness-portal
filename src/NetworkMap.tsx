@@ -13,7 +13,7 @@
 // gathered into clusters. Every business also carries its own Google Maps link, and the route
 // opens in Google Maps itself.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { getNetworkMap, refreshNetworkMap, requestRoute, saveSelection } from './lib/api';
+import { getNetworkMap, refreshNetworkMap, requestRoute, saveSelection, setDeviceLocation } from './lib/api';
 import { Icon, type IconName } from './Icons';
 import { dateInputValue, directionsUrl, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
 import NetworkOrb from './NetworkOrb';
@@ -83,8 +83,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your network map.</h2><p>{error}</p><button className="network-primary" onClick={() => void load()}>Try again</button></div></Shell>;
   if (!data) return <Shell onClose={onClose}><div className="network-orb-panel is-loading"><NetworkOrb loading groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName="Your clinic"/>
     <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p></div></Shell>;
-  if (!location) return <Shell onClose={onClose}><div className="network-state"><Icon name="map" size={30}/><h2>Your map isn’t set up yet.</h2>
-    <p>The network map opens on your clinic’s saved location, and we don’t have one on file for {data.clinic.name} yet. Call the team and we’ll add it — the map appears here straight afterwards.</p></div></Shell>;
+  if (!location) return <Shell onClose={onClose}><LocateClinic name={data.clinic.name} onDone={value => { setData(value); setNotice(value.refresh?.detail ?? ''); }}/></Shell>;
 
   const selectionIds = data.selection;
   const atCapacity = selectionIds.length >= data.maxStops;
@@ -164,6 +163,37 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
     <DataNote data={data} busy={busy} onRefresh={refresh}/>
     <ScheduleDialog ref={schedule} data={data} selected={selected} onDone={value => { setData({ ...data, requests: value.requests, selection: value.selection }); setNotice('Your visit request is with the OUR Optimization team. We’ll confirm a time with you.'); }}/>
   </Shell>;
+}
+
+/**
+ * No location saved yet: the clinic can share its device's location once, and the map is built from
+ * there. The browser asks for permission; nothing is sent until the clinic agrees. The orb pulses
+ * while the device finds itself and while the businesses around it are looked up and cross-checked.
+ */
+function LocateClinic({ name, onDone }: { name: string; onDone: (value: NetworkMapPayload) => void }) {
+  const [step, setStep] = useState<'idle' | 'locating' | 'searching'>('idle');
+  const [error, setError] = useState('');
+  function locate() {
+    if (!('geolocation' in navigator)) { setError('This browser can\u2019t share a location. Call the team and we\u2019ll set your clinic\u2019s spot for you.'); return; }
+    setError(''); setStep('locating');
+    navigator.geolocation.getCurrentPosition(async position => {
+      setStep('searching');
+      try { onDone(await setDeviceLocation({ lat: position.coords.latitude, lng: position.coords.longitude, accuracy: position.coords.accuracy })); }
+      catch (failure) { setError(failure instanceof Error ? failure.message : 'We couldn\u2019t build your map.'); setStep('idle'); }
+    }, failure => {
+      setError(failure.code === failure.PERMISSION_DENIED ? 'Location is turned off for this site. Allow it in your browser\u2019s settings, or call the team and we\u2019ll set your clinic\u2019s spot for you.' : 'Your device couldn\u2019t find its location just now. Try again in a moment.');
+      setStep('idle');
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  }
+  const working = step !== 'idle';
+  return <div className="network-orb-panel network-locate">
+    <NetworkOrb loading={working} groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName={name}/>
+    <div className="network-locate-copy">
+      <h2>{working ? (step === 'locating' ? 'Finding your clinic\u2026' : 'Finding the businesses that share your clients\u2026') : 'Build your map from your clinic.'}</h2>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {!working && <button type="button" className="network-primary" onClick={locate}><Icon name="map" size={17}/> Use my location</button>}
+    </div>
+  </div>;
 }
 
 function Shell({ children, onClose, subtitle }: { children: React.ReactNode; onClose: () => void; subtitle?: string }) {
