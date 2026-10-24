@@ -62,6 +62,14 @@ server/validation.ts     Campaign-feed validation
 scripts/create-client.ts Create an account from the trusted server CLI
 scripts/import-campaigns.ts Validate and import a clinic-specific data feed
 tests/portal.test.ts      Automated calculations, empty-state and auth tests
+server/network/config.ts  Category rules, weights, limits — the Network Map's one config file
+server/network/places.ts  Google Places (New); the only module that reads the API key
+server/network/network.ts Cross-reference and fit score, as pure functions
+server/network/db.ts      The Network Map's tables and queries, all clinic-scoped
+server/network/map.ts     When a Places call may be spent, and when the cache is reused
+src/NetworkMap.tsx        The Network Map screen
+src/lib/network-math.ts   Clustering, filtering and the Google Maps route link
+tests/network.test.ts     Tenancy, conflict rules, route limits, caching and retention
 public/assets/           Original logo and favicon files from your website
 BRAND-SOURCES.md          Exact asset URLs and palette sources
 QA.md                    Test results, review, and remaining hosting work
@@ -101,6 +109,114 @@ npm run import-campaigns -- --clinic clinic-slug --file /path/to/campaigns.json
 ```
 
 Each campaign needs `id`, `name`, `period`, `locations`, and `leads`. Import validation checks date format, unique identifiers, positive/zero flyer counts, valid email/phone shapes, and lead-to-location links. Existing campaign IDs for that clinic are updated; omitted campaigns are retained, not deleted. Accounts cannot choose another clinic via a request parameter: clinic identity always comes from the authenticated server session.
+
+## The Network Map
+
+A signed-in client has two screens, switched from the tabs in the header: **Your report** and
+**Network Map**. The map opens on the clinic's own saved location and shows the businesses
+around it — fitness studios, yoga and Pilates, physical therapy, chiropractic, salons and
+wellness retail — with what the network already knows about each one, and lets the client put
+up to five of them on a route.
+
+### Set a clinic up
+
+A clinic with no saved location sees a plain message, not an empty map. Give it one:
+
+```sh
+npm run set-clinic-location -- --clinic clinic-slug \
+  --label "100 Main St, Naperville, IL 60540" --lat 41.7735 --lng=-88.1520 --radius 5
+```
+
+A negative longitude needs the equals sign (`--lng=-88.1520`); without it Node reads the dash
+as the next option. `--competitors med-spa,salon` overrides which categories count as direct
+competitors for that clinic; the default is the med spa and wellness centre category.
+
+Then load the network's own records — the data every status is decided against:
+
+```sh
+npm run import-network-records -- --file ./network-records.json
+```
+
+Each record is `{ id, kind, ownerClinicId, placeId, name, address, note }`, where `kind` is
+`client`, `partner`, `exclusive`, `competitor` or `blocked`. `ownerClinicId` is the clinic that
+holds the arrangement. It decides whether another clinic sees "Already in network" or
+"Unavailable", and **it is never sent to a browser**: a client is told that an agreement exists,
+never whose it is. Records are matched to a business by place ID first, then by a normalised
+name, then by house number plus ZIP.
+
+### What a client sees
+
+Each business gets a plain-language status and a reason:
+
+| Status | Means | Can it go on a route? |
+| --- | --- | --- |
+| Good referral fit | Likely shared clientele, no known conflict | Yes |
+| Already in network | Approved for this clinic already | Yes |
+| Possible conflict | Another arrangement, or a business in two lines of work | Yes, and the request is flagged for review |
+| Unavailable | An agreement or a do-not-approach record covers it | No |
+| Direct competitor | Sells the same sessions nearby | No |
+
+The fit score is 0-100: up to 60 for the category and up to 40 for distance, both shown with
+the reason. **Google's rating and review count are not inputs** — they are displayed as context
+with the caveat that a popular business is not one that has agreed to anything.
+
+`routable: false` is enforced on the server, not in the browser: `saveSelection` and
+`createRouteRequest` re-run the same cross-reference and drop anything refused, so editing a
+request cannot route a clinic to a competitor or a restricted business.
+
+### Routes
+
+**Start Route** opens an ordinary Google Maps directions link (the Maps URLs API — no key, no
+billing, no route optimisation) with the clinic as the origin and the stops in the order the
+client arranged them. Google drives them in that order and does not reorder them.
+
+**Schedule Route** creates a visit request with the dates, a contact and the stops. It is
+created as `requested` and the portal says "Requested — not scheduled yet" until the team
+accepts it. There is no web operations screen yet; requests are handled from the terminal:
+
+```sh
+npm run route-requests                                    # everything, newest first
+npm run route-requests -- --status requested              # the ones waiting
+npm run route-requests -- --accept <id> --note "Wed 3pm"  # the client then sees "Scheduled by the team"
+npm run route-requests -- --decline <id> --note "..."
+npm run route-requests -- --complete <id>
+```
+
+### The Google Places key, and what is stored
+
+The server reads `process.env.Google_places_API` — that exact, case-sensitive name, set in the
+Render dashboard. It is used in one place, the `X-Goog-Api-Key` header in
+`server/network/places.ts`, and is never logged, never returned by an endpoint and never sent
+to the browser.
+
+Opening the map does **not** search Google. One discovery pass — a Nearby Search per category —
+runs when a clinic's cache is empty or when its refresh cooldown has passed, and the result is
+reused until then. Google Maps Platform terms allow a place ID to be kept indefinitely and its
+content for up to 30 days, so `map_place_ids` keeps the IDs and `map_places` keeps names,
+addresses, coordinates and ratings with a 30-day expiry that is purged on read. Set
+`NETWORK_MAP_AUTO_DISCOVER=false` to stop the automatic pass and refresh by hand instead:
+
+```sh
+npm run refresh-network-map -- --clinic clinic-slug
+```
+
+If the key is missing or refused, the map says so plainly and stays empty. No business, rating
+or status is ever invented.
+
+### The map itself
+
+There is **no embedded Google basemap**. The server-side Places key must never be exposed to a
+browser, and no referrer-restricted browser key is configured for this project. The map is
+drawn from coordinates instead: the clinic at the centre, distance rings, one circular marker
+per business coloured and iconed by category, crowded areas gathered into clusters that spread
+open when tapped, and the distance filter doubling as the zoom. Every business also carries its
+own Google Maps link, and the route opens in Google Maps.
+
+To add a real Google basemap later you need a **second, browser-restricted Maps JavaScript API
+key** (HTTP-referrer restricted to the portal's domain), exposed to the client as a `VITE_`
+variable, plus `https://maps.googleapis.com` added to `script-src`, `img-src` and `connect-src`
+in the Content-Security-Policy in `server/http.ts`. Until both exist, the coordinate plot is
+what ships.
 
 ## Hosting safely
 

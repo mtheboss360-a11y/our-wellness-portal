@@ -1,0 +1,2557 @@
+{
+ "clinic": {
+  "label": "Orchard Lantern Integrative Wellness \u00b7 Oak Brook",
+  "lat": 41.8328,
+  "lng": -87.929
+ },
+ "drivers": [
+  {
+   "id": "marcus",
+   "name": "Marcus Reed",
+   "photo": "/assets/field/marcus.jpg",
+   "homeBase": "Bolingbrook",
+   "since": "2026-06-02",
+   "vehicle": "Silver sedan",
+   "languages": [
+    "English"
+   ],
+   "bio": "Ran a UPS route for six years, so he knows every loading-dock door in DuPage. Front desks remember him by the second visit."
+  },
+  {
+   "id": "elena",
+   "name": "Elena Vargas",
+   "photo": "/assets/field/elena.jpg",
+   "homeBase": "Berwyn",
+   "since": "2026-07-14",
+   "vehicle": "White hatchback",
+   "languages": [
+    "English",
+    "Spanish"
+   ],
+   "bio": "Former salon coordinator. Talks to stylists and nail techs like a colleague, because she was one."
+  },
+  {
+   "id": "omar",
+   "name": "Omar Haddad",
+   "photo": "/assets/field/omar.jpg",
+   "homeBase": "Bridgeview",
+   "since": "2026-08-04",
+   "vehicle": "Grey SUV",
+   "languages": [
+    "English",
+    "Arabic"
+   ],
+   "bio": "Personal trainer on weekends. Gym owners give him the floor manager instead of the brush-off."
+  },
+  {
+   "id": "tasha",
+   "name": "Tasha Greene",
+   "photo": "/assets/field/tasha.jpg",
+   "homeBase": "Lombard",
+   "since": "2026-06-23",
+   "vehicle": "White compact SUV",
+   "languages": [
+    "English"
+   ],
+   "bio": "Twelve years in hospitality. Runs the ten-stop days: early start, nothing missed, every card counted."
+  },
+  {
+   "id": "danny",
+   "name": "Danny Kowalski",
+   "photo": "/assets/field/danny.jpg",
+   "homeBase": "Downers Grove",
+   "since": "2026-09-08",
+   "vehicle": "Dark grey SUV",
+   "languages": [
+    "English",
+    "Polish"
+   ],
+   "bio": "Covers the Downers Grove and Westmont side when the regular driver is out."
+  },
+  {
+   "id": "priya",
+   "name": "Priya Nair",
+   "photo": "/assets/field/priya.jpg",
+   "homeBase": "Naperville",
+   "since": "2026-09-22",
+   "vehicle": "Blue sedan",
+   "languages": [
+    "English",
+    "Hindi"
+   ],
+   "bio": "Newest on the team. Shadowing the ten-stop routes before taking her own."
+  }
+ ],
+ "routes": [
+  {
+   "id": "r1",
+   "date": "2026-09-02",
+   "start": "09:00",
+   "driverId": "marcus",
+   "status": "done",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-09-02",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": "09:11",
+     "left": "09:33",
+     "spokeWith": "Manager",
+     "staffOnShift": 3,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 5,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Staff signed up, owner wants to meet first.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 72
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-09-02",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": "09:49",
+     "left": "10:06",
+     "spokeWith": "Front desk",
+     "staffOnShift": 6,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 8,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 72
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-09-02",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": "10:20",
+     "left": "10:38",
+     "spokeWith": "Owner",
+     "staffOnShift": 3,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 3,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 95
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-09-02",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": "10:47",
+     "left": "10:58",
+     "spokeWith": "Front desk",
+     "staffOnShift": 12,
+     "boxes": 2,
+     "coffees": 10,
+     "cards": 12,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": "/assets/field/handoff.jpg",
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 72
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-09-02",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": "11:09",
+     "left": "11:30",
+     "spokeWith": "Manager",
+     "staffOnShift": 7,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 7,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 84
+     }
+    }
+   ]
+  },
+  {
+   "id": "r2",
+   "date": "2026-09-16",
+   "start": "09:00",
+   "driverId": "elena",
+   "status": "done",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-09-16",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": "09:15",
+     "left": "09:31",
+     "spokeWith": "Owner",
+     "staffOnShift": 7,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 10,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 83
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-09-16",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": "09:41",
+     "left": "09:55",
+     "spokeWith": "Manager",
+     "staffOnShift": 8,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 9,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 71
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-09-16",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": "10:10",
+     "left": "10:22",
+     "spokeWith": "Owner",
+     "staffOnShift": 5,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 7,
+     "display": true,
+     "outcome": "joined",
+     "note": "Manager asked for a second box next visit.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 85
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-09-16",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": "10:31",
+     "left": "10:50",
+     "spokeWith": "Front desk",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 4,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 87
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-09-16",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": "11:04",
+     "left": "11:18",
+     "spokeWith": "Front desk",
+     "staffOnShift": 9,
+     "boxes": 2,
+     "coffees": 10,
+     "cards": 9,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 93
+     }
+    }
+   ]
+  },
+  {
+   "id": "r3",
+   "date": "2026-09-30",
+   "start": "08:30",
+   "driverId": "omar",
+   "status": "done",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-09-30",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": "08:46",
+     "left": "08:57",
+     "spokeWith": "Manager",
+     "staffOnShift": 8,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 11,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 73
+     }
+    },
+    {
+     "id": "juniper-yoga@2026-09-30",
+     "businessId": "juniper-yoga",
+     "name": "Juniper Yoga House",
+     "category": "yoga",
+     "town": "Clarendon Hills",
+     "lat": 41.7975,
+     "lng": -87.9548,
+     "arrived": "09:07",
+     "left": "09:28",
+     "spokeWith": "Owner",
+     "staffOnShift": 3,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 3,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Owner out today; manager wants the one-pager.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Slow-flow and prenatal classes, 30\u201345, wellness-first spenders",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 77
+     }
+    },
+    {
+     "id": "fieldstone-pt@2026-09-30",
+     "businessId": "fieldstone-pt",
+     "name": "Fieldstone Physical Therapy",
+     "category": "physio",
+     "town": "Westmont",
+     "lat": 41.7905,
+     "lng": -87.969,
+     "arrived": "09:39",
+     "left": "09:54",
+     "spokeWith": "Owner",
+     "staffOnShift": 6,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Owner kept the counter card by the register.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Patients finishing a plan of care who want to keep feeling good",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 89
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-09-30",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": "10:08",
+     "left": "10:20",
+     "spokeWith": "Front desk",
+     "staffOnShift": 3,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 3,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 93
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-09-30",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": "10:37",
+     "left": "10:57",
+     "spokeWith": "Manager",
+     "staffOnShift": 7,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 8,
+     "display": true,
+     "outcome": "joined",
+     "note": "Manager asked for a second box next visit.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 88
+     }
+    },
+    {
+     "id": "northwind-cycle@2026-09-30",
+     "businessId": "northwind-cycle",
+     "name": "Northwind Cycle",
+     "category": "cycle",
+     "town": "Downers Grove",
+     "lat": 41.8089,
+     "lng": -88.0112,
+     "arrived": "11:10",
+     "left": "11:29",
+     "spokeWith": "Manager",
+     "staffOnShift": 6,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 8,
+     "display": true,
+     "outcome": "joined",
+     "note": "Owner kept the counter card by the register.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Indoor cycling regulars, 6am and 6pm, who live on hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 74
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-09-30",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": "11:42",
+     "left": "11:58",
+     "spokeWith": "Manager",
+     "staffOnShift": 13,
+     "boxes": 2,
+     "coffees": 10,
+     "cards": 16,
+     "display": true,
+     "outcome": "joined",
+     "note": "Owner kept the counter card by the register.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 80
+     }
+    },
+    {
+     "id": "mavis-pine@2026-09-30",
+     "businessId": "mavis-pine",
+     "name": "Mavis & Pine Boutique",
+     "category": "boutique",
+     "town": "Oak Brook",
+     "lat": 41.8497,
+     "lng": -87.9548,
+     "arrived": "12:11",
+     "left": "12:29",
+     "spokeWith": "Manager",
+     "staffOnShift": 6,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 9,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Asked us to come back after their member event.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Repeat shoppers 35\u201360 who ask staff where to go for everything else",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 84
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-09-30",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": "12:38",
+     "left": "12:52",
+     "spokeWith": "Owner",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 94
+     }
+    },
+    {
+     "id": "sable-nail@2026-09-30",
+     "businessId": "sable-nail",
+     "name": "Sable Nail Lounge",
+     "category": "nails",
+     "town": "Elmhurst",
+     "lat": 41.8851,
+     "lng": -87.937,
+     "arrived": "13:05",
+     "left": "13:27",
+     "spokeWith": "Manager",
+     "staffOnShift": 5,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 8,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Asked us to come back after their member event.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Standing two-week appointments, the most-repeated visit in any plaza",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 81
+     }
+    }
+   ]
+  },
+  {
+   "id": "r4",
+   "date": "2026-10-07",
+   "start": "09:00",
+   "driverId": "marcus",
+   "status": "done",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-10-07",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": "09:17",
+     "left": "09:28",
+     "spokeWith": "Manager",
+     "staffOnShift": 8,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 11,
+     "display": true,
+     "outcome": "joined",
+     "note": "Owner kept the counter card by the register.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 92
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-10-07",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": "09:38",
+     "left": "09:51",
+     "spokeWith": "Front desk",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 7,
+     "display": true,
+     "outcome": "joined",
+     "note": "Owner kept the counter card by the register.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 96
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-10-07",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": "10:00",
+     "left": "10:18",
+     "spokeWith": "Owner",
+     "staffOnShift": 7,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 7,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 72
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-10-07",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": "10:28",
+     "left": "10:43",
+     "spokeWith": "Owner",
+     "staffOnShift": 6,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Asked us to come back after their member event.",
+     "photo": "/assets/field/handoff.jpg",
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 81
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-10-07",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": "10:59",
+     "left": "11:13",
+     "spokeWith": "Front desk",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "follow-up",
+     "note": "Asked us to come back after their member event.",
+     "photo": "/assets/field/handoff.jpg",
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 91
+     }
+    }
+   ]
+  },
+  {
+   "id": "r5",
+   "date": "2026-10-21",
+   "start": "08:30",
+   "driverId": "tasha",
+   "status": "done",
+   "stops": [
+    {
+     "id": "lantern-barre@2026-10-21",
+     "businessId": "lantern-barre",
+     "name": "Lantern Barre",
+     "category": "pilates",
+     "town": "La Grange",
+     "lat": 41.805,
+     "lng": -87.8692,
+     "arrived": "08:42",
+     "left": "09:00",
+     "spokeWith": "Owner",
+     "staffOnShift": 5,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 8,
+     "display": true,
+     "outcome": "joined",
+     "note": "Manager asked for a second box next visit.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Barre members who come in pairs and bring friends",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 84
+     }
+    },
+    {
+     "id": "stillwater-pilates@2026-10-21",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": "09:14",
+     "left": "09:30",
+     "spokeWith": "Manager",
+     "staffOnShift": 7,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 8,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 83
+     }
+    },
+    {
+     "id": "juniper-yoga@2026-10-21",
+     "businessId": "juniper-yoga",
+     "name": "Juniper Yoga House",
+     "category": "yoga",
+     "town": "Clarendon Hills",
+     "lat": 41.7975,
+     "lng": -87.9548,
+     "arrived": "09:46",
+     "left": "10:04",
+     "spokeWith": "Owner",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Manager asked for a second box next visit.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Slow-flow and prenatal classes, 30\u201345, wellness-first spenders",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 91
+     }
+    },
+    {
+     "id": "fieldstone-pt@2026-10-21",
+     "businessId": "fieldstone-pt",
+     "name": "Fieldstone Physical Therapy",
+     "category": "physio",
+     "town": "Westmont",
+     "lat": 41.7905,
+     "lng": -87.969,
+     "arrived": "10:18",
+     "left": "10:35",
+     "spokeWith": "Owner",
+     "staffOnShift": 5,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Patients finishing a plan of care who want to keep feeling good",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 85
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-10-21",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": "10:48",
+     "left": "11:00",
+     "spokeWith": "Owner",
+     "staffOnShift": 8,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 10,
+     "display": true,
+     "outcome": "joined",
+     "note": "Put the tap card on the check-in iPad stand.",
+     "photo": "/assets/field/tap.jpg",
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 91
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-10-21",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": "11:15",
+     "left": "11:30",
+     "spokeWith": "Manager",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 7,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 78
+     }
+    },
+    {
+     "id": "northwind-cycle@2026-10-21",
+     "businessId": "northwind-cycle",
+     "name": "Northwind Cycle",
+     "category": "cycle",
+     "town": "Downers Grove",
+     "lat": 41.8089,
+     "lng": -88.0112,
+     "arrived": "11:40",
+     "left": "11:54",
+     "spokeWith": "Manager",
+     "staffOnShift": 3,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Indoor cycling regulars, 6am and 6pm, who live on hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 88
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-10-21",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": "12:06",
+     "left": "12:24",
+     "spokeWith": "Front desk",
+     "staffOnShift": 4,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 6,
+     "display": true,
+     "outcome": "joined",
+     "note": "Staff group photo taken for their story.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 86
+     }
+    },
+    {
+     "id": "brookside-climb@2026-10-21",
+     "businessId": "brookside-climb",
+     "name": "Brookside Climbing Gym",
+     "category": "gym",
+     "town": "Lombard",
+     "lat": 41.88,
+     "lng": -88.0078,
+     "arrived": "12:38",
+     "left": "12:59",
+     "spokeWith": "Owner",
+     "staffOnShift": 8,
+     "boxes": 1,
+     "coffees": 10,
+     "cards": 11,
+     "display": true,
+     "outcome": "joined",
+     "note": "Front desk already had two clients asking about recovery.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Climbers 22\u201340 with sore shoulders and a recovery habit",
+      "yourServices": [
+       "Infrared sauna"
+      ],
+      "score": 80
+     }
+    },
+    {
+     "id": "mavis-pine@2026-10-21",
+     "businessId": "mavis-pine",
+     "name": "Mavis & Pine Boutique",
+     "category": "boutique",
+     "town": "Oak Brook",
+     "lat": 41.8497,
+     "lng": -87.9548,
+     "arrived": "13:16",
+     "left": "13:36",
+     "spokeWith": "Manager",
+     "staffOnShift": 5,
+     "boxes": 1,
+     "coffees": 6,
+     "cards": 5,
+     "display": true,
+     "outcome": "joined",
+     "note": "Manager asked for a second box next visit.",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Repeat shoppers 35\u201360 who ask staff where to go for everything else",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 90
+     }
+    }
+   ]
+  },
+  {
+   "id": "r6",
+   "date": "2026-10-28",
+   "start": "09:00",
+   "driverId": "marcus",
+   "status": "scheduled",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-10-28",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 88
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-10-28",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 92
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-10-28",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 83
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-10-28",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 78
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-10-28",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 85
+     }
+    }
+   ]
+  },
+  {
+   "id": "r7",
+   "date": "2026-11-04",
+   "start": "08:30",
+   "driverId": "elena",
+   "status": "scheduled",
+   "stops": [
+    {
+     "id": "stillwater-pilates@2026-11-04",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 76
+     }
+    },
+    {
+     "id": "juniper-yoga@2026-11-04",
+     "businessId": "juniper-yoga",
+     "name": "Juniper Yoga House",
+     "category": "yoga",
+     "town": "Clarendon Hills",
+     "lat": 41.7975,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Slow-flow and prenatal classes, 30\u201345, wellness-first spenders",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 72
+     }
+    },
+    {
+     "id": "fieldstone-pt@2026-11-04",
+     "businessId": "fieldstone-pt",
+     "name": "Fieldstone Physical Therapy",
+     "category": "physio",
+     "town": "Westmont",
+     "lat": 41.7905,
+     "lng": -87.969,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Patients finishing a plan of care who want to keep feeling good",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 78
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-11-04",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 87
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-11-04",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 83
+     }
+    },
+    {
+     "id": "northwind-cycle@2026-11-04",
+     "businessId": "northwind-cycle",
+     "name": "Northwind Cycle",
+     "category": "cycle",
+     "town": "Downers Grove",
+     "lat": 41.8089,
+     "lng": -88.0112,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Indoor cycling regulars, 6am and 6pm, who live on hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 79
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-11-04",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 88
+     }
+    },
+    {
+     "id": "mavis-pine@2026-11-04",
+     "businessId": "mavis-pine",
+     "name": "Mavis & Pine Boutique",
+     "category": "boutique",
+     "town": "Oak Brook",
+     "lat": 41.8497,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Repeat shoppers 35\u201360 who ask staff where to go for everything else",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 96
+     }
+    },
+    {
+     "id": "northgate-athletic@2026-11-04",
+     "businessId": "northgate-athletic",
+     "name": "Northgate Athletic Club",
+     "category": "gym",
+     "town": "Elmhurst",
+     "lat": 41.8995,
+     "lng": -87.9403,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "A 1,400-member club with a recovery-minded masters swim group",
+      "yourServices": [
+       "Infrared sauna",
+       "IV drip"
+      ],
+      "score": 85
+     }
+    },
+    {
+     "id": "sable-nail@2026-11-04",
+     "businessId": "sable-nail",
+     "name": "Sable Nail Lounge",
+     "category": "nails",
+     "town": "Elmhurst",
+     "lat": 41.8851,
+     "lng": -87.937,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Standing two-week appointments, the most-repeated visit in any plaza",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 90
+     }
+    }
+   ]
+  },
+  {
+   "id": "r8",
+   "date": "2026-11-11",
+   "start": "09:00",
+   "driverId": "omar",
+   "status": "scheduled",
+   "stops": [
+    {
+     "id": "juniper-yoga@2026-11-11",
+     "businessId": "juniper-yoga",
+     "name": "Juniper Yoga House",
+     "category": "yoga",
+     "town": "Clarendon Hills",
+     "lat": 41.7975,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Slow-flow and prenatal classes, 30\u201345, wellness-first spenders",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 87
+     }
+    },
+    {
+     "id": "fieldstone-pt@2026-11-11",
+     "businessId": "fieldstone-pt",
+     "name": "Fieldstone Physical Therapy",
+     "category": "physio",
+     "town": "Westmont",
+     "lat": 41.7905,
+     "lng": -87.969,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Patients finishing a plan of care who want to keep feeling good",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 96
+     }
+    },
+    {
+     "id": "northwind-cycle@2026-11-11",
+     "businessId": "northwind-cycle",
+     "name": "Northwind Cycle",
+     "category": "cycle",
+     "town": "Downers Grove",
+     "lat": 41.8089,
+     "lng": -88.0112,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Indoor cycling regulars, 6am and 6pm, who live on hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 78
+     }
+    },
+    {
+     "id": "mavis-pine@2026-11-11",
+     "businessId": "mavis-pine",
+     "name": "Mavis & Pine Boutique",
+     "category": "boutique",
+     "town": "Oak Brook",
+     "lat": 41.8497,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Repeat shoppers 35\u201360 who ask staff where to go for everything else",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 81
+     }
+    },
+    {
+     "id": "sable-nail@2026-11-11",
+     "businessId": "sable-nail",
+     "name": "Sable Nail Lounge",
+     "category": "nails",
+     "town": "Elmhurst",
+     "lat": 41.8851,
+     "lng": -87.937,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Standing two-week appointments, the most-repeated visit in any plaza",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 78
+     }
+    }
+   ]
+  },
+  {
+   "id": "r9",
+   "date": "2026-11-18",
+   "start": "08:30",
+   "driverId": "tasha",
+   "status": "scheduled",
+   "stops": [
+    {
+     "id": "lantern-barre@2026-11-18",
+     "businessId": "lantern-barre",
+     "name": "Lantern Barre",
+     "category": "pilates",
+     "town": "La Grange",
+     "lat": 41.805,
+     "lng": -87.8692,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Barre members who come in pairs and bring friends",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 88
+     }
+    },
+    {
+     "id": "stillwater-pilates@2026-11-18",
+     "businessId": "stillwater-pilates",
+     "name": "Stillwater Pilates",
+     "category": "pilates",
+     "town": "Hinsdale",
+     "lat": 41.8009,
+     "lng": -87.937,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Reformer regulars, 30\u201355, who already book self-care by the week",
+      "yourServices": [
+       "Lymphatic drainage",
+       "Infrared sauna"
+      ],
+      "score": 84
+     }
+    },
+    {
+     "id": "juniper-yoga@2026-11-18",
+     "businessId": "juniper-yoga",
+     "name": "Juniper Yoga House",
+     "category": "yoga",
+     "town": "Clarendon Hills",
+     "lat": 41.7975,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Slow-flow and prenatal classes, 30\u201345, wellness-first spenders",
+      "yourServices": [
+       "Lymphatic drainage"
+      ],
+      "score": 71
+     }
+    },
+    {
+     "id": "fieldstone-pt@2026-11-18",
+     "businessId": "fieldstone-pt",
+     "name": "Fieldstone Physical Therapy",
+     "category": "physio",
+     "town": "Westmont",
+     "lat": 41.7905,
+     "lng": -87.969,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Patients finishing a plan of care who want to keep feeling good",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 83
+     }
+    },
+    {
+     "id": "harbor-row-studio@2026-11-18",
+     "businessId": "harbor-row-studio",
+     "name": "Harbor Row Studio",
+     "category": "yoga",
+     "town": "Westmont",
+     "lat": 41.7959,
+     "lng": -87.9756,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Hot yoga members who already think about recovery and hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 90
+     }
+    },
+    {
+     "id": "copper-leaf-salon@2026-11-18",
+     "businessId": "copper-leaf-salon",
+     "name": "Copper Leaf Salon",
+     "category": "salon",
+     "town": "Downers Grove",
+     "lat": 41.7959,
+     "lng": -88.0107,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Color and cut clients on a 6-week rhythm who ask stylists for recommendations",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 86
+     }
+    },
+    {
+     "id": "northwind-cycle@2026-11-18",
+     "businessId": "northwind-cycle",
+     "name": "Northwind Cycle",
+     "category": "cycle",
+     "town": "Downers Grove",
+     "lat": 41.8089,
+     "lng": -88.0112,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Indoor cycling regulars, 6am and 6pm, who live on hydration",
+      "yourServices": [
+       "IV drip",
+       "Infrared sauna"
+      ],
+      "score": 91
+     }
+    },
+    {
+     "id": "ridgeline-strength@2026-11-18",
+     "businessId": "ridgeline-strength",
+     "name": "Ridgeline Strength",
+     "category": "gym",
+     "town": "Oak Brook",
+     "lat": 41.8401,
+     "lng": -87.9512,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Members 28\u201350 training for strength and recovery, mostly early mornings",
+      "yourServices": [
+       "Infrared sauna",
+       "Lymphatic drainage"
+      ],
+      "score": 75
+     }
+    },
+    {
+     "id": "brookside-climb@2026-11-18",
+     "businessId": "brookside-climb",
+     "name": "Brookside Climbing Gym",
+     "category": "gym",
+     "town": "Lombard",
+     "lat": 41.88,
+     "lng": -88.0078,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Climbers 22\u201340 with sore shoulders and a recovery habit",
+      "yourServices": [
+       "Infrared sauna"
+      ],
+      "score": 87
+     }
+    },
+    {
+     "id": "mavis-pine@2026-11-18",
+     "businessId": "mavis-pine",
+     "name": "Mavis & Pine Boutique",
+     "category": "boutique",
+     "town": "Oak Brook",
+     "lat": 41.8497,
+     "lng": -87.9548,
+     "arrived": null,
+     "left": null,
+     "spokeWith": "",
+     "staffOnShift": 0,
+     "boxes": 0,
+     "coffees": 0,
+     "cards": 0,
+     "display": false,
+     "outcome": "pending",
+     "note": "",
+     "photo": null,
+     "crossRef": {
+      "theirClients": "Repeat shoppers 35\u201360 who ask staff where to go for everything else",
+      "yourServices": [
+       "Lymphatic drainage",
+       "IV drip"
+      ],
+      "score": 95
+     }
+    }
+   ]
+  }
+ ],
+ "signups": [
+  {
+   "id": "s001",
+   "firstName": "Sofi",
+   "routeId": "r1",
+   "stopId": "stillwater-pilates@2026-09-02",
+   "date": "2026-09-10",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s002",
+   "firstName": "Mateo",
+   "routeId": "r1",
+   "stopId": "stillwater-pilates@2026-09-02",
+   "date": "2026-09-08",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s003",
+   "firstName": "Jess",
+   "routeId": "r1",
+   "stopId": "harbor-row-studio@2026-09-02",
+   "date": "2026-09-02",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s004",
+   "firstName": "Cam",
+   "routeId": "r1",
+   "stopId": "harbor-row-studio@2026-09-02",
+   "date": "2026-09-04",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s005",
+   "firstName": "Brooke",
+   "routeId": "r1",
+   "stopId": "harbor-row-studio@2026-09-02",
+   "date": "2026-09-05",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s006",
+   "firstName": "Rae",
+   "routeId": "r1",
+   "stopId": "copper-leaf-salon@2026-09-02",
+   "date": "2026-09-10",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s007",
+   "firstName": "Luis",
+   "routeId": "r1",
+   "stopId": "copper-leaf-salon@2026-09-02",
+   "date": "2026-09-07",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s008",
+   "firstName": "Isla",
+   "routeId": "r1",
+   "stopId": "ridgeline-strength@2026-09-02",
+   "date": "2026-09-10",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s009",
+   "firstName": "Hana",
+   "routeId": "r1",
+   "stopId": "ridgeline-strength@2026-09-02",
+   "date": "2026-09-10",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s010",
+   "firstName": "Sam",
+   "routeId": "r1",
+   "stopId": "northgate-athletic@2026-09-02",
+   "date": "2026-09-11",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s011",
+   "firstName": "Mateo",
+   "routeId": "r1",
+   "stopId": "northgate-athletic@2026-09-02",
+   "date": "2026-09-05",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s012",
+   "firstName": "Tess",
+   "routeId": "r1",
+   "stopId": "northgate-athletic@2026-09-02",
+   "date": "2026-09-10",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s013",
+   "firstName": "Rae",
+   "routeId": "r1",
+   "stopId": "northgate-athletic@2026-09-02",
+   "date": "2026-09-03",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s014",
+   "firstName": "Wren",
+   "routeId": "r2",
+   "stopId": "stillwater-pilates@2026-09-16",
+   "date": "2026-09-20",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s015",
+   "firstName": "Rae",
+   "routeId": "r2",
+   "stopId": "harbor-row-studio@2026-09-16",
+   "date": "2026-09-17",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s016",
+   "firstName": "Sam",
+   "routeId": "r2",
+   "stopId": "harbor-row-studio@2026-09-16",
+   "date": "2026-09-16",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s017",
+   "firstName": "Ana",
+   "routeId": "r2",
+   "stopId": "harbor-row-studio@2026-09-16",
+   "date": "2026-09-17",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s018",
+   "firstName": "Hana",
+   "routeId": "r2",
+   "stopId": "ridgeline-strength@2026-09-16",
+   "date": "2026-09-24",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s019",
+   "firstName": "Sofi",
+   "routeId": "r3",
+   "stopId": "juniper-yoga@2026-09-30",
+   "date": "2026-10-05",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s020",
+   "firstName": "Kira",
+   "routeId": "r3",
+   "stopId": "juniper-yoga@2026-09-30",
+   "date": "2026-10-04",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s021",
+   "firstName": "Zoe",
+   "routeId": "r3",
+   "stopId": "juniper-yoga@2026-09-30",
+   "date": "2026-09-30",
+   "service": "Lymphatic drainage",
+   "status": "new"
+  },
+  {
+   "id": "s022",
+   "firstName": "Tess",
+   "routeId": "r3",
+   "stopId": "juniper-yoga@2026-09-30",
+   "date": "2026-10-05",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s023",
+   "firstName": "Zoe",
+   "routeId": "r3",
+   "stopId": "fieldstone-pt@2026-09-30",
+   "date": "2026-10-01",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s024",
+   "firstName": "Kira",
+   "routeId": "r3",
+   "stopId": "fieldstone-pt@2026-09-30",
+   "date": "2026-10-03",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s025",
+   "firstName": "Wren",
+   "routeId": "r3",
+   "stopId": "harbor-row-studio@2026-09-30",
+   "date": "2026-10-02",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s026",
+   "firstName": "Mateo",
+   "routeId": "r3",
+   "stopId": "harbor-row-studio@2026-09-30",
+   "date": "2026-10-07",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s027",
+   "firstName": "Kira",
+   "routeId": "r3",
+   "stopId": "copper-leaf-salon@2026-09-30",
+   "date": "2026-10-04",
+   "service": "IV drip",
+   "status": "called"
+  },
+  {
+   "id": "s028",
+   "firstName": "Gina",
+   "routeId": "r3",
+   "stopId": "copper-leaf-salon@2026-09-30",
+   "date": "2026-10-03",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s029",
+   "firstName": "Isla",
+   "routeId": "r3",
+   "stopId": "northwind-cycle@2026-09-30",
+   "date": "2026-10-02",
+   "service": "IV drip",
+   "status": "called"
+  },
+  {
+   "id": "s030",
+   "firstName": "Jess",
+   "routeId": "r3",
+   "stopId": "northwind-cycle@2026-09-30",
+   "date": "2026-10-02",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s031",
+   "firstName": "Sofi",
+   "routeId": "r3",
+   "stopId": "northwind-cycle@2026-09-30",
+   "date": "2026-10-09",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s032",
+   "firstName": "Gina",
+   "routeId": "r3",
+   "stopId": "ridgeline-strength@2026-09-30",
+   "date": "2026-10-09",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s033",
+   "firstName": "Sam",
+   "routeId": "r3",
+   "stopId": "ridgeline-strength@2026-09-30",
+   "date": "2026-10-03",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s034",
+   "firstName": "Tess",
+   "routeId": "r3",
+   "stopId": "mavis-pine@2026-09-30",
+   "date": "2026-10-03",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s035",
+   "firstName": "Zoe",
+   "routeId": "r3",
+   "stopId": "mavis-pine@2026-09-30",
+   "date": "2026-10-01",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s036",
+   "firstName": "Jordan",
+   "routeId": "r3",
+   "stopId": "northgate-athletic@2026-09-30",
+   "date": "2026-10-05",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s037",
+   "firstName": "Mateo",
+   "routeId": "r3",
+   "stopId": "northgate-athletic@2026-09-30",
+   "date": "2026-10-03",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s038",
+   "firstName": "Ana",
+   "routeId": "r3",
+   "stopId": "sable-nail@2026-09-30",
+   "date": "2026-10-01",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s039",
+   "firstName": "Hana",
+   "routeId": "r3",
+   "stopId": "sable-nail@2026-09-30",
+   "date": "2026-10-03",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s040",
+   "firstName": "Fay",
+   "routeId": "r4",
+   "stopId": "stillwater-pilates@2026-10-07",
+   "date": "2026-10-15",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s041",
+   "firstName": "Nora",
+   "routeId": "r4",
+   "stopId": "stillwater-pilates@2026-10-07",
+   "date": "2026-10-09",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s042",
+   "firstName": "Ana",
+   "routeId": "r4",
+   "stopId": "stillwater-pilates@2026-10-07",
+   "date": "2026-10-08",
+   "service": "Infrared sauna",
+   "status": "booked"
+  },
+  {
+   "id": "s043",
+   "firstName": "Brooke",
+   "routeId": "r4",
+   "stopId": "stillwater-pilates@2026-10-07",
+   "date": "2026-10-10",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s044",
+   "firstName": "Pia",
+   "routeId": "r4",
+   "stopId": "harbor-row-studio@2026-10-07",
+   "date": "2026-10-15",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s045",
+   "firstName": "Dani",
+   "routeId": "r4",
+   "stopId": "copper-leaf-salon@2026-10-07",
+   "date": "2026-10-07",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s046",
+   "firstName": "Cam",
+   "routeId": "r4",
+   "stopId": "copper-leaf-salon@2026-10-07",
+   "date": "2026-10-15",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s047",
+   "firstName": "Hana",
+   "routeId": "r4",
+   "stopId": "copper-leaf-salon@2026-10-07",
+   "date": "2026-10-16",
+   "service": "IV drip",
+   "status": "new"
+  },
+  {
+   "id": "s048",
+   "firstName": "Gina",
+   "routeId": "r4",
+   "stopId": "ridgeline-strength@2026-10-07",
+   "date": "2026-10-12",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s049",
+   "firstName": "Isla",
+   "routeId": "r4",
+   "stopId": "ridgeline-strength@2026-10-07",
+   "date": "2026-10-14",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s050",
+   "firstName": "Jess",
+   "routeId": "r4",
+   "stopId": "northgate-athletic@2026-10-07",
+   "date": "2026-10-14",
+   "service": "IV drip",
+   "status": "new"
+  },
+  {
+   "id": "s051",
+   "firstName": "Hana",
+   "routeId": "r4",
+   "stopId": "northgate-athletic@2026-10-07",
+   "date": "2026-10-16",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s052",
+   "firstName": "Lena",
+   "routeId": "r5",
+   "stopId": "lantern-barre@2026-10-21",
+   "date": "2026-10-23",
+   "service": "Lymphatic drainage",
+   "status": "new"
+  },
+  {
+   "id": "s053",
+   "firstName": "Jordan",
+   "routeId": "r5",
+   "stopId": "stillwater-pilates@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s054",
+   "firstName": "Maya",
+   "routeId": "r5",
+   "stopId": "stillwater-pilates@2026-10-21",
+   "date": "2026-10-22",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s055",
+   "firstName": "Gina",
+   "routeId": "r5",
+   "stopId": "fieldstone-pt@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "new"
+  },
+  {
+   "id": "s056",
+   "firstName": "Brooke",
+   "routeId": "r5",
+   "stopId": "harbor-row-studio@2026-10-21",
+   "date": "2026-10-24",
+   "service": "IV drip",
+   "status": "booked"
+  },
+  {
+   "id": "s057",
+   "firstName": "Kira",
+   "routeId": "r5",
+   "stopId": "copper-leaf-salon@2026-10-21",
+   "date": "2026-10-24",
+   "service": "IV drip",
+   "status": "called"
+  },
+  {
+   "id": "s058",
+   "firstName": "Lena",
+   "routeId": "r5",
+   "stopId": "copper-leaf-salon@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "new"
+  },
+  {
+   "id": "s059",
+   "firstName": "Sofi",
+   "routeId": "r5",
+   "stopId": "northwind-cycle@2026-10-21",
+   "date": "2026-10-24",
+   "service": "IV drip",
+   "status": "new"
+  },
+  {
+   "id": "s060",
+   "firstName": "Sam",
+   "routeId": "r5",
+   "stopId": "ridgeline-strength@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s061",
+   "firstName": "Dani",
+   "routeId": "r5",
+   "stopId": "brookside-climb@2026-10-21",
+   "date": "2026-10-22",
+   "service": "Infrared sauna",
+   "status": "called"
+  },
+  {
+   "id": "s062",
+   "firstName": "Isla",
+   "routeId": "r5",
+   "stopId": "mavis-pine@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  },
+  {
+   "id": "s063",
+   "firstName": "Gina",
+   "routeId": "r5",
+   "stopId": "mavis-pine@2026-10-21",
+   "date": "2026-10-21",
+   "service": "Lymphatic drainage",
+   "status": "booked"
+  },
+  {
+   "id": "s064",
+   "firstName": "Sam",
+   "routeId": "r5",
+   "stopId": "mavis-pine@2026-10-21",
+   "date": "2026-10-24",
+   "service": "Lymphatic drainage",
+   "status": "called"
+  }
+ ]
+}

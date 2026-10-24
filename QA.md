@@ -1,6 +1,39 @@
 # Delivery checks
 
-Checked 22 October 2026. This report distinguishes automated checks from hosting/visual review.
+Checked 22 October 2026, and again on 23 October 2026 for the Network Map.
+This report distinguishes automated checks from hosting/visual review.
+
+## Network Map, 23 October 2026
+
+- TypeScript strict type check: PASS.
+- Automated tests: 43 passed, 0 failed (25 existing, 18 new). None of the existing tests changed.
+- Production build: PASS. Bundle approximately 271 KB, 83 KB compressed; CSS approximately 38 KB, 8 KB compressed. No map library, no tile requests, no new dependency of any kind.
+- npm audit: 0 reported vulnerabilities.
+- Browser pass completed this time, on a throwaway database with fictional businesses, at 1440x950 and at 375x812: sign in, open the Network Map, filter and search, zoom by distance, open a cluster, read a business card, add and reorder three stops, check the Google Maps route link, send a visit request, accept it from the terminal, and see the client's status change to "Scheduled by the team". No console errors.
+- The throwaway database and its fictional records were deleted afterwards. The live local database was not written to; it still holds only the real ETHR LAB account.
+- NOT verified: a real call to Google Places. No request was made against the live key, so the discovery path is proven only against an injected test double, and the exact shape of live Places responses for these categories in this area is unconfirmed. Run `npm run refresh-network-map -- --clinic clinic-slug` once with the key set to confirm it.
+
+### Network Map security review
+
+| Threat / check | Severity if unmitigated | Likelihood | Impact | Status |
+|---|---|---|---|---|
+| A client reading another clinic's map or requests | High | Medium | Client data exposure | PASS: every network query takes its clinic from the session row only; `?clinicId=` is ignored; tested |
+| A conflict warning disclosing which clinic holds an agreement | High | Medium | Client confidentiality | PASS: owner clinic and record notes never leave the server; the payload is asserted free of both |
+| Routing a client to a competitor or a restricted business | High | Medium | Breach of an agreement | PASS: the refusal is re-run server-side on save and on request; browser state cannot override it |
+| Borrowing another clinic's place ID to route to it | Medium | Low | Cross-tenant leakage | PASS: a place ID not on this clinic's own map is dropped |
+| More than five stops, or duplicates | Low | Medium | Operational noise | PASS: capped and de-duplicated server-side |
+| The Google Places key reaching a browser | High | Medium | Key theft and billing abuse | PASS: read in one module, used in one header, absent from every payload; asserted by test. No browser map key is claimed or used |
+| Spending Places calls on every page view | Medium | High | Unbounded Google billing | PASS: one pass per category per cooldown window; the client-facing refresh obeys the same cooldown; a forced pass is a terminal command |
+| Holding Google content past its terms | Medium | Medium | Terms breach | PASS: place IDs kept, all other Google content expires at 30 days and is purged on read; tested |
+| Cross-origin writes to the network endpoints | High | Medium | Unauthorized changes | PASS: the existing exact-origin check covers them; tested |
+| SQL injection through the new tables | High | Low | Database access | PASS: bound parameters throughout |
+| Invented businesses, ratings or statuses | Medium | Medium | Misleading a client | PASS: no placeholder data anywhere; an unconfigured or failing lookup shows an explained empty state |
+
+### Still to build
+
+- A web operations screen for route requests. They are stored and complete, and handled from the terminal with `npm run route-requests`; there is no admin UI and no email or notification when a client asks for a visit.
+- An embedded Google basemap. It needs a second, HTTP-referrer-restricted browser key and three Content-Security-Policy entries; until then the map is a coordinate plot with Google Maps links.
+- A clinic's saved location is set from the terminal. There is no screen for it.
 
 ## Results
 
