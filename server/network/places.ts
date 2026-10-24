@@ -33,7 +33,14 @@ export type DiscoveredPlace = {
   googleMapsUri: string | null;
 };
 
-export const apiKey = () => (process.env.Google_places_API ?? '').trim();
+// Google_places_API is the name set on Render. A few common spellings of the same thing are read too, in
+// any case, so a key saved as GOOGLE_PLACES_API_KEY (or with a different capital) still works.
+const KEY_NAMES = ['google_places_api', 'google_places_api_key', 'google_places_key', 'places_api_key'];
+export const apiKey = () => {
+  if ((process.env.Google_places_API ?? '').trim()) return process.env.Google_places_API!.trim();
+  const name = Object.keys(process.env).find(key => KEY_NAMES.includes(key.trim().toLowerCase()) && (process.env[key] ?? '').trim());
+  return name ? process.env[name]!.trim() : '';
+};
 export const configured = () => apiKey().length > 0;
 
 export class PlacesError extends Error {

@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openStore } from './store';
 import { createPortalServer } from './http';
+import { configured } from './network/places';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 if (existsSync(resolve(root, '.env'))) process.loadEnvFile(resolve(root, '.env'));
 const port = Number(process.env.PORT ?? 3000);
@@ -20,7 +21,7 @@ const dev = process.argv.includes('--dev');
 const vite = dev ? await (await import('vite')).createServer({ root, server: { middlewareMode: true }, appType: 'custom' }) : undefined;
 if (!dev && !existsSync(resolve(root, 'dist/client/index.html'))) throw new Error('Run npm run build before npm start.');
 const server = createPortalServer({ store, origin, secure: originUrl.protocol === 'https:', root, vite, trustProxy: process.env.TRUST_PROXY === 'true' });
-server.listen(port, host, () => console.log(`Our Wellness Network portal: ${origin}\nSample clinic: ${sample ? 'enabled (fictional records only)' : 'disabled'}`));
+server.listen(port, host, () => console.log(`Our Wellness Network portal: ${origin}\nSample clinic: ${sample ? 'enabled (fictional records only)' : 'disabled'}\nGoogle Places key: ${configured() ? 'found' : 'NOT found (set Google_places_API)'}`));
 // Shut down once: a second signal (or a second close) must not try to close the database again.
 let closing = false;
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => { if (closing) return; closing = true; server.close(() => { store.close(); void vite?.close().finally(() => process.exit(0)); if (!vite) process.exit(0); }); });
