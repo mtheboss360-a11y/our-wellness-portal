@@ -4,6 +4,7 @@ import { login, logout } from './lib/api';
 import type { Campaign, PortalSnapshot, PublicPortal } from '../data/portal-data';
 import { accumulation, dateLabel, filterLeads, isNew, number, phoneLabel, summarize , monthly, fieldDays } from './lib/portal-math';
 import NetworkMap from './NetworkMap';
+import Drivers from './Drivers';
 
 
 
@@ -68,8 +69,8 @@ function SignIn({ config }: { config: PublicPortal }) {
 }
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
-  // Two screens behind one sign-in: the campaign report and the referral Network Map.
-  const [view, setView] = useState<'report' | 'network'>('report');
+  // Three screens behind one sign-in: the campaign report, drivers & routes, and the Network Map.
+  const [view, setView] = useState<'report' | 'drivers' | 'network'>('report');
   const [campaignId, setCampaignId] = useState(data.campaigns[0]?.id ?? '');
   const [selected, setSelected] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -102,12 +103,13 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     <header className="site-header"><Brand name={data.config.name}/>
       <nav className="portal-nav" aria-label="Your portal">
         <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
+        <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> Drivers &amp; routes</button>
         <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Network Map</button>
       </nav>
       <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {view === 'network' ? <NetworkMap onClose={() => setView('report')}/> : <>
+      {view === 'network' ? <NetworkMap onClose={() => setView('report')}/> : view === 'drivers' ? <Drivers today={data.today} onClose={() => setView('report')}/> : <>
       <section className="hero"><h1 ref={hero}>Here's how far<br/><span>your marketing materials traveled.</span></h1><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>

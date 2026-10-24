@@ -17,7 +17,8 @@
     "set-clinic-location": "tsx scripts/set-clinic-location.ts",
     "import-network-records": "tsx scripts/import-network-records.ts",
     "refresh-network-map": "tsx scripts/refresh-network-map.ts",
-    "route-requests": "tsx scripts/route-requests.ts"
+    "route-requests": "tsx scripts/route-requests.ts",
+    "import-field-log": "tsx scripts/import-field-log.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -18,3 +18,7 @@ export const refreshNetworkMap = () => request<NetworkMapPayload>('/api/network/
 export const saveSelection = (placeIds: string[]) => request<{ selection: string[]; refused: Array<{ placeId: string; reason: string }> }>('/api/network/selection', 'POST', { placeIds });
 export const requestRoute = (input: { contactName: string; contactPhone: string; notes: string; preferredFrom: string; preferredTo: string }) =>
   request<{ request: NetworkMapPayload['requests'][number]; requests: NetworkMapPayload['requests']; selection: string[] }>('/api/network/route-request', 'POST', input);
+
+// The field log: drivers, routes and sign-ups. Null until a clinic's log has been imported.
+import type { FieldLog } from '../../data/field-data';
+export const getField = () => request<{ field: FieldLog | null }>('/api/field');

@@ -8,7 +8,7 @@ import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
 const loginInput = z.object({ username: z.string().trim().toLowerCase().min(1).max(254), password: z.string().min(1).max(256) });
 type Options = { store: PortalStore; origin: string; secure: boolean; root: string; vite?: ViteDevServer; trustProxy?: boolean };
-const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
+const mime: Record<string, string> = { '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.jpg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2','.webmanifest':'application/manifest+json' };
 function json(response: ServerResponse, status: number, value: unknown) { response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); response.end(JSON.stringify(value)); }
 async function body(request: IncomingMessage) {
   if (!request.headers['content-type']?.startsWith('application/json')) throw new Error('content-type');
@@ -43,6 +43,12 @@ export function createPortalServer(options: Options) {
           const result = store.signIn(input.data.username, input.data.password, ip, cookie);
           if (result.ok) response.setHeader('Set-Cookie', `${cookieName}=${result.token}; ${cookieFlags}; Max-Age=28800`);
           json(response, 200, { ok: result.ok, message: result.message }); return;
+        }
+        // THE FIELD LOG. Drivers, routes and sign-ups for the signed-in clinic only.
+        if (url.pathname === '/api/field' && request.method === 'GET') {
+          const clinic = store.clinicFromToken(cookie);
+          if (!clinic) { json(response, 401, { error: 'Please sign in again to see your routes.' }); return; }
+          json(response, 200, { field: store.fieldLog(clinic.id) }); return;
         }
         // THE NETWORK MAP. Every endpoint below resolves the clinic from the session cookie and
         // from nowhere else, so `?clinicId=` and a borrowed place ID are both simply ignored.

@@ -38,3 +38,32 @@ export const clinicLocationInput = z.object({
   placeId: z.string().min(1).max(255).nullable().default(null),
   competitorCategories: z.array(z.string().min(1).max(60)).max(20).default([]),
 });
+
+// The field log: drivers, routes, stops and staff sign-ups, as the Google Form rows record them.
+// Photos are paths under /assets/field/ only, so a feed cannot point the portal at another site.
+const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+const photo = z.string().regex(/^\/assets\/field\/[a-z0-9-]+\.(jpg|png|webp)$/);
+const slug = z.string().regex(/^[a-z0-9@-]{1,120}$/);
+const count = z.number().int().min(0).max(10000);
+const fieldStop = z.object({
+  id: slug, businessId: slug, name: z.string().min(1).max(160),
+  category: z.enum(['gym', 'yoga', 'pilates', 'salon', 'nails', 'boutique', 'physio', 'cycle', 'other']),
+  town: z.string().min(1).max(100), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180),
+  arrived: clock.nullable(), left: clock.nullable(), spokeWith: z.string().max(60),
+  staffOnShift: count, boxes: count, coffees: count, cards: count, display: z.boolean(),
+  outcome: z.enum(['joined', 'follow-up', 'not-now', 'pending']), note: z.string().max(400), photo: photo.nullable(),
+  crossRef: z.object({ theirClients: z.string().max(240), yourServices: z.array(z.string().min(1).max(80)).max(8), score: z.number().int().min(0).max(100) }).strict(),
+}).strict();
+export const fieldLogFeed = z.object({
+  clinic: z.object({ label: z.string().min(1).max(200), lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }).strict(),
+  drivers: z.array(z.object({ id: slug, name: z.string().min(1).max(120), photo, homeBase: z.string().max(100), since: day, vehicle: z.string().max(80), languages: z.array(z.string().min(1).max(40)).max(8), bio: z.string().max(400) }).strict()).max(200),
+  routes: z.array(z.object({ id: slug, date: day, start: clock, driverId: slug, status: z.enum(['done', 'scheduled']), stops: z.array(fieldStop).min(1).max(10) }).strict()).max(2000),
+  signups: z.array(z.object({ id: slug, firstName: z.string().min(1).max(60), routeId: slug, stopId: slug, date: day, service: z.string().min(1).max(80), status: z.enum(['new', 'called', 'booked']) }).strict()).max(100000),
+}).strict().superRefine((feed, ctx) => {
+  const drivers = new Set(feed.drivers.map(d => d.id));
+  const stops = new Map(feed.routes.flatMap(r => r.stops.map(s => [s.id, r.id] as const)));
+  if (drivers.size !== feed.drivers.length) ctx.addIssue({ code: 'custom', message: 'Driver IDs must be unique.' });
+  if (new Set(feed.routes.map(r => r.id)).size !== feed.routes.length) ctx.addIssue({ code: 'custom', message: 'Route IDs must be unique.' });
+  feed.routes.forEach((route, i) => { if (!drivers.has(route.driverId)) ctx.addIssue({ code: 'custom', path: ['routes', i, 'driverId'], message: 'Route refers to a missing driver.' }); });
+  feed.signups.forEach((signup, i) => { if (stops.get(signup.stopId) !== signup.routeId) ctx.addIssue({ code: 'custom', path: ['signups', i, 'stopId'], message: 'Sign-up refers to a stop that is not on its route.' }); });
+});
