@@ -156,7 +156,15 @@ export function townPicks(businesses: MapBusiness[], perTown = 5, towns = 3): To
  * fit and then distance. Each five is one route and one side of the orb.
  */
 export const TIERS = ['Top 5', 'Top 10', 'Top 15'] as const;
+/** A partner's standing: well rated by enough people. A thin or poor record ranks lower; a bad one is out. */
+export function partnerScore(b: MapBusiness) {
+  if (b.rating === null || !b.reviewCount) return b.fit.score - 15;
+  const trust = Math.min(1, Math.log10(b.reviewCount + 1) / 2);   // 99+ reviews counts in full
+  return b.fit.score + (b.rating - 4.2) * 25 * trust;
+}
 export function bestFifteen(businesses: MapBusiness[]): TownGroup[] {
-  const ranked = businesses.filter(b => b.routable).sort((a, b) => b.fit.score - a.fit.score || a.distanceMiles - b.distanceMiles).slice(0, 15);
+  const ranked = businesses
+    .filter(b => b.routable && !(b.rating !== null && (b.reviewCount ?? 0) >= 5 && b.rating < 3.8))
+    .sort((a, b) => partnerScore(b) - partnerScore(a) || a.distanceMiles - b.distanceMiles).slice(0, 15);
   return TIERS.map((label, i) => ({ town: label, businesses: ranked.slice(i * 5, i * 5 + 5) })).filter(group => group.businesses.length);
 }

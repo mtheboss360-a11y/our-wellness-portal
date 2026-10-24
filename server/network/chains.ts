@@ -10,7 +10,7 @@ import type { DiscoveredPlace } from './places';
 const CHAINS = [
   // gyms and boutique fitness franchises
   'planet fitness', 'la fitness', 'orangetheory', 'anytime fitness', 'f45', 'crunch fitness', 'snap fitness', '24 hour fitness',
-  'life time', 'lifetime fitness', 'xsport', 'equinox', 'ymca', 'gold s gym', 'golds gym', 'chicago athletic clubs', 'midtown athletic',
+  'life time', 'lifetime', 'lifetime fitness', 'lt athletic', 'xsport', 'equinox', 'ymca', 'gold s gym', 'golds gym', 'chicago athletic clubs', 'midtown athletic',
   'east bank club', 'fitness formula', 'ff clubs', 'burn boot camp', 'fit body boot camp', 'title boxing', '9round', 'stretchlab',
   'stretch zone', 'row house', 'cyclebar', 'pure barre', 'club pilates', 'yogasix', 'corepower yoga', 'bodybar', 'solidcore',
   'the barre code', 'barre3', 'eos fitness', 'blink fitness', 'workout anytime', 'bft', 'rumble', 'barry s', 'shred415', 'hotworx',
@@ -51,7 +51,10 @@ export function privateOnly(places: Array<Pick<DiscoveredPlace, 'name' | 'types'
     const key = nameKey(place.name);
     if (!key) return false;
     if ((counts.get(key) ?? 0) > 1) return false;
-    if (CHAINS.some(chain => key === chain || key.startsWith(chain))) return false;
+    // A chain's name anywhere in the name counts: "Chiropractic at Life Time" is inside a Life Time. Short
+    // chain names (cvs, rei, rush...) only match at the start, so they don't catch ordinary words.
+    if (CHAINS.some(chain => key === chain || key.startsWith(chain) || (chain.length >= 6 && key.includes(chain)))) return false;
+    if (/\b(at|inside|@)\s/i.test(place.name ?? '') && CHAINS.some(chain => chain.length >= 3 && key.includes(chain))) return false;
     if (NOT_PRIVATE.test(place.name ?? '')) return false;
     if ([place.primaryType, ...place.types].some(type => type && PUBLIC_TYPES.has(type))) return false;
     return true;
