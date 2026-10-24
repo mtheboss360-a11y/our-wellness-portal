@@ -28,7 +28,7 @@ export type CategoryRule = {
 
 export const CATEGORY_RULES: CategoryRule[] = [
   { id: 'fitness', label: 'Fitness studios', icon: 'dumbbell', color: '#1F4D3A', weight: 60,
-    googleTypes: ['gym', 'fitness_center', 'sports_club', 'sports_activity_location'],
+    googleTypes: ['gym', 'fitness_center'], // sports clubs and activity locations are mostly park fields, courts and school clubs
     reason: 'People training several times a week book recovery and wellness services more than any other group nearby.' },
   { id: 'yoga', label: 'Yoga & Pilates', icon: 'lotus', color: '#2E8B7A', weight: 58,
     googleTypes: ['yoga_studio'], // Google has no pilates type; pilates studios are listed as yoga studios or gyms

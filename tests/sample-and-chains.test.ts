@@ -2,17 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openStore } from '../server/store';
 import { ensureDiscovery } from '../server/network/map';
-import { chainFilter } from '../server/network/chains';
+import { privateOnly } from '../server/network/chains';
 import type { DiscoveredPlace } from '../server/network/places';
 
 const place = (placeId: string, name: string): DiscoveredPlace => ({ placeId, name, address: 'Westmont, IL 60559', lat: 41.79, lng: -87.97, types: ['gym'], primaryType: 'gym', businessStatus: 'OPERATIONAL', rating: null, reviewCount: null, googleMapsUri: null });
 
-test('chains are dropped: known names, and any name seen at two places nearby', () => {
-  const chain = chainFilter(['Planet Fitness', 'Quarry Lane Fitness', 'Iron Oak Gym', 'Iron Oak Gym']);
-  assert.equal(chain('Planet Fitness'), true);
-  assert.equal(chain('Orangetheory Fitness Westmont'), true);
-  assert.equal(chain('Iron Oak Gym'), true, 'two locations nearby');
-  assert.equal(chain('Quarry Lane Fitness'), false, 'owner-operated stays');
+test('privately owned only: no chains, no repeats nearby, nothing public', () => {
+  const p = (name: string, types = ['gym']) => ({ name, types, primaryType: types[0] });
+  const keep = privateOnly([p('Planet Fitness'), p('Quarry Lane Fitness'), p('Iron Oak Gym'), p('Iron Oak Gym')]);
+  assert.equal(keep(p('Planet Fitness')), false);
+  assert.equal(keep(p('Orangetheory Fitness Westmont')), false);
+  assert.equal(keep(p('Iron Oak Gym')), false, 'two locations nearby');
+  assert.equal(keep(p('Westmont Park District Fitness Center')), false, 'public');
+  assert.equal(keep(p('Ridgeway Tennis Courts', ['athletic_field'])), false, 'public type');
+  assert.equal(keep(p('Quarry Lane Fitness')), true, 'owner-operated stays');
 });
 
 test('the map hides chains', () => {
