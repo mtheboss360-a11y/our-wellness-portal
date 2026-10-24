@@ -1,6 +1,5 @@
 // THE NETWORK ORB. The Network Map's centrepiece: a big orb of small, same-size dots with your clinic
-// in the middle. While the nearby businesses are being looked up the orb pulses like sonar — rings
-// ripple out from the clinic, the dots light up as each wave passes, a soft sweep turns round it.
+// in the middle. While the nearby businesses are being looked up the orb simply turns.
 // When the results land, the network builds in front of you: each town arrives in turn, its five best
 // matches pop in one by one, and every business is joined to the clinic and to its neighbours, so the
 // whole thing reads as one network. Positions are a diagram (each town gets its own side of the orb),
@@ -91,7 +90,7 @@ export default function NetworkOrb({ loading, groups, focus, selection, onOpen, 
       const { loading: busy, selection: chosen } = live.current;
       const still = reduce.matches;
       const dt = Math.min(64, now - last); last = now;
-      spin += still ? 0 : dt * (busy ? .00045 : .00011);
+      spin += still ? 0 : dt * .00011;
       const cx = w / 2, cy = h / 2, R = Math.min(w, h) * .45;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
       const { plan, startedAt } = build.current;
@@ -99,10 +98,10 @@ export default function NetworkOrb({ loading, groups, focus, selection, onOpen, 
       const built = !busy && plan.nodes.length > 0;
       const dim = built ? clamp(t / .6) : 0;
 
-      // The orb. While loading, a sonar wave rolls out from the clinic and lights the dots it passes.
-      const wave = busy && !still ? ((now / 1300) % 1) : -1;
+      // The orb: same-size dots, depth by opacity alone.
+      const wave = -1;
       const cos = Math.cos(spin), sin = Math.sin(spin), tilt = .34, ct = Math.cos(tilt), st = Math.sin(tilt);
-      const sweep = busy && !still ? (now / 900) % (Math.PI * 2) : 0;
+      const sweep = 0;
       for (const [x0, y0, z0, k] of pts) {
         const x = x0 * cos - z0 * sin, z1 = x0 * sin + z0 * cos, y = y0 * ct - z1 * st, z = y0 * st + z1 * ct;
         const depth = (z + 1) / 2;
@@ -116,11 +115,6 @@ export default function NetworkOrb({ loading, groups, focus, selection, onOpen, 
         ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
         ctx.globalAlpha = Math.min(1, (.1 + .55 * depth * k) * (1 - .4 * dim) + glow * .7);
         ctx.beginPath(); ctx.arc(cx + x * R, cy + y * R, DOT + glow * .6, 0, Math.PI * 2); ctx.fill();
-      }
-      if (busy && !still) for (let i = 0; i < 3; i++) {
-        const k = ((now / 1300) + i / 3) % 1;
-        ctx.strokeStyle = C.rose; ctx.lineWidth = 1.5; ctx.globalAlpha = .45 * (1 - k);
-        ctx.beginPath(); ctx.arc(cx, cy, 14 + k * R, 0, Math.PI * 2); ctx.stroke();
       }
 
       // The network.
@@ -198,7 +192,7 @@ export default function NetworkOrb({ loading, groups, focus, selection, onOpen, 
       }
 
       // Your clinic, in the middle: it breathes while the results load, then anchors the network.
-      const breathe = busy && !still ? 1 + Math.sin(now / 260) * .12 : 1;
+      const breathe = 1;
       ctx.globalAlpha = .18; ctx.fillStyle = C.rose; ctx.beginPath(); ctx.arc(cx, cy, 22 * breathe, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(cx, cy, 12 * breathe, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();

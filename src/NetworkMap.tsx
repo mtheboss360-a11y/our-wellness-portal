@@ -26,10 +26,6 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   const [notice, setNotice] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
-  // The orb always pulses for a moment before the network builds, even when the businesses come back
-  // from the cache in a few milliseconds: the search is the part people should see.
-  const [warm, setWarm] = useState(false);
-  useEffect(() => { const timer = window.setTimeout(() => setWarm(true), 1600); return () => window.clearTimeout(timer); }, []);
   const [filters, setFilters] = useState<Filters>({ query: '', categories: [], withinMiles: 5, onlyRoutable: false });
   const schedule = useRef<HTMLDialogElement>(null);
 
@@ -97,10 +93,10 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
             <button type="button" className={`network-chip ${focus === null ? 'is-on' : ''}`} aria-pressed={focus === null} onClick={() => setFocus(null)}>All {groups.reduce((n, g) => n + g.businesses.length, 0)}</button>
             {groups.map((group, i) => <button key={group.town} type="button" className={`network-chip ${focus === i ? 'is-on' : ''}`} aria-pressed={focus === i} onClick={() => setFocus(i)}>{group.town}<small>{group.businesses.length}</small></button>)}
           </div>}
-          <NetworkOrb loading={busy || !warm} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
+          <NetworkOrb loading={busy} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
             onOpen={id => { const business = businesses.find(b => b.placeId === id); if (business?.routable) toggle(business); setOpen(id);
               requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>
-          {busy || !warm ? <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p>
+          {busy ? <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p>
             : focus !== null && groups[focus]
               ? <div className="network-orb-action"><button type="button" className="network-primary" disabled={busy} onClick={() => void commit(groups[focus].businesses.map(b => b.placeId).slice(0, data.maxStops))}>
                   <Icon name="route" size={16}/> Put these {Math.min(data.maxStops, groups[focus].businesses.length)} on your route</button></div>
