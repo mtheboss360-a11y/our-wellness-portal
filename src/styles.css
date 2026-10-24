@@ -359,3 +359,35 @@
 /* The orb gets the full width; the business list sits under it */
 .network-layout{grid-template-columns:minmax(0,1fr)}
 .network-orb-panel .network-orb{max-width:760px;margin:0 auto}
+
+/* Drivers & routes: the next routes as small cards, one per driver; compact driver cards */
+.field-upcoming{margin-top:30px}
+.field-upcoming ul{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.field-upcoming li{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.field-upcoming-head{display:flex;align-items:center;gap:12px}
+.field-upcoming-head strong{display:block;font-size:14.5px;color:var(--ink)}
+.field-upcoming-head small{display:block;font-size:12px;color:var(--muted)}
+.field-upcoming-stops{font-size:12.5px;line-height:1.45;color:var(--quiet);flex:1}
+.field-upcoming-stops b{color:var(--ink);font-weight:650}
+.field-link{align-self:flex-start;background:none;border:0;padding:0;font:600 12.5px/1 var(--sans);color:var(--accent-text);text-decoration:underline;text-underline-offset:3px}
+.field-driver-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.field-driver-body{padding:16px 18px 18px}
+.field-driver-head{display:flex;align-items:center;gap:12px}
+.field-driver-head img{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}
+.field-driver-head h3{font-size:1.1rem}
+.field-driver-head .field-driver-meta{margin-top:2px}
+.field-driver-bio{font-size:12.5px;margin-top:12px}
+.field-driver-stats dd{font-size:15px}
+
+/* Network Map: the orb on the left half, the businesses and the route builder on the right */
+.network-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+.network-map-panel{position:sticky;top:84px}
+.network-side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.network-side .network-list{max-height:min(560px,62vh);overflow-y:auto;padding-right:4px}
+.network-side .network-route{margin-top:0}
+.network-list li{position:relative}
+.network-row{padding-right:52px}
+.network-row-add{position:absolute;top:12px;right:10px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1px solid var(--border);color:var(--ink)}
+.network-row-add:hover:not(:disabled){border-color:var(--ink)}
+.network-row-add.is-on{background:var(--ink);border-color:var(--ink);color:#fff}
+@media(max-width:980px){.network-layout{grid-template-columns:minmax(0,1fr)}.network-map-panel{position:static}}

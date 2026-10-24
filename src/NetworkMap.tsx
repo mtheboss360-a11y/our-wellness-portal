@@ -99,7 +99,8 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
             {groups.map((group, i) => <button key={group.town} type="button" className={`network-chip ${focus === i ? 'is-on' : ''}`} aria-pressed={focus === i} onClick={() => setFocus(i)}>{group.town}<small>{group.businesses.length}</small></button>)}
           </div>}
           <NetworkOrb loading={busy || !warm} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
-            onOpen={id => { setOpen(id); requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>
+            onOpen={id => { const business = businesses.find(b => b.placeId === id); if (business?.routable) toggle(business); setOpen(id);
+              requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>
           {busy || !warm ? <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p>
             : focus !== null && groups[focus]
               ? <div className="network-orb-action"><button type="button" className="network-primary" disabled={busy} onClick={() => void commit(groups[focus].businesses.map(b => b.placeId).slice(0, data.maxStops))}>
@@ -112,6 +113,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
         <p className="network-plot-note">Your clinic sits in the middle, with the best five matches in each nearby town around it. The orb is a picture of your network, not a scale map; the list has every real distance and address, and each business carries its own Google Maps link.</p>
       </section>
 
+      <div className="network-side">
       <section className="network-list-panel" aria-label="Nearby business list">
         <div className="network-filters">
           <div className="network-search"><Icon name="search" size={17}/>
@@ -148,12 +150,16 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
                     <span className={`network-status is-${business.status}`}>{business.statusLabel}</span>
                   </span>
                 </button>
+                {business.routable && <button type="button" className={`network-row-add ${selectionIds.includes(business.placeId) ? 'is-on' : ''}`} disabled={busy || (!selectionIds.includes(business.placeId) && atCapacity)}
+                  aria-label={`${selectionIds.includes(business.placeId) ? 'Remove' : 'Add'} ${business.name ?? 'this business'} ${selectionIds.includes(business.placeId) ? 'from' : 'to'} your route`} onClick={() => toggle(business)}>
+                  <Icon name={selectionIds.includes(business.placeId) ? 'check' : 'plus'} size={16}/></button>}
                 {open === business.placeId && <BusinessCard business={business} chosen={selectionIds.includes(business.placeId)} atCapacity={atCapacity} busy={busy} onToggle={() => toggle(business)}/>}
               </li>)}</ul>}
       </section>
+      <RoutePanel data={data} selected={selected} busy={busy} onMove={move} onRemove={business => toggle(business)} onSchedule={() => schedule.current?.showModal()} origin={location}/>
+      </div>
     </div>
 
-    <RoutePanel data={data} selected={selected} busy={busy} onMove={move} onRemove={business => toggle(business)} onSchedule={() => schedule.current?.showModal()} origin={location}/>
     <Requests requests={data.requests}/>
     <DataNote data={data} busy={busy} onRefresh={refresh}/>
     <ScheduleDialog ref={schedule} data={data} selected={selected} onDone={value => { setData({ ...data, requests: value.requests, selection: value.selection }); setNotice('Your visit request is with the OUR Optimization team. We’ll confirm a time with you.'); }}/>

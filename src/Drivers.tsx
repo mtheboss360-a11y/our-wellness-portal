@@ -46,7 +46,7 @@ function Field({ log, today }: { log: FieldLog; today: string }) {
       <Stat value={all.joined} label="Partner visits that joined" note={`of ${all.stops} stops`}/>
     </section>
 
-    {next && <NextRoute log={log} route={next} onShow={() => setRouteId(next.id)}/>}
+    <Upcoming log={log} today={today} onShow={id => { setRouteId(id); document.getElementById('explorer-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}/>
 
     <RouteExplorer log={log} route={route} routes={ordered} onPick={setRouteId}/>
 
@@ -69,19 +69,16 @@ function Avatar({ driver, size = 44 }: { driver: Driver | null; size?: number })
   return <img className="field-avatar" src={driver.photo} alt="" width={size} height={size} loading="lazy"/>;
 }
 
-function NextRoute({ log, route, onShow }: { log: FieldLog; route: FieldRoute; onShow: () => void }) {
-  const driver = driverOf(log, route);
-  return <section className="field-next" aria-labelledby="next-title">
-    <img className="field-next-photo" src={driver?.photo} alt={driver ? `${driver.name}, your driver` : ''} width="640" height="640"/>
-    <div className="field-next-body">
-      <p className="eyebrow">Who’s driving your next route</p>
-      <h2 id="next-title">{driver?.name ?? 'Driver to be confirmed'}</h2>
-      <p className="field-next-when"><strong>{dayLabel(route.date)}</strong> · starts {timeLabel(route.start)} · {route.stops.length} stops</p>
-      {driver && <p className="field-next-bio">{driver.bio}</p>}
-      <ol className="field-next-stops">{route.stops.map((stop, i) => <li key={stop.id}><span>{i + 1}</span><strong>{stop.name}</strong><small>{CATEGORY_LABEL[stop.category]} · {stop.town}</small></li>)}</ol>
-      <div className="field-next-actions"><button className="network-secondary" onClick={onShow}>See it on the orb</button>
-        {driver && <span className="field-chip">{driver.vehicle} · {driver.languages.join(', ')}</span>}</div>
-    </div>
+function Upcoming({ log, today, onShow }: { log: FieldLog; today: string; onShow: (id: string) => void }) {
+  const routes = log.routes.filter(r => r.status === 'scheduled' && r.date >= today).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
+  if (!routes.length) return null;
+  return <section className="field-upcoming" aria-labelledby="upcoming-title">
+    <div className="section-heading"><h2 id="upcoming-title">Who&rsquo;s driving your next routes</h2></div>
+    <ul>{routes.map(route => { const driver = driverOf(log, route); const more = route.stops.length - 3; return <li key={route.id}>
+      <div className="field-upcoming-head"><Avatar driver={driver} size={48}/><span><strong>{driver?.name ?? 'Driver to be confirmed'}</strong><small>{dayLabel(route.date)} · {timeLabel(route.start)}</small></span></div>
+      <p className="field-upcoming-stops"><b>{route.stops.length} stops:</b> {route.stops.slice(0, 3).map(s => s.name).join(', ')}{more > 0 ? `, +${more} more` : ''}</p>
+      <button className="field-link" onClick={() => onShow(route.id)}>See it on the orb</button>
+    </li>; })}</ul>
   </section>;
 }
 
@@ -157,10 +154,9 @@ function Roster({ log, today }: { log: FieldLog; today: string }) {
       const mine = routesBy(log, driver), t = tally(log, mine), up = mine.filter(r => r.status === 'scheduled' && r.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
       const months = monthsSince(driver.since, today);
       return <article key={driver.id} className="field-driver">
-        <img src={driver.photo} alt={driver.name} width="640" height="640" loading="lazy"/>
         <div className="field-driver-body">
-          <h3>{driver.name}</h3>
-          <p className="field-driver-meta">{driver.homeBase} · with the network {months < 1 ? 'this month' : `${months} ${months === 1 ? 'month' : 'months'}`}</p>
+          <div className="field-driver-head"><img src={driver.photo} alt="" width="56" height="56" loading="lazy"/><span><h3>{driver.name}</h3>
+          <p className="field-driver-meta">{driver.homeBase} · with the network {months < 1 ? 'this month' : `${months} ${months === 1 ? 'month' : 'months'}`}</p></span></div>
           <p className="field-driver-bio">{driver.bio}</p>
           <dl className="field-driver-stats"><div><dt>Routes</dt><dd>{t.routes}</dd></div><div><dt>Stops</dt><dd>{t.stops}</dd></div><div><dt>Staff met</dt><dd>{t.staff}</dd></div><div><dt>Sign-ups</dt><dd>{t.signups}</dd></div></dl>
           <p className="field-driver-next" style={{ '--tone': up ? '#1F6A52' : '#6B7B70' } as CSSProperties}>{up ? `Next on your route ${dayLabel(up.date)}` : `Last drove for you ${dayLabel(mine.filter(r => r.status === 'done').at(-1)?.date ?? mine[0].date)}`}</p>

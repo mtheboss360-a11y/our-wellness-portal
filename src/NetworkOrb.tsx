@@ -163,9 +163,38 @@ export default function NetworkOrb({ loading, groups, focus, selection, onOpen, 
           const k = ease(clamp((t - town.start) / .4)); if (k <= 0) continue;
           pill(cx + town.x * R, cy + town.y * R + (1 - k) * 6, town.name, false, k);
         }
-        // the hovered business's name
+        // Once the network has finished connecting, every business's name fades in, one after another.
+        // A label sits just outside its dot, pointing away from the clinic, and steps further out (or
+        // up and down) until it clears the town names and the labels before it.
+        const boxes: Array<[number, number, number, number]> = plan.towns.map(town => { const x = cx + town.x * R, y = cy + town.y * R; return [x - 60, y - 14, x + 60, y + 14]; });
+        const clash = (b: [number, number, number, number]) => b[0] < 2 || b[2] > w - 2 || b[1] < 2 || b[3] > h - 2 || boxes.some(o => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+        if (t > plan.done) plan.nodes.forEach((node, i) => {
+          const k = ease(clamp((t - plan.done - i * .07) / .45)); if (k <= 0) return;
+          const [x, y] = P(node), len = Math.hypot(x - cx, y - cy) || 1, ux = (x - cx) / len, uy = (y - cy) / len;
+          const raw = node.business.name ?? 'A nearby business', text = raw.length > 24 ? raw.slice(0, 23) + '…' : raw;
+          ctx.font = '600 11px Inter, system-ui, sans-serif';
+          const tw = ctx.measureText(text).width + 16, th = 21;
+          let box: [number, number, number, number] | null = null;
+          const tries = [[16, 0], [30, 0], [16, -16], [16, 16], [44, 0], [30, -22], [30, 22], [58, 0], [16, -30], [16, 30], [44, -30], [44, 30], [-30, 0]];
+          for (const [out, side] of tries) {
+            const ax = x + ux * out + -uy * side, ay = y + uy * out + ux * side;
+            const left = ux < -.25 ? ax - tw : ux > .25 ? ax : ax - tw / 2;
+            const top = uy < -.25 ? ay - th : uy > .25 ? ay : ay - th / 2;
+            const b: [number, number, number, number] = [left, top, left + tw, top + th];
+            if (!clash(b)) { box = b; break; }
+          }
+          if (!box) { // every spot is taken: use the nearest one anyway, so no business goes unnamed
+            const ax = x + ux * 16, ay = y + uy * 16, left = ux < -.25 ? ax - tw : ux > .25 ? ax : ax - tw / 2, top = uy < -.25 ? ay - th : uy > .25 ? ay : ay - th / 2;
+            box = [Math.max(2, Math.min(w - tw - 2, left)), Math.max(2, Math.min(h - th - 2, top)), 0, 0]; box[2] = box[0] + tw; box[3] = box[1] + th;
+          }
+          boxes.push(box);
+          ctx.globalAlpha = k; ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.strokeStyle = C.rule; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.roundRect(box[0], box[1] + (1 - k) * 4, tw, th, th / 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = C.ink; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(text, box[0] + 8, box[1] + (1 - k) * 4 + th / 2 + .5);
+        });
+        // the hovered business's name, on top of everything
         const hovered = plan.nodes.find(n => n.business.placeId === hover.current);
-        if (hovered) { const [x, y] = P(hovered); pill(x, y - 24, hovered.business.name ?? 'A nearby business', false, 1); }
+        if (hovered) { const [x, y] = P(hovered); pill(x, y - 24, hovered.business.name ?? 'A nearby business', true, 1); }
       }
 
       // Your clinic, in the middle: it breathes while the results load, then anchors the network.
