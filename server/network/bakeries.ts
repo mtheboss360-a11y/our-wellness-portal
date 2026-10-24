@@ -94,6 +94,7 @@ export function openBakeries(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS bakery_places (clinic_id TEXT NOT NULL, place_id TEXT NOT NULL, payload TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY(clinic_id,place_id));
     CREATE TABLE IF NOT EXISTS bakery_refreshes (clinic_id TEXT PRIMARY KEY, attempted_at INTEGER NOT NULL, status TEXT NOT NULL, detail TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS bakery_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, clinic_id TEXT NOT NULL, place_id TEXT NOT NULL, bakery TEXT NOT NULL, payload TEXT NOT NULL, emailed INTEGER NOT NULL, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS bakery_choices (clinic_id TEXT PRIMARY KEY, place_id TEXT NOT NULL, chosen_at INTEGER NOT NULL);
   `);
   const held = (clinicId: string, now = Date.now()) => {
@@ -123,7 +124,11 @@ export function openBakeries(db: DatabaseSync) {
     db.prepare(`INSERT INTO bakery_choices (clinic_id,place_id,chosen_at) VALUES (?,?,?) ON CONFLICT(clinic_id) DO UPDATE SET place_id=excluded.place_id,chosen_at=excluded.chosen_at`).run(clinicId, placeId, Date.now());
     return true;
   }
-  return { heldBakeries: held, saveBakeries, markBakeries, bakeriesDue, bakeryChoice, chooseBakery };
+  /** Every items request is kept, emailed or not, so nothing is lost if the email can't go out. */
+  function saveItemsRequest(clinicId: string, placeId: string, bakery: string, payload: unknown, emailed: boolean) {
+    db.prepare('INSERT INTO bakery_requests (clinic_id,place_id,bakery,payload,emailed,created_at) VALUES (?,?,?,?,?,?)').run(clinicId, placeId, bakery, JSON.stringify(payload), emailed ? 1 : 0, Date.now());
+  }
+  return { saveItemsRequest, heldBakeries: held, saveBakeries, markBakeries, bakeriesDue, bakeryChoice, chooseBakery };
 }
 
 /** Bring a clinic's bakery list up to date if it is due. Never throws. */

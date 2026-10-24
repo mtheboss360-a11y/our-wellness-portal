@@ -497,3 +497,9 @@
 .bakery-chosen{display:flex;align-items:center;gap:6px;margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--card)}
 .bakery-chosen span{display:flex;flex-direction:column}.bakery-chosen small{color:var(--quiet);font-size:12.5px}
 .bakery-list .network-row.is-chosen .network-row-head strong::after{content:"· your bakery"}
+/* The items request: the form scrolls, the Request items bar stays at the bottom */
+.items-dialog{max-height:min(92dvh,760px);overflow:auto;padding-bottom:0}
+.items-dialog textarea{width:100%;border:1px solid #CCD8CE;border-radius:12px;background:#FDFEFC;color:var(--ink);padding:12px 15px;font:inherit;resize:vertical}
+.items-submit{position:sticky;bottom:0;background:inherit;padding:4px 0 22px;margin-top:6px}
+.items-submit .signin-button{margin-top:14px}
+.bakery-again{margin-top:16px}

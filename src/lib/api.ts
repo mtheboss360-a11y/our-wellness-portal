@@ -27,3 +27,5 @@ export type BakeryRow = { placeId: string; name: string | null; address: string 
 export type BakeryPayload = { clinic: { name: string; location: { label: string } | null }; bakeries: BakeryRow[]; choice: string | null; placesConfigured: boolean };
 export const getBakeries = () => request<BakeryPayload>('/api/network/bakeries');
 export const chooseBakery = (placeId: string | null) => request<BakeryPayload>('/api/network/bakery', 'POST', { placeId });
+export type ItemsRequest = { placeId: string; items: string; people: number; neededBy: string; contactName: string; contactPhone: string; notes: string };
+export const requestItems = (input: ItemsRequest) => request<BakeryPayload & { sent: boolean }>('/api/network/bakery-request', 'POST', input);

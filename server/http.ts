@@ -2,10 +2,11 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { bakeryChoiceInput, deviceLocationInput, routeRequestInput, selectionInput } from './validation';
+import { bakeryChoiceInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
+import { sendTeamEmail } from './email';
 import { configured as placesConfigured } from './network/places';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
@@ -102,6 +103,22 @@ export function createPortalServer(options: Options) {
           if (url.pathname === '/api/network/bakeries' && request.method === 'GET') {
             await ensureBakeries(store, clinic.id);
             json(response, 200, bakeryPayload(store, clinic.id, clinic.name));
+            return;
+          }
+          // Request items from the chosen bakery: saved, then emailed to the team. The bakery becomes the clinic's bakery.
+          if (url.pathname === '/api/network/bakery-request' && request.method === 'POST') {
+            let input;
+            try { input = itemsRequestInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That request could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: input.error.issues[0]?.message ?? 'Please check the form.' }); return; }
+            const bakery = bakeryPayload(store, clinic.id, clinic.name).bakeries.find(b => b.placeId === input.data.placeId);
+            if (!bakery || !store.chooseBakery(clinic.id, bakery.placeId)) { json(response, 400, { error: 'That bakery is no longer on your list.' }); return; }
+            const r = input.data;
+            const text = [`${clinic.name} requested items.`, '', `Bakery: ${bakery.name} (${bakery.label})`, bakery.address ? `Address: ${bakery.address}` : '', '',
+              `Items: ${r.items}`, `People: ${r.people}`, `Needed by: ${r.neededBy}`, '', `Contact: ${r.contactName}${r.contactPhone ? `, ${r.contactPhone}` : ''}`, r.notes ? `Notes: ${r.notes}` : '']
+              .filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
+            const emailed = await sendTeamEmail(`Items request: ${clinic.name} · ${bakery.name}`, text);
+            store.saveItemsRequest(clinic.id, bakery.placeId, bakery.name ?? 'Bakery', r, emailed);
+            json(response, 200, { ...bakeryPayload(store, clinic.id, clinic.name), sent: true });
             return;
           }
           if (url.pathname === '/api/network/bakery' && request.method === 'POST') {

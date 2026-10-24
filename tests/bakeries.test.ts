@@ -26,3 +26,26 @@ test('the sample clinic gets its bakeries without Google, and can choose one', a
     assert.equal(bakeryPayload(store, 'orchard-lantern', 'x').choice, payload.bakeries[0].placeId);
   } finally { store.close(); if (previous !== undefined) process.env.Google_places_API = previous; }
 });
+
+test('an items request is checked, saved and makes that bakery the clinic\'s bakery', async () => {
+  const { createPortalServer } = await import('../server/http');
+  const previous = process.env.Google_places_API; delete process.env.Google_places_API;
+  const store = openStore(':memory:');
+  store.createClient('orchard-lantern', 'Orchard Lantern', 'sample', 'password-s-123');
+  const server = createPortalServer({ store, origin: 'http://portal.test', secure: false, root: process.cwd() });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`;
+  const post = (path: string, body: unknown, cookie = '') => fetch(base + path, { method: 'POST', headers: { Origin: 'http://portal.test', 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
+  try {
+    const cookie = (await post('/api/login', { username: 'sample', password: 'password-s-123' })).headers.get('set-cookie')!.split(';')[0];
+    const list = await (await fetch(base + '/api/network/bakeries', { headers: { Cookie: cookie } })).json();
+    const placeId = list.bakeries[0].placeId;
+    const form = { placeId, items: '2 dozen donuts', people: 20, neededBy: '2030-01-10', contactName: 'Dana', contactPhone: '', notes: '' };
+    assert.equal((await post('/api/network/bakery-request', { ...form, items: '' }, cookie)).status, 400, 'items are required');
+    assert.equal((await post('/api/network/bakery-request', { ...form, placeId: 'nope' }, cookie)).status, 400, 'only a bakery on the list');
+    const ok = await post('/api/network/bakery-request', form, cookie);
+    assert.equal(ok.status, 200);
+    assert.equal((await ok.json()).choice, placeId);
+    assert.equal((store.db.prepare('SELECT COUNT(*) AS n FROM bakery_requests').get() as { n: number }).n, 1);
+  } finally { server.close(); store.close(); if (previous !== undefined) process.env.Google_places_API = previous; }
+});
