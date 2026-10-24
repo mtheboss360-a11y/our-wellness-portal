@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { getNetworkMap, refreshNetworkMap, requestRoute, saveSelection, setDeviceLocation } from './lib/api';
 import { Icon, type IconName } from './Icons';
-import { dateInputValue, directionsUrl, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
+import { dateInputValue, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
 import NetworkOrb from './NetworkOrb';
 
 
@@ -62,13 +62,6 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
     const current = data?.selection ?? [];
     void commit(current.includes(business.placeId) ? current.filter(id => id !== business.placeId) : [...current, business.placeId]);
   };
-  const move = (index: number, by: number) => {
-    const next = [...(data?.selection ?? [])];
-    const target = index + by;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    void commit(next);
-  };
   async function refresh() {
     setBusy(true); setNotice('');
     try { const value = await refreshNetworkMap(); setData(value); if (value.refresh?.status === 'failed') setNotice(value.refresh.detail); }
@@ -77,8 +70,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   }
 
   if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your referral network.</h2><p>{error}</p><button className="network-primary" onClick={() => void load()}>Try again</button></div></Shell>;
-  if (!data) return <Shell onClose={onClose}><div className="network-orb-panel is-loading"><NetworkOrb loading groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName="Your clinic"/>
-    <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p></div></Shell>;
+  if (!data) return <Shell onClose={onClose}><div className="network-locate"><p className="network-orb-status" role="status">Opening your referral network…</p></div></Shell>;
   if (!location) return <Shell onClose={onClose}><LocateClinic onDone={value => { setData(value); if (value.refresh?.status === 'failed') setNotice(value.refresh.detail); }}/></Shell>;
 
   const selectionIds = data.selection;
@@ -93,7 +85,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
             <button type="button" className={`network-chip ${focus === null ? 'is-on' : ''}`} aria-pressed={focus === null} onClick={() => setFocus(null)}>All {groups.reduce((n, g) => n + g.businesses.length, 0)}</button>
             {groups.map((group, i) => <button key={group.town} type="button" className={`network-chip ${focus === i ? 'is-on' : ''}`} aria-pressed={focus === i} onClick={() => setFocus(i)}>{group.town}<small>{group.businesses.length}</small></button>)}
           </div>}
-          <NetworkOrb loading={busy} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
+          <NetworkOrb loading={busy && !groups.length} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
             onOpen={id => { const business = businesses.find(b => b.placeId === id); if (business?.routable) toggle(business); setOpen(id);
               requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>
           {busy ? <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p>
@@ -151,13 +143,13 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
                 {open === business.placeId && <BusinessCard business={business} chosen={selectionIds.includes(business.placeId)} atCapacity={atCapacity} busy={busy} onToggle={() => toggle(business)}/>}
               </li>)}</ul>}
       </section>
-      <RoutePanel data={data} selected={selected} busy={busy} onMove={move} onRemove={business => toggle(business)} onSchedule={() => schedule.current?.showModal()} origin={location}/>
+      <RoutePanel data={data} selected={selected} busy={busy} onRemove={business => toggle(business)} onSchedule={() => schedule.current?.showModal()} origin={location}/>
       </div>
     </div>
 
     <Requests requests={data.requests}/>
     <DataNote data={data} busy={busy} onRefresh={refresh}/>
-    <ScheduleDialog ref={schedule} data={data} selected={selected} onDone={value => { setData({ ...data, requests: value.requests, selection: value.selection }); setNotice('Your visit request is with the OUR Optimization team. We’ll confirm a time with you.'); }}/>
+    <ScheduleDialog ref={schedule} data={data} selected={selected} onDone={value => { setData({ ...data, requests: value.requests, selection: value.selection }); setNotice('Sent. We’ll put your route together and confirm a time.'); }}/>
   </Shell>;
 }
 
@@ -236,30 +228,26 @@ function BusinessCard({ business, chosen, atCapacity, busy, onToggle }: { busine
   </div>;
 }
 
-function RoutePanel({ data, selected, busy, onMove, onRemove, onSchedule, origin }:
-  { data: NetworkMapPayload; selected: MapBusiness[]; busy: boolean; onMove: (index: number, by: number) => void; onRemove: (business: MapBusiness) => void; onSchedule: () => void; origin: { lat: number; lng: number } }) {
+// Pick the spots and send them. The team puts the route together, so there is no ordering here.
+function RoutePanel({ data, selected, busy, onRemove, onSchedule }:
+  { data: NetworkMapPayload; selected: MapBusiness[]; busy: boolean; onRemove: (business: MapBusiness) => void; onSchedule: () => void; origin: { lat: number; lng: number } }) {
   return <section className="network-route" aria-labelledby="route-title">
     <div className="network-route-head">
-      <div><h2 id="route-title">Your route</h2><p className="section-subtitle">Up to {data.maxStops} stops, in the order you put them.</p></div>
+      <div><h2 id="route-title">Your route</h2><p className="section-subtitle">Pick up to {data.maxStops}. We put the route together.</p></div>
       <span className="network-route-count">{selected.length} of {data.maxStops}</span>
     </div>
     {!selected.length
       ? <p className="network-empty">No stops yet. Open a business on the map and add it here.</p>
-      : <><ol className="network-stops">{selected.map((business, index) => <li key={business.placeId} style={{ '--marker': business.category?.color ?? '#6B7B70' } as CSSProperties}>
-          <span className="network-stop-number">{index + 1}</span>
+      : <><ul className="network-stops">{selected.map(business => <li key={business.placeId} style={{ '--marker': business.category?.color ?? '#6B7B70' } as CSSProperties}>
           <span className="network-stop-body"><strong>{business.name ?? 'Unnamed business'}</strong><span>{business.category?.label ?? 'Uncategorised'}{business.address ? ` · ${business.address}` : ''}</span>
             {business.status === 'review' && <span className="network-status is-review">{business.statusLabel} — we’ll check this one first</span>}</span>
           <span className="network-stop-controls">
-            <button type="button" aria-label={`Move ${business.name ?? 'this stop'} earlier`} disabled={busy || index === 0} onClick={() => onMove(index, -1)}><Icon name="up" size={16}/></button>
-            <button type="button" aria-label={`Move ${business.name ?? 'this stop'} later`} disabled={busy || index === selected.length - 1} onClick={() => onMove(index, 1)}><Icon name="down" size={16}/></button>
             <button type="button" aria-label={`Remove ${business.name ?? 'this stop'}`} disabled={busy} onClick={() => onRemove(business)}><Icon name="minus" size={16}/></button>
           </span>
-        </li>)}</ol>
+        </li>)}</ul>
         <div className="network-route-actions">
-          <a className="network-primary" href={directionsUrl(origin, selected)} target="_blank" rel="noreferrer noopener"><Icon name="route" size={17}/> Start route in Google Maps</a>
-          <button type="button" className="network-secondary" onClick={onSchedule} disabled={busy}><Icon name="calendar" size={17}/> Ask the team to schedule it</button>
-        </div>
-        <p className="panel-footnote">Google Maps drives the stops in the order above — it does not reorder them for you.</p></>}
+          <button type="button" className="network-primary" onClick={onSchedule} disabled={busy}><Icon name="route" size={17}/> Send to our team</button>
+        </div></>}
   </section>;
 }
 
@@ -316,7 +304,7 @@ function ScheduleDialog({ ref, data, selected, onDone }: { ref: React.Ref<HTMLDi
     finally { setBusy(false); }
   }
   return <dialog ref={ref} className="campaign-dialog network-dialog" aria-labelledby="schedule-title" onClick={event => { if (event.target === event.currentTarget) element.current?.close(); }}>
-    <div className="dialog-heading"><div><h2 id="schedule-title">Ask us to schedule this route</h2><p>{selected.length} {selected.length === 1 ? 'stop' : 'stops'}. We’ll confirm a time with you — nothing is booked until we do.</p></div>
+    <div className="dialog-heading"><div><h2 id="schedule-title">Send your spots</h2><p>We’ll put the route together and confirm a time.</p></div>
       <button className="dialog-close" aria-label="Close" onClick={() => element.current?.close()} type="button"><Icon name="minus" size={18}/></button></div>
     <form onSubmit={submit}>
       <div className="network-date-row">
@@ -327,9 +315,8 @@ function ScheduleDialog({ ref, data, selected, onDone }: { ref: React.Ref<HTMLDi
       <div className="field"><label htmlFor="route-phone">Phone (optional)</label><input id="route-phone" type="tel" maxLength={40} placeholder="Best number to reach them" value={contactPhone} onChange={event => setContactPhone(event.target.value)} disabled={busy}/></div>
       <div className="field"><label htmlFor="route-notes">Anything we should know? (optional)</label><textarea id="route-notes" rows={3} maxLength={600} value={notes} onChange={event => setNotes(event.target.value)} disabled={busy}/></div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <ol className="network-dialog-stops">{selected.map((business, index) => <li key={business.placeId}>{index + 1}. {business.name ?? 'Unnamed business'}{business.address ? ` — ${business.address}` : ''}</li>)}</ol>
-      <button className="signin-button" type="submit" disabled={busy || !selected.length}>{busy ? 'Sending…' : 'Send the request'}</button>
-      <p className="network-dialog-note">This sends a request to the OUR Optimization team. It is not a confirmed appointment, and your portal will show it as “Requested” until we accept it.</p>
+      <ul className="network-dialog-stops">{selected.map(business => <li key={business.placeId}>{business.name ?? 'Unnamed business'}</li>)}</ul>
+      <button className="signin-button" type="submit" disabled={busy || !selected.length}>{busy ? 'Sending…' : 'Send to our team'}</button>
     </form>
   </dialog>;
 }

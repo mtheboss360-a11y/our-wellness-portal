@@ -20,7 +20,7 @@ import { CATEGORY_RULES, DEFAULT_COMPETITOR_CATEGORIES, DISTANCE_FILTERS, DEFAUL
 import { haversineMiles, plotOffset } from './geo';
 import { addressKey, crossReference, fitScore, nameKey, type NetworkRecord, type RecordKind } from './network';
 import { configured as placesConfigured, type DiscoveredPlace } from './places';
-import { chainFilter } from './chains';
+import { privateOnly } from './chains';
 
 const DAY = 86_400_000;
 
@@ -142,8 +142,8 @@ export function openNetwork(db: DatabaseSync) {
     if (!location) return [];
     const records = networkRecords();
     const places = cachedDiscovery(clinicId, now);
-    const chain = chainFilter(places.map(place => place.name));
-    return places.filter(place => !chain(place.name)).map(place => {
+    const keep = privateOnly(places);
+    return places.filter(keep).map(place => {
       const category = categoryForTypes(place.types, place.primaryType);
       const distanceMiles = haversineMiles(location.lat, location.lng, place.lat, place.lng);
       const distance = Number.isFinite(distanceMiles) ? distanceMiles : location.radiusMiles;
