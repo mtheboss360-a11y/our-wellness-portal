@@ -35,7 +35,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
       setData(value);
       setFilters(current => ({ ...current, withinMiles: value.clinic.location?.radiusMiles ?? current.withinMiles }));
       setError('');
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'We couldn’t open your network map.'); }
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'We couldn’t open your referral network.'); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
@@ -71,15 +71,15 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   };
   async function refresh() {
     setBusy(true); setNotice('');
-    try { const value = await refreshNetworkMap(); setData(value); setNotice(value.refresh?.detail ?? ''); }
+    try { const value = await refreshNetworkMap(); setData(value); if (value.refresh?.status === 'failed') setNotice(value.refresh.detail); }
     catch (failure) { setNotice(failure instanceof Error ? failure.message : 'We couldn’t check for new businesses.'); }
     finally { setBusy(false); }
   }
 
-  if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your network map.</h2><p>{error}</p><button className="network-primary" onClick={() => void load()}>Try again</button></div></Shell>;
+  if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your referral network.</h2><p>{error}</p><button className="network-primary" onClick={() => void load()}>Try again</button></div></Shell>;
   if (!data) return <Shell onClose={onClose}><div className="network-orb-panel is-loading"><NetworkOrb loading groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName="Your clinic"/>
     <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p></div></Shell>;
-  if (!location) return <Shell onClose={onClose}><LocateClinic name={data.clinic.name} onDone={value => { setData(value); setNotice(value.refresh?.detail ?? ''); }}/></Shell>;
+  if (!location) return <Shell onClose={onClose}><LocateClinic onDone={value => { setData(value); if (value.refresh?.status === 'failed') setNotice(value.refresh.detail); }}/></Shell>;
 
   const selectionIds = data.selection;
   const atCapacity = selectionIds.length >= data.maxStops;
@@ -163,10 +163,10 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
 
 /**
  * No location saved yet: the clinic can share its device's location once, and the map is built from
- * there. The browser asks for permission; nothing is sent until the clinic agrees. The orb pulses
- * while the device finds itself and while the businesses around it are looked up and cross-checked.
+ * there. The browser asks for permission; nothing is sent until the clinic agrees. No orb here: once the
+ * location is in, the map view opens and its one orb builds the network.
  */
-function LocateClinic({ name, onDone }: { name: string; onDone: (value: NetworkMapPayload) => void }) {
+function LocateClinic({ onDone }: { onDone: (value: NetworkMapPayload) => void }) {
   const [step, setStep] = useState<'idle' | 'locating' | 'searching'>('idle');
   const [error, setError] = useState('');
   function locate() {
@@ -182,8 +182,7 @@ function LocateClinic({ name, onDone }: { name: string; onDone: (value: NetworkM
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   }
   const working = step !== 'idle';
-  return <div className="network-orb-panel network-locate">
-    <NetworkOrb loading={working} groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName={name}/>
+  return <div className="network-locate">
     <div className="network-locate-copy">
       <h2>{working ? (step === 'locating' ? 'Finding your clinic\u2026' : 'Finding the businesses that share your clients\u2026') : 'Build your map from your clinic.'}</h2>
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -196,8 +195,7 @@ function Shell({ children, onClose, subtitle }: { children: React.ReactNode; onC
   return <section className="network-page" aria-labelledby="network-title">
     <div className="network-head">
       <div>
-        <p className="eyebrow">Referral network</p>
-        <h1 id="network-title">Network Map</h1>
+        <h1 id="network-title">Referral network</h1>
         {subtitle && <p className="network-subtitle">{subtitle}</p>}
       </div>
       <button className="network-back" onClick={onClose}><Icon name="back" size={17}/> Back to your report</button>

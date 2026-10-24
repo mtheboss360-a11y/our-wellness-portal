@@ -21,8 +21,12 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
-function Brand({ name, centered = false }: { name: string; centered?: boolean }) {
-  return <div className={`brand ${centered ? 'brand-centered' : ''}`}><img src="/assets/owo-logo.png" alt={name} width="1579" height="574"/></div>;
+// The logo goes home: the website from the sign-in screen, the report once signed in.
+function Brand({ name, centered = false, onHome }: { name: string; centered?: boolean; onHome?: () => void }) {
+  const logo = <img src="/assets/owo-logo.png" alt={name} width="1579" height="574"/>;
+  return <div className={`brand ${centered ? 'brand-centered' : ''}`}>{onHome
+    ? <button type="button" className="brand-home" onClick={onHome} aria-label={`${name}: back to your report`}>{logo}</button>
+    : <a className="brand-home" href="https://www.ouroptimization.com" aria-label={`${name}: home`}>{logo}</a>}</div>;
 }
 export default function Portal() {
   const data = useSession().data!;
@@ -50,7 +54,6 @@ function SignIn({ config }: { config: PublicPortal }) {
       <section className="signin-card" aria-labelledby="welcome-title">
         <p className="eyebrow">Client portal</p>
         <h1 id="welcome-title">Welcome back.</h1>
-        <p className="signin-intro">See where your marketing materials went, and who came back.</p>
         <form onSubmit={submit}>
           <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="yourclinic" value={email} onChange={event => setEmail(event.target.value)} disabled={busy}/></div>
           <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" required autoComplete="current-password" placeholder="Your password" value={password} onChange={event => setPassword(event.target.value)} disabled={busy}/></div>
@@ -60,16 +63,13 @@ function SignIn({ config }: { config: PublicPortal }) {
             {sample && <button className="sample-button" type="button" onClick={() => void signIn(sample)} disabled={busy}>Sample account</button>}
           </div>
         </form>
-        <p className="access-help">Need access? Call <a href={`tel:${config.supportDial}`}>{config.supportPhone}</a></p>
       </section>
-      {sample && <p className="sample-note">{config.sampleNotice}</p>}
-      <p className="signin-foot"><Icon name="lock" size={13}/> Your campaign. Your neighborhood. Your results.</p>
     </div>
   </main>;
 }
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
-  // Three screens behind one sign-in: the campaign report, drivers & routes, and the Network Map.
+  // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
   const [view, setView] = useState<'report' | 'drivers' | 'network'>('report');
   const [campaignId, setCampaignId] = useState(data.campaigns[0]?.id ?? '');
   const [selected, setSelected] = useState<string | null>(null);
@@ -92,11 +92,11 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   }
   return <div className="portal-page">
     <a className="skip-link" href="#report">Skip to report</a>
-    <header className="site-header"><Brand name={data.config.name}/>
+    <header className="site-header"><Brand name={data.config.name} onHome={() => setView('report')}/>
       <nav className="portal-nav" aria-label="Your portal">
         <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
         <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> Drivers &amp; routes</button>
-        <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Network Map</button>
+        <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Referral network</button>
       </nav>
       <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="report" className="report">

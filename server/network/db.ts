@@ -20,6 +20,7 @@ import { CATEGORY_RULES, DEFAULT_COMPETITOR_CATEGORIES, DISTANCE_FILTERS, DEFAUL
 import { haversineMiles, plotOffset } from './geo';
 import { addressKey, crossReference, fitScore, nameKey, type NetworkRecord, type RecordKind } from './network';
 import { configured as placesConfigured, type DiscoveredPlace } from './places';
+import { chainFilter } from './chains';
 
 const DAY = 86_400_000;
 
@@ -101,6 +102,9 @@ export function openNetwork(db: DatabaseSync) {
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
 
+  /** Drop every cached business for a clinic (the sample clinic, before its fixed set is loaded). */
+  function clearDiscovery(clinicId: string) { db.prepare('DELETE FROM map_places WHERE clinic_id=?').run(clinicId); }
+
   function cachedDiscovery(clinicId: string, now = Date.now()): DiscoveredPlace[] {
     purgeExpired(now);
     return (db.prepare('SELECT payload FROM map_places WHERE clinic_id=? AND expires_at>?').all(clinicId, now) as Array<{ payload: string }>)
@@ -137,7 +141,9 @@ export function openNetwork(db: DatabaseSync) {
     const location = clinicLocation(clinicId);
     if (!location) return [];
     const records = networkRecords();
-    return cachedDiscovery(clinicId, now).map(place => {
+    const places = cachedDiscovery(clinicId, now);
+    const chain = chainFilter(places.map(place => place.name));
+    return places.filter(place => !chain(place.name)).map(place => {
       const category = categoryForTypes(place.types, place.primaryType);
       const distanceMiles = haversineMiles(location.lat, location.lng, place.lat, place.lng);
       const distance = Number.isFinite(distanceMiles) ? distanceMiles : location.radiusMiles;
@@ -260,7 +266,7 @@ export function openNetwork(db: DatabaseSync) {
     };
   }
 
-  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
+  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, clearDiscovery, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
 }
 
 export type NetworkStore = ReturnType<typeof openNetwork>;

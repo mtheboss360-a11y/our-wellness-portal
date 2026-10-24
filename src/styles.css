@@ -477,3 +477,10 @@
   .hero .campaign-line{margin-top:0}
   .stat-grid{margin-top:16px}
 }
+/* The logo is the way home */
+.brand-home{display:block;background:none;border:0;padding:0;cursor:pointer;text-decoration:none}
+/* Drivers & routes: no heading block, just the back button */
+.drivers-page .network-head{border-bottom:0;padding-bottom:0;justify-content:flex-end}
+/* A stop's details open on click; this goes back to the route */
+.field-back{margin-bottom:12px}
+.network-locate{padding:48px 0 24px}
