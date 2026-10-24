@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { getNetworkMap, refreshNetworkMap, requestRoute, saveSelection, setDeviceLocation } from './lib/api';
 import { Icon, type IconName } from './Icons';
-import { dateInputValue, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
+import { bestFifteen, dateInputValue, milesLabel, townOf, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
 import NetworkOrb from './NetworkOrb';
 
 
@@ -24,16 +24,12 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [open, setOpen] = useState<string | null>(null);
-  const [focus, setFocus] = useState<number | null>(null);
-  const [filters, setFilters] = useState<Filters>({ query: '', categories: [], withinMiles: 5, onlyRoutable: false });
   const schedule = useRef<HTMLDialogElement>(null);
 
   const load = useCallback(async () => {
     try {
       const value = await getNetworkMap();
       setData(value);
-      setFilters(current => ({ ...current, withinMiles: value.clinic.location?.radiusMiles ?? current.withinMiles }));
       setError('');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'We couldn’t open your referral network.'); }
   }, []);
@@ -41,12 +37,10 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
 
   const businesses = data?.businesses ?? [];
   const location = data?.clinic.location ?? null;
-  const visible = useMemo(() => filterBusinesses(businesses, filters), [businesses, filters]);
-  // The orb's fifteen: the best five matches in each of the three towns with the most businesses we can
-  // route to around the clinic. Three towns of five is three routes.
-  const groups = useMemo(() => townPicks(businesses), [businesses]);
+  // The best fifteen, as three fives: the top 5, top 10 and top 15. All of them go on the orb, and the list
+  // shows only these: no search, no filters, no browsing every business nearby.
+  const groups = useMemo(() => bestFifteen(businesses), [businesses]);
   const selected = useMemo(() => (data?.selection ?? []).map(id => businesses.find(row => row.placeId === id)).filter(Boolean) as MapBusiness[], [data?.selection, businesses]);
-  const detail = open ? businesses.find(row => row.placeId === open) ?? null : null;
 
   async function commit(placeIds: string[]) {
     if (!data) return;
@@ -79,84 +73,46 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   return <Shell onClose={onClose} subtitle={location.label}>
     {notice && <p className="network-notice" role="status">{notice}</p>}
     <div className="network-layout">
-      <section className="network-map-panel" aria-label="Businesses near your clinic">
+      <section className="network-map-panel" aria-label="Your referral network">
         <div className="network-orb-panel">
-          {groups.length > 0 && <div className="network-orb-towns" role="group" aria-label="Show on the orb">
-            <button type="button" className={`network-chip ${focus === null ? 'is-on' : ''}`} aria-pressed={focus === null} onClick={() => setFocus(null)}>All {groups.reduce((n, g) => n + g.businesses.length, 0)}</button>
-            {groups.map((group, i) => <button key={group.town} type="button" className={`network-chip ${focus === i ? 'is-on' : ''}`} aria-pressed={focus === i} onClick={() => setFocus(i)}>{group.town}<small>{group.businesses.length}</small></button>)}
-          </div>}
-          <NetworkOrb loading={busy && !groups.length} groups={groups} focus={focus} selection={selectionIds} clinicName={data.clinic.name}
-            onOpen={id => { const business = businesses.find(b => b.placeId === id); if (business?.routable) toggle(business); setOpen(id);
-              requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>
-          {busy ? <p className="network-orb-status" role="status">Finding the businesses that share your clients…</p>
-            : focus !== null && groups[focus]
-              ? <div className="network-orb-action"><button type="button" className="network-primary" disabled={busy} onClick={() => void commit(groups[focus].businesses.map(b => b.placeId).slice(0, data.maxStops))}>
-                  <Icon name="route" size={16}/> Put these {Math.min(data.maxStops, groups[focus].businesses.length)} on your route</button></div>
-              : groups.length > 0 && <p className="network-orb-status">{groups.reduce((n, g) => n + g.businesses.length, 0)} businesses across {groups.length} {groups.length === 1 ? 'town' : 'towns'}: {groups.length === 1 ? 'one route' : `${groups.length} routes`} of five. Pick a town to put its five on your route.</p>}
+          <NetworkOrb loading={busy && !groups.length} groups={groups} focus={null} selection={selectionIds} clinicName={data.clinic.name}
+            onOpen={id => { const business = businesses.find(b => b.placeId === id); if (business?.routable && (selectionIds.includes(id) || !atCapacity)) toggle(business); }}/>
         </div>
-        <div className="network-legend">{data.categories.map(category => ({ ...category, shown: visible.filter(business => business.category?.id === category.id).length })).filter(category => category.shown > 0).map(category =>
-          <span key={category.id} className="network-legend-item"><span className="network-legend-dot" style={{ background: category.color }}/>{category.label}<small>{category.shown}</small></span>)}
-        </div>
-        <p className="network-plot-note">Your clinic sits in the middle, with the best five matches in each nearby town around it. The orb is a picture of your network, not a scale map; the list has every real distance and address, and each business carries its own Google Maps link.</p>
       </section>
 
       <div className="network-side">
-      <section className="network-list-panel" aria-label="Nearby business list">
-        <div className="network-filters">
-          <div className="network-search"><Icon name="search" size={17}/>
-            <label className="sr-only" htmlFor="network-search">Search nearby businesses</label>
-            <input id="network-search" type="search" placeholder="Search by name or street" value={filters.query} onChange={event => setFilters({ ...filters, query: event.target.value })}/>
-          </div>
-          <div className="network-filter-row">
-            <label className="sr-only" htmlFor="network-distance">Distance from your clinic</label>
-            <select id="network-distance" value={filters.withinMiles} onChange={event => setFilters({ ...filters, withinMiles: Number(event.target.value) })}>
-              {[...new Set([...data.distanceFilters, location.radiusMiles])].sort((a, b) => a - b).map(miles => <option key={miles} value={miles}>Within {miles} mi</option>)}
-            </select>
-            <button type="button" className={`network-chip ${filters.onlyRoutable ? 'is-on' : ''}`} aria-pressed={filters.onlyRoutable} onClick={() => setFilters({ ...filters, onlyRoutable: !filters.onlyRoutable })}>Routable only</button>
-          </div>
-          <div className="network-chips">{data.categories.map(category => {
-            const on = filters.categories.includes(category.id);
-            return <button key={category.id} type="button" className={`network-chip ${on ? 'is-on' : ''}`} aria-pressed={on}
-              onClick={() => setFilters({ ...filters, categories: on ? filters.categories.filter(id => id !== category.id) : [...filters.categories, category.id] })}
-              style={{ '--chip': category.color } as CSSProperties}><Icon name={category.icon as IconName} size={15}/>{category.label}</button>;
-          })}</div>
-        </div>
-        <p className="network-count" aria-live="polite">{visible.length} of {businesses.length} nearby {businesses.length === 1 ? 'business' : 'businesses'}</p>
-        {!businesses.length
+      <section className="network-list-panel" aria-label="Your best fifteen">
+        {!groups.length
           ? <EmptyMap data={data} busy={busy} onRefresh={refresh}/>
-          : !visible.length
-            ? <p className="network-empty">Nothing matches those filters yet. Widen the distance or clear a category.</p>
-            : <ul className="network-list">{visible.map(business => <li key={business.placeId} id={`biz-${business.placeId}`}>
-                <button type="button" className={`network-row ${open === business.placeId ? 'is-open' : ''} ${selectionIds.includes(business.placeId) ? 'is-chosen' : ''}`}
-                  aria-expanded={open === business.placeId} onClick={() => setOpen(open === business.placeId ? null : business.placeId)}
-                  style={{ '--marker': business.category?.color ?? '#6B7B70' } as CSSProperties}>
-                  <span className="network-row-icon"><Icon name={(business.category?.icon ?? 'info') as IconName} size={17}/></span>
+          : groups.map((group, g) => <div key={group.town} className="network-tier">
+              <h2 className="network-tier-title">{group.town}</h2>
+              <ul className="network-list">{group.businesses.map((business, i) => { const chosen = selectionIds.includes(business.placeId); return <li key={business.placeId} id={`biz-${business.placeId}`}>
+                <div className={`network-row ${chosen ? 'is-chosen' : ''}`} style={{ '--marker': business.category?.color ?? '#6B7B70' } as CSSProperties}>
+                  <span className="network-row-rank">{g * 5 + i + 1}</span>
                   <span className="network-row-body">
                     <span className="network-row-head"><strong>{business.name ?? 'Unnamed business'}</strong><span className="network-row-distance">{milesLabel(business.distanceMiles)}</span></span>
-                    <span className="network-row-meta">{business.category?.label ?? 'Uncategorised'}{business.address ? ` · ${business.address}` : ''}</span>
-                    <span className={`network-status is-${business.status}`}>{business.statusLabel}</span>
+                    <span className="network-row-meta">{business.category?.label ?? 'Business'}{townOf(business.address) ? ` · ${townOf(business.address)}` : ''}</span>
                   </span>
-                </button>
-                {business.routable && <button type="button" className={`network-row-add ${selectionIds.includes(business.placeId) ? 'is-on' : ''}`} disabled={busy || (!selectionIds.includes(business.placeId) && atCapacity)}
-                  aria-label={`${selectionIds.includes(business.placeId) ? 'Remove' : 'Add'} ${business.name ?? 'this business'} ${selectionIds.includes(business.placeId) ? 'from' : 'to'} your route`} onClick={() => toggle(business)}>
-                  <Icon name={selectionIds.includes(business.placeId) ? 'check' : 'plus'} size={16}/></button>}
-                {open === business.placeId && <BusinessCard business={business} chosen={selectionIds.includes(business.placeId)} atCapacity={atCapacity} busy={busy} onToggle={() => toggle(business)}/>}
-              </li>)}</ul>}
+                </div>
+                <button type="button" className={`network-row-add ${chosen ? 'is-on' : ''}`} disabled={busy || (!chosen && atCapacity)}
+                  aria-label={`${chosen ? 'Remove' : 'Add'} ${business.name ?? 'this business'} ${chosen ? 'from' : 'to'} your route`} onClick={() => toggle(business)}>
+                  <Icon name={chosen ? 'check' : 'plus'} size={16}/></button>
+              </li>; })}</ul>
+            </div>)}
       </section>
       <RoutePanel data={data} selected={selected} busy={busy} onRemove={business => toggle(business)} onSchedule={() => schedule.current?.showModal()} origin={location}/>
       </div>
     </div>
 
     <Requests requests={data.requests}/>
-    <DataNote data={data} busy={busy} onRefresh={refresh}/>
     <ScheduleDialog ref={schedule} data={data} selected={selected} onDone={value => { setData({ ...data, requests: value.requests, selection: value.selection }); setNotice('Sent. We’ll put your route together and confirm a time.'); }}/>
   </Shell>;
 }
 
 /**
  * No location saved yet: the clinic can share its device's location once, and the map is built from
- * there. The browser asks for permission; nothing is sent until the clinic agrees. No orb here: once the
- * location is in, the map view opens and its one orb builds the network.
+ * there. The browser asks for permission; nothing is sent until the clinic agrees. The big orb and one
+ * button; the orb stays big while the clinic is found and its best fifteen are looked up.
  */
 function LocateClinic({ onDone }: { onDone: (value: NetworkMapPayload) => void }) {
   const [step, setStep] = useState<'idle' | 'locating' | 'searching'>('idle');
@@ -174,11 +130,12 @@ function LocateClinic({ onDone }: { onDone: (value: NetworkMapPayload) => void }
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   }
   const working = step !== 'idle';
-  return <div className="network-locate">
+  return <div className="network-orb-panel network-locate is-big">
+    <NetworkOrb loading={working} groups={[]} focus={null} selection={[]} onOpen={() => {}} clinicName="Your clinic"/>
     <div className="network-locate-copy">
-      <h2>{working ? (step === 'locating' ? 'Finding your clinic\u2026' : 'Finding the businesses that share your clients\u2026') : 'Build your map from your clinic.'}</h2>
+      {working && <p className="network-orb-status" role="status">{step === 'locating' ? 'Finding your clinic\u2026' : 'Finding your best fifteen\u2026'}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      {!working && <button type="button" className="network-primary" onClick={locate}><Icon name="map" size={17}/> Use my location</button>}
+      {!working && <button type="button" className="network-primary" onClick={locate}><Icon name="map" size={17}/> Build my network</button>}
     </div>
   </div>;
 }
@@ -194,38 +151,6 @@ function Shell({ children, onClose, subtitle }: { children: React.ReactNode; onC
     </div>
     {children}
   </section>;
-}
-
-function BusinessCard({ business, chosen, atCapacity, busy, onToggle }: { business: MapBusiness; chosen: boolean; atCapacity: boolean; busy: boolean; onToggle: () => void }) {
-  return <div className="network-card">
-    <dl className="network-card-facts">
-      {business.address && <><dt>Address</dt><dd>{business.address}</dd></>}
-      <dt>Distance</dt><dd>{business.distanceMiles.toFixed(1)} miles from your clinic</dd>
-      <dt>Category</dt><dd>{business.category?.label ?? 'No category rule matches this business yet'}</dd>
-      {business.rating !== null && <><dt>Google rating</dt><dd>{business.rating.toFixed(1)}{business.reviewCount !== null ? ` from ${business.reviewCount.toLocaleString('en-US')} review${business.reviewCount === 1 ? '' : 's'}` : ''} <span className="network-caveat">Context only — a popular business is not a business that has agreed to anything.</span></dd></>}
-    </dl>
-    <div className="network-card-block">
-      <h3>Why this could share your clientele</h3>
-      <p>{business.fit.components[0]?.detail}</p>
-      <div className="network-fit" aria-label={`Fit score ${business.fit.score} out of 100`}>
-        <span className="network-fit-bar"><span style={{ width: `${business.fit.score}%` }}/></span>
-        <strong>{business.fit.score}<small>/100</small></strong>
-      </div>
-      <ul className="network-fit-parts">{business.fit.components.map(part => <li key={part.label}><span>{part.label}</span><span>{part.points} of {part.outOf}</span></li>)}</ul>
-    </div>
-    <div className={`network-card-block network-reference is-${business.status}`}>
-      <h3>{business.statusLabel}</h3>
-      <p>{business.statusReason}</p>
-    </div>
-    <div className="network-card-actions">
-      {business.routable
-        ? <button type="button" className={chosen ? 'network-secondary' : 'network-primary'} disabled={busy || (!chosen && atCapacity)} onClick={onToggle}>
-            <Icon name={chosen ? 'minus' : 'plus'} size={16}/>{chosen ? 'Remove from route' : atCapacity ? 'Route is full' : 'Add to route'}
-          </button>
-        : <p className="network-blocked"><Icon name="info" size={15}/> The network doesn’t route your clinic here.</p>}
-      <a className="network-link" href={mapsPlaceUrl(business)} target="_blank" rel="noreferrer noopener">Open in Google Maps</a>
-    </div>
-  </div>;
 }
 
 // Pick the spots and send them. The team puts the route together, so there is no ordering here.
@@ -271,15 +196,6 @@ function EmptyMap({ data, busy, onRefresh }: { data: NetworkMapPayload; busy: bo
   return <div className="network-empty-block"><h3>{failed ? 'The last lookup didn’t go through.' : 'No nearby businesses saved yet.'}</h3>
     <p>{data.data.lastRefresh?.detail ?? 'Your map fills in the first time it is opened.'}</p>
     <button type="button" className="network-secondary" onClick={onRefresh} disabled={busy}><Icon name="refresh" size={16}/> {busy ? 'Checking…' : 'Check again'}</button></div>;
-}
-
-function DataNote({ data, busy, onRefresh }: { data: NetworkMapPayload; busy: boolean; onRefresh: () => void }) {
-  const last = data.data.lastRefresh;
-  return <p className="network-data-note">
-    {last ? `Nearby businesses last checked ${last.at.slice(0, 10)}. ` : 'Nearby businesses have not been checked yet. '}
-    Google’s details are held for up to {data.data.retentionDays} days and then looked up again, which is why the map doesn’t search on every visit.
-    {data.businesses.length > 0 && <> <button type="button" className="network-inline-button" onClick={onRefresh} disabled={busy}>{busy ? 'Checking…' : 'Check for new businesses'}</button></>}
-  </p>;
 }
 
 function ScheduleDialog({ ref, data, selected, onDone }: { ref: React.Ref<HTMLDialogElement>; data: NetworkMapPayload; selected: MapBusiness[]; onDone: (value: { requests: NetworkMapPayload['requests']; selection: string[] }) => void }) {

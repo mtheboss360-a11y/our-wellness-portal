@@ -484,3 +484,9 @@
 /* A stop's details open on click; this goes back to the route */
 .field-back{margin-bottom:12px}
 .network-locate{padding:48px 0 24px}
+/* Referral network: the big orb and one button before the location; then the best fifteen in fives */
+.network-locate.is-big{max-width:720px;margin:26px auto 0;padding:16px}
+.network-tier+.network-tier{margin-top:22px}
+.network-tier-title{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text);font-weight:650;margin-bottom:10px}
+.network-row-rank{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--surface,#F1F5F0);color:var(--ink);font:600 12.5px/1 var(--nums,system-ui);font-variant-numeric:tabular-nums}
+.network-list li>.network-row{cursor:default}
