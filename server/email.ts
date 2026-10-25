@@ -5,7 +5,7 @@
 //   RESEND_API_KEY     optional: send through Resend instead (REQUEST_EMAIL_FROM sets the sender)
 // Never throws: a failed send is reported as false and the request is still saved.
 
-const DEFAULT_INBOX = 'moe@ouroptimization.com';
+const DEFAULT_INBOX = 'moeazeez@ouroptimization.com';
 export const inbox = () => (process.env.REQUEST_EMAIL_TO?.trim() || DEFAULT_INBOX).split(',').map(a => a.trim()).filter(Boolean);
 
 // The last send's outcome, for /api/health: when it ran and what came back. Never the message itself.
