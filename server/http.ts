@@ -2,11 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { bakeryChoiceInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput } from './validation';
+import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
-import { inbox, lastEmail, sendTeamEmail } from './email';
 import { configured as placesConfigured } from './network/places';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
@@ -39,7 +38,7 @@ export function createPortalServer(options: Options) {
     response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)'); // the Network Map may ask for the clinic's location
     response.setHeader('X-Robots-Tag', 'noindex, nofollow');
     response.setHeader('Cache-Control', 'no-store');
-    response.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'${vite ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://formsubmit.co${vite ? ' ws://localhost:* ws://127.0.0.1:*' : ''}; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'`);
+    response.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self'${vite ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'${vite ? ' ws://localhost:* ws://127.0.0.1:*' : ''}; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'`);
     if (secure) response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     try {
       const url = new URL(request.url ?? '/', origin);
@@ -49,7 +48,7 @@ export function createPortalServer(options: Options) {
         // A health check anyone can read: whether the server sees a Places key, never the key itself, and the
         // NAMES (no values) of any environment variables that look like one, so a misnamed key can be spotted.
         if (url.pathname === '/api/health' && request.method === 'GET') {
-          json(response, 200, { ok: true, lastItemsEmail: lastEmail(), placesKey: placesConfigured(), placesVariableNames: Object.keys(process.env).filter(name => /place/i.test(name)).sort() });
+          json(response, 200, { ok: true, placesKey: placesConfigured(), placesVariableNames: Object.keys(process.env).filter(name => /place/i.test(name)).sort() });
           return;
         }
         if (url.pathname === '/api/portal' && request.method === 'GET') { json(response, 200, store.snapshot(cookie)); return; }
@@ -113,17 +112,17 @@ export function createPortalServer(options: Options) {
             const bakery = bakeryPayload(store, clinic.id, clinic.name).bakeries.find(b => b.placeId === input.data.placeId);
             if (!bakery || !store.chooseBakery(clinic.id, bakery.placeId)) { json(response, 400, { error: 'That bakery is no longer on your list.' }); return; }
             const r = input.data;
-            const text = [`${clinic.name} requested items.`, '', `Bakery: ${bakery.name} (${bakery.label})`, bakery.address ? `Address: ${bakery.address}` : '', '',
-              `Items: ${r.items}`, `People: ${r.people}`, `Needed by: ${r.neededBy}`, '', `Contact: ${r.contactName}${r.contactPhone ? `, ${r.contactPhone}` : ''}`, r.notes ? `Notes: ${r.notes}` : '']
-              .filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
-            const emailFields = { Clinic: clinic.name, Bakery: `${bakery.name} (${bakery.label})`, Address: bakery.address ?? '', Items: r.items, People: String(r.people),
-              'Needed by': r.neededBy, Contact: r.contactName, Phone: r.contactPhone, Notes: r.notes };
-            const emailed = await sendTeamEmail(`Items request: ${clinic.name} · ${bakery.name}`, text, emailFields);
-            store.saveItemsRequest(clinic.id, bakery.placeId, bakery.name ?? 'Bakery', r, emailed);
-            // When the server's send didn't go through, the browser sends the same email itself (FormSubmit
-            // turns away some server traffic but always takes a form post from a real browser).
-            json(response, 200, { ...bakeryPayload(store, clinic.id, clinic.name), sent: true, emailed,
-              ...(emailed ? {} : { fallback: { inbox: inbox(), subject: `Items request: ${clinic.name} · ${bakery.name}`, fields: emailFields } }) });
+            store.saveItemsRequest(clinic.id, bakery.placeId, bakery.name ?? 'Bakery', r, false);
+            json(response, 200, { ...bakeryPayload(store, clinic.id, clinic.name), sent: true });
+            return;
+          }
+          // Take a bakery off the list, or bring every removed one back.
+          if (url.pathname === '/api/network/bakery-remove' && request.method === 'POST') {
+            let input;
+            try { input = bakeryRemoveInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That could not be read.' }); return; }
+            if (input.data.placeId) store.hideBakery(clinic.id, input.data.placeId); else store.restoreBakeries(clinic.id);
+            json(response, 200, bakeryPayload(store, clinic.id, clinic.name));
             return;
           }
           if (url.pathname === '/api/network/bakery' && request.method === 'POST') {

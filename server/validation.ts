@@ -21,6 +21,7 @@ export const itemsRequestInput = z.object({
   contactPhone: z.string().trim().max(40).default(''),
   notes: z.string().trim().max(600).default(''),
 }).strict();
+export const bakeryRemoveInput = z.object({ placeId: z.string().min(1).max(255).nullable() }).strict();
 export const bakeryChoiceInput = z.object({ placeId: z.string().min(1).max(255).nullable() }).strict();
 export const routeRequestInput = z.object({
   contactName: z.string().trim().min(1).max(120),
