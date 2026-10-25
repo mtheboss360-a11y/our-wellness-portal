@@ -116,7 +116,9 @@ export function createPortalServer(options: Options) {
             const text = [`${clinic.name} requested items.`, '', `Bakery: ${bakery.name} (${bakery.label})`, bakery.address ? `Address: ${bakery.address}` : '', '',
               `Items: ${r.items}`, `People: ${r.people}`, `Needed by: ${r.neededBy}`, '', `Contact: ${r.contactName}${r.contactPhone ? `, ${r.contactPhone}` : ''}`, r.notes ? `Notes: ${r.notes}` : '']
               .filter((line, i, all) => line !== '' || all[i - 1] !== '').join('\n');
-            const emailed = await sendTeamEmail(`Items request: ${clinic.name} · ${bakery.name}`, text);
+            const emailed = await sendTeamEmail(`Items request: ${clinic.name} · ${bakery.name}`, text, {
+              Clinic: clinic.name, Bakery: `${bakery.name} (${bakery.label})`, Address: bakery.address ?? '', Items: r.items, People: String(r.people),
+              'Needed by': r.neededBy, Contact: r.contactName, Phone: r.contactPhone, Notes: r.notes });
             store.saveItemsRequest(clinic.id, bakery.placeId, bakery.name ?? 'Bakery', r, emailed);
             json(response, 200, { ...bakeryPayload(store, clinic.id, clinic.name), sent: true });
             return;

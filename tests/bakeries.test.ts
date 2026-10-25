@@ -29,6 +29,7 @@ test('the sample clinic gets its bakeries without Google, and can choose one', a
 
 test('an items request is checked, saved and makes that bakery the clinic\'s bakery', async () => {
   const { createPortalServer } = await import('../server/http');
+  process.env.REQUEST_EMAIL_OFF = 'true';
   const previous = process.env.Google_places_API; delete process.env.Google_places_API;
   const store = openStore(':memory:');
   store.createClient('orchard-lantern', 'Orchard Lantern', 'sample', 'password-s-123');
