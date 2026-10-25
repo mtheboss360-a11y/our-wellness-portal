@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { routeRequestInput, selectionInput } from './validation';
+import { outreachInput, reopenInput, routeRequestInput, selectionInput } from './validation';
 import { ensureDiscovery } from './network/map';
 import type { ViteDevServer } from 'vite';
 import type { PortalStore } from './store';
@@ -74,6 +74,27 @@ export function createPortalServer(options: Options) {
             // clicking this cannot spend Places calls repeatedly. A forced pass is a terminal job.
             const refresh = await ensureDiscovery(store, clinic.id);
             json(response, 200, { ...store.networkMap(clinic.id, clinic.name), refresh });
+            return;
+          }
+          // THE BRAIN. Recording a visit and reopening a business both write for the signed-in
+          // clinic only, and both answer with the whole refreshed map so the monthly list and
+          // the follow-up queue on screen are the server's, not the browser's arithmetic.
+          if (url.pathname === '/api/network/outreach' && request.method === 'POST') {
+            let input;
+            try { input = outreachInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That visit could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: input.error.issues[0]?.message ?? 'Please check the visit date and outcome.' }); return; }
+            const result = store.recordOutreach(clinic.id, input.data);
+            if (!result.ok) { json(response, 400, { error: result.message }); return; }
+            json(response, 200, { nextDueOn: result.nextDueOn, ...store.networkMap(clinic.id, clinic.name) });
+            return;
+          }
+          if (url.pathname === '/api/network/reopen' && request.method === 'POST') {
+            let input;
+            try { input = reopenInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That business could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That business could not be read.' }); return; }
+            const result = store.reopenOutreach(clinic.id, input.data.placeId);
+            if (!result.ok) { json(response, 400, { error: result.message }); return; }
+            json(response, 200, { nextDueOn: result.nextDueOn, ...store.networkMap(clinic.id, clinic.name) });
             return;
           }
           if (url.pathname === '/api/network/selection' && request.method === 'POST') {

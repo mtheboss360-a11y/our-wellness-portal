@@ -12,10 +12,10 @@
 // that is not routable, so a client cannot route to a direct competitor or to a business an
 // agreement restricts by editing a request.
 
-import { CATEGORY_RULES, DISTANCE_BANDS, categoryForTypes, type CategoryRule } from './config';
+import { CATEGORY_RULES, CLOSED_STATUSES, DISTANCE_BANDS, categoryForTypes, type CategoryRule } from './config';
 import type { DiscoveredPlace } from './places';
 
-export type RecordKind = 'client' | 'partner' | 'exclusive' | 'competitor' | 'blocked';
+export type RecordKind = 'client' | 'partner' | 'exclusive' | 'competitor' | 'blocked' | 'independent' | 'chain';
 export type NetworkRecord = {
   id: string;
   kind: RecordKind;
@@ -68,7 +68,7 @@ export function matchRecords(place: Pick<DiscoveredPlace, 'placeId' | 'name' | '
  * comes back as a competitor, not as routable.
  */
 export function crossReference(
-  place: Pick<DiscoveredPlace, 'placeId' | 'name' | 'address' | 'types' | 'primaryType'>,
+  place: Pick<DiscoveredPlace, 'placeId' | 'name' | 'address' | 'types' | 'primaryType'> & { businessStatus?: string | null },
   category: CategoryRule | null,
   records: NetworkRecord[],
   clinicId: string,
@@ -77,6 +77,11 @@ export function crossReference(
   const matched = matchRecords(place, records);
   const held = (kind: RecordKind, byThisClinic: boolean) =>
     matched.some(record => record.kind === kind && (byThisClinic ? record.ownerClinicId === clinicId : record.ownerClinicId !== clinicId));
+
+  // Google says this one has shut, or shut for now. Either way it is not somewhere to send a
+  // client, and no score or category reason changes that.
+  if (place.businessStatus && CLOSED_STATUSES.includes(place.businessStatus))
+    return { status: 'unavailable', label: LABELS.unavailable, reason: 'Google lists this business as closed, so the network does not route your clinic here.', routable: false };
 
   const competesByCategory = !!category && (category.competitor === true || competitorCategories.includes(category.id));
   if (competesByCategory || matched.some(record => record.kind === 'competitor'))
@@ -123,4 +128,30 @@ export function fitScore(category: CategoryRule | null, distanceMiles: number) {
     { label: 'Distance', detail: `${distanceMiles.toFixed(1)} miles — ${band.label}.`, points: band.points, outOf: 40 },
   ];
   return { score: categoryPoints + band.points, components };
+}
+
+/**
+ * Whether a business is a verified independent or owner-operated location.
+ *
+ * ONLY A RECORD CAN SAY SO. Ownership comes from the network's own `independent` and `chain`
+ * records — the agency's verified data — and from nothing else. A name is not evidence: "Smith
+ * Family Chiropractic" may be one of forty, and a four-star rating with 900 reviews says
+ * nothing about who owns the place. With no record, the answer is "Ownership unknown", which
+ * the score treats as the neutral middle rather than as a mark against the business.
+ */
+export type OwnershipState = 'independent' | 'chain' | 'unknown';
+export const OWNERSHIP_LABELS: Record<OwnershipState, string> = {
+  independent: 'Verified independent or owner-operated',
+  chain: 'Part of a chain or franchise',
+  unknown: 'Ownership unknown',
+};
+
+export function ownershipOf(place: Pick<DiscoveredPlace, 'placeId' | 'name' | 'address'>, records: NetworkRecord[]): { state: OwnershipState; label: string } {
+  const matched = matchRecords(place, records);
+  // A chain record wins over an independent one: the cautious answer is the one that does not
+  // claim a verification the network cannot stand behind.
+  const state: OwnershipState = matched.some(record => record.kind === 'chain') ? 'chain'
+    : matched.some(record => record.kind === 'independent') ? 'independent'
+    : 'unknown';
+  return { state, label: OWNERSHIP_LABELS[state] };
 }

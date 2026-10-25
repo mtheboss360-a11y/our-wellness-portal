@@ -97,3 +97,84 @@ export function categoryForTypes(types: string[], primaryType: string | null): C
  * and nothing else. One request per category gives each kind of business its own 20.
  */
 export const discoveryQueries = () => CATEGORY_RULES.map(rule => ({ categoryId: rule.id, includedTypes: rule.googleTypes.slice(0, 50) }));
+
+// ───────────────────────────────────────────────────────────────────────────────────────────
+// THE BRAIN'S OWN DIALS. Everything the monthly recommendation and the follow-up rotation
+// decide is a value here: how many businesses a client is offered, how good a match has to be
+// to be offered at all, how far is practical, what each part of the referral score is worth,
+// and how long after a visit a business comes back round. Edit this block, not brain.ts.
+//
+// `RULES_VERSION` is stored with every recommendation, next to its score inputs, so a set made
+// last month can still be explained after these dials change. Bump it when a dial moves.
+// ───────────────────────────────────────────────────────────────────────────────────────────
+
+export const RULES_VERSION = 'brain-2026-10-1';
+
+/** What a client is told the portal does. One sentence, used on screen and nowhere else. */
+export const PROMISE = 'Up to 15 new businesses to consider each month, plus previously contacted businesses as they come due.';
+
+export type OutreachOutcome = 'interested' | 'follow-up-later' | 'not-interested' | 'unable-to-reach' | 'reopened';
+
+export const BRAIN = {
+  /** New businesses a client may be offered in one month. Fifteen, never more. */
+  monthlyNewLimit: 15,
+  /** Below this a business is not offered at all: a short list beats a padded one. */
+  minimumScore: 50,
+  /** Preferred ceiling per category in one month's set, so a batch is not fifteen gyms. */
+  preferredPerCategory: 5,
+  /** Practical distance for a walk-in. Beyond this a business is not recommended. */
+  maxRecommendationMiles: 6,
+  /** The referral-fit score, out of 100. Google ratings and review counts are not in it. */
+  weights: {
+    /** Shared audience: the category's own share-of-clientele weight, rescaled. */
+    sharedAudience: 45,
+    /** Practical distance, rescaled from DISTANCE_BANDS. */
+    distance: 30,
+    /** Network compatibility: what the cross-reference already knows about the business. */
+    network: 15,
+    /** Verified independent or owner-operated. Unknown ownership scores the neutral middle. */
+    ownership: 10,
+  },
+  /** Network compatibility points by cross-reference status. A refused status is not scored. */
+  networkPoints: { fit: 15, 'in-network': 12, review: 6 } as Record<string, number>,
+  followUp: {
+    /** The default cadence: about every other month. */
+    defaultMonths: 2,
+    /**
+     * What a recorded outcome does to the next due date. `null` parks the business: it does
+     * not come back until the client deliberately reopens it.
+     */
+    byOutcome: {
+      interested: { months: 1 },
+      'follow-up-later': { months: 2 },
+      'unable-to-reach': { days: 21 },
+      'not-interested': null,
+      reopened: { days: 0 },
+    } as Record<OutreachOutcome, { months?: number; days?: number } | null>,
+    /** How many follow-ups land in one week, so a month's cohort is spread across the month. */
+    perWeek: 4,
+    /** Never put more than fifteen businesses in front of a client at once. */
+    queueLimit: 15,
+  },
+} as const;
+
+/** The plain-language outcome names the portal shows and stores. */
+export const OUTCOME_LABELS: Record<OutreachOutcome, string> = {
+  interested: 'Interested',
+  'follow-up-later': 'Follow up later',
+  'not-interested': 'Not interested',
+  'unable-to-reach': 'Unable to reach',
+  reopened: 'Reopened by your clinic',
+};
+
+/** Why a business is back in the follow-up queue, said in the client's own terms. */
+export const OUTCOME_REASONS: Record<OutreachOutcome, string> = {
+  interested: 'Said they were interested last time, so this is the check-in.',
+  'follow-up-later': 'Asked you to come back later, and later has arrived.',
+  'not-interested': 'Not interested, so it stays out of the queue until you reopen it.',
+  'unable-to-reach': 'Nobody was available last time — worth another try.',
+  reopened: 'You reopened this one, so it is back in the queue now.',
+};
+
+/** Google business statuses that take a business off the map for good. */
+export const CLOSED_STATUSES = ['CLOSED_PERMANENTLY', 'CLOSED_TEMPORARILY'];

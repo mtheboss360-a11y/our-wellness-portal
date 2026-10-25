@@ -13,10 +13,11 @@
 // gathered into clusters. Every business also carries its own Google Maps link, and the route
 // opens in Google Maps itself.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { getNetworkMap, refreshNetworkMap, requestRoute, saveSelection } from './lib/api';
+import { getNetworkMap, recordOutreach, refreshNetworkMap, reopenBusiness, requestRoute, saveSelection } from './lib/api';
 import { Icon, type IconName } from './Icons';
-import { dateInputValue, directionsUrl, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
+import { dateInputValue, dayLabel, directionsUrl, filterBusinesses, mapsPlaceUrl, milesLabel, townPicks, type Filters, type MapBusiness, type NetworkMapPayload } from './lib/network-math';
 import NetworkOrb from './NetworkOrb';
+import NetworkPlan from './NetworkPlan';
 
 
 export default function NetworkMap({ onClose }: { onClose: () => void }) {
@@ -73,6 +74,19 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
     [next[index], next[target]] = [next[target], next[index]];
     void commit(next);
   };
+  // Recording a visit and reopening a business both come back as the whole map, so the monthly
+  // list, the follow-up queue and the business rows can never drift apart on screen.
+  async function record(input: { placeId: string; visitedOn: string; outcome: string; note: string }) {
+    const value = await recordOutreach(input);
+    setData(value);
+    setNotice(value.nextDueOn ? `Visit saved. Next due ${dayLabel(value.nextDueOn)}.` : 'Visit saved. This business stays out of the queue until you reopen it.');
+  }
+  async function reopen(placeId: string) {
+    setBusy(true); setNotice('');
+    try { const value = await reopenBusiness(placeId); setData(value); setNotice('Back in your follow-up queue, due now.'); }
+    catch (failure) { setNotice(failure instanceof Error ? failure.message : 'That business could not be reopened.'); }
+    finally { setBusy(false); }
+  }
   async function refresh() {
     setBusy(true); setNotice('');
     try { const value = await refreshNetworkMap(); setData(value); setNotice(value.refresh?.detail ?? ''); }
@@ -91,6 +105,9 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
 
   return <Shell onClose={onClose} subtitle={location.label}>
     {notice && <p className="network-notice" role="status">{notice}</p>}
+    {data.plan && <NetworkPlan plan={data.plan} businesses={businesses} selection={data.selection} maxStops={data.maxStops} busy={busy}
+      onToggle={toggle} onRecord={record} onReopen={reopen}
+      onOpen={id => { setOpen(id); requestAnimationFrame(() => document.getElementById(`biz-${id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }}/>}
     <div className="network-layout">
       <section className="network-map-panel" aria-label="Businesses near your clinic">
         <div className="network-orb-panel">

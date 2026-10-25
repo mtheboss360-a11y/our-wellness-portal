@@ -16,6 +16,13 @@ import type { NetworkMapPayload } from './network-math';
 export const getNetworkMap = () => request<NetworkMapPayload>('/api/network/map');
 export const refreshNetworkMap = () => request<NetworkMapPayload>('/api/network/refresh', 'POST', {});
 export const saveSelection = (placeIds: string[]) => request<{ selection: string[]; refused: Array<{ placeId: string; reason: string }> }>('/api/network/selection', 'POST', { placeIds });
+// The brain: record what happened on a visit, or put a parked business back in the queue. Both
+// answer with the whole refreshed map, so the lists on screen are always the server's.
+export const recordOutreach = (input: { placeId: string; visitedOn: string; outcome: string; note: string }) =>
+  request<NetworkMapPayload & { nextDueOn: string | null }>('/api/network/outreach', 'POST', input);
+export const reopenBusiness = (placeId: string) =>
+  request<NetworkMapPayload & { nextDueOn: string | null }>('/api/network/reopen', 'POST', { placeId });
+
 export const requestRoute = (input: { contactName: string; contactPhone: string; notes: string; preferredFrom: string; preferredTo: string }) =>
   request<{ request: NetworkMapPayload['requests'][number]; requests: NetworkMapPayload['requests']; selection: string[] }>('/api/network/route-request', 'POST', input);
 

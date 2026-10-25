@@ -21,10 +21,40 @@ export type MapBusiness = {
   statusLabel: string;
   statusReason: string;
   routable: boolean;
+  /** False when the coordinates were missing: the distance above is the search radius, not a measurement. */
+  distanceKnown: boolean;
+  ownership: { state: 'independent' | 'chain' | 'unknown'; label: string };
   fit: { score: number; components: FitComponent[] };
 };
 export type RouteStop = { placeId: string; name: string | null; address: string | null; category: string | null };
 export type RouteRequest = { id: string; status: string; statusLabel: string; createdAt: string; preferredFrom: string; preferredTo: string; contactName: string; contactPhone: string; notes: string; teamNote: string; stops: RouteStop[]; needsReview: boolean };
+// THE BRAIN'S PAYLOAD. Entries carry a place ID and the brain's own fields — score, reason,
+// dates — and point into `businesses` in the same payload for everything else, so a name,
+// address, distance or status on screen has exactly one source. `present: false` means the
+// business's Google content has aged out of the 30-day cache and is being looked up again: the
+// row says so rather than showing a stale copy or a guess.
+export type PlanPick = { placeId: string; rank: number; score: number; reason: string; components: FitComponent[]; period: string; present: boolean };
+export type PlanFollowUp = { placeId: string; lastVisitedOn: string; outcome: string; outcomeLabel: string; dueOn: string; scheduledOn: string; week: number; reason: string; note: string; present: boolean };
+export type PlanHistory = { placeId: string; visitedOn: string; outcome: string; outcomeLabel: string; note: string; nextDueOn: string | null };
+export type NetworkPlan = {
+  promise: string;
+  /** The server's own day, so "due since" is never the browser's idea of today. */
+  today: string;
+  period: string;
+  periodLabel: string;
+  rulesVersion: string;
+  generatedAt: string;
+  monthlyLimit: number;
+  recommended: PlanPick[];
+  recommendedNote: string;
+  withdrawn: Array<{ placeId: string; reason: string }>;
+  heldBack: Array<{ placeId: string; name: string | null; reason: string }>;
+  followUps: { due: PlanFollowUp[]; upcoming: PlanFollowUp[]; parked: PlanFollowUp[]; note: string };
+  cadence: { months: number; perWeek: number; queueLimit: number };
+  outcomes: Array<{ id: string; label: string }>;
+  history: PlanHistory[];
+};
+
 export type NetworkMapPayload = {
   clinic: { name: string; location: { label: string; lat: number; lng: number; radiusMiles: number } | null };
   categories: MapCategory[];
@@ -33,6 +63,7 @@ export type NetworkMapPayload = {
   selection: string[];
   maxStops: number;
   requests: RouteRequest[];
+  plan: NetworkPlan | null;
   data: { placesConfigured: boolean; browserMapKeyConfigured: boolean; retentionDays: number; lastRefresh: { at: string; status: string; detail: string; found: number } | null };
   refresh?: { ran: boolean; status: string; detail: string; found: number };
 };
@@ -150,3 +181,13 @@ export function townPicks(businesses: MapBusiness[], perTown = 5, towns = 3): To
     .slice(0, towns)
     .map(({ town, businesses: picked }) => ({ town, businesses: picked }));
 }
+
+/** Plan entries beside the business row they describe, in the order the server ranked them. */
+export function joinPlan<T extends { placeId: string }>(entries: T[], businesses: MapBusiness[]) {
+  const rows = new Map(businesses.map(business => [business.placeId, business]));
+  return entries.map(entry => ({ entry, business: rows.get(entry.placeId) ?? null }));
+}
+
+/** "12 Nov 2026" — a due date a client reads, from the ISO day the server sent. */
+export const dayLabel = (day: string) =>
+  day ? new Date(`${day}T00:00:00Z`).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';

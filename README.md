@@ -138,7 +138,10 @@ npm run import-network-records -- --file ./network-records.json
 ```
 
 Each record is `{ id, kind, ownerClinicId, placeId, name, address, note }`, where `kind` is
-`client`, `partner`, `exclusive`, `competitor` or `blocked`. `ownerClinicId` is the clinic that
+`client`, `partner`, `exclusive`, `competitor`, `blocked`, `independent` or `chain`. The last
+two are the **only** way a business is labelled independent or owner-operated: ownership is
+never inferred from a name, a rating or a review count, and a business with no record reads
+"Ownership unknown" and is scored at the neutral middle of that part. `ownerClinicId` is the clinic that
 holds the arrangement. It decides whether another clinic sees "Already in network" or
 "Unavailable", and **it is never sent to a browser**: a client is told that an agreement exists,
 never whose it is. Records are matched to a business by place ID first, then by a normalised
@@ -163,6 +166,52 @@ with the caveat that a popular business is not one that has agreed to anything.
 `routable: false` is enforced on the server, not in the browser: `saveSelection` and
 `createRouteRequest` re-run the same cross-reference and drop anything refused, so editing a
 request cannot route a clinic to a competitor or a restricted business.
+
+### This month's fifteen, and the follow-up rotation
+
+Above the map a client sees two lists, kept deliberately separate because a first visit and a
+return visit are different jobs: **New this month** and **Follow-ups due**. The rules live in
+one place, the `BRAIN` block in `server/network/config.ts`; nothing in `server/network/brain.ts`
+is a tuned number.
+
+**New this month.** Up to 15 new businesses per clinic per calendar month, strongest first. A
+business is offered only if the network can route to it, Google does not list it as closed, its
+distance is readable and within 6 miles, it scores at least 50 of 100, and this clinic has never
+been offered it before or recorded outreach against it. A month's set is written once and then
+kept, so opening the portal twice in March shows the same March list — that is what prevents a
+second monthly set and what makes "never shown as new twice" possible. **Fewer than 15 means
+fewer qualified**; the count is explained on screen and never padded out.
+
+The referral-fit score is 0-100 from four stated parts: shared audience 45 (the category's own
+weight), practical distance 30, network compatibility 15, ownership 10. **Google's rating and
+review count are not inputs**, here or in the map's own fit score. A category ceiling of 5 is
+preferred so a batch is not fifteen gyms, and any slots still empty are filled from the
+remaining qualifiers rather than handing over a short list. Each recommendation is stored with
+its rank, score, reason and versioned score inputs (`RULES_VERSION`), so a set made in August
+can still be explained in November after the dials move. **No Google name or address is written
+to those tables** — only to the 30-day content cache the map reads.
+
+Two things are held back and listed rather than quietly included: a business with no readable
+distance, and a second listing of the same location.
+
+**Follow-ups due.** A recorded outcome sets the next due date, and nothing else does:
+
+| Outcome | Comes round again |
+| --- | --- |
+| Interested | 1 month |
+| Follow up later | 2 months — the default cadence |
+| Unable to reach | 21 days |
+| Not interested | Not at all, until the clinic reopens it |
+
+A month's cohort is staggered four a week so a clinic that visited thirty businesses in one week
+does not get all thirty back on one day; the stagger only ever moves a visit later, and the next
+recorded visit measures from that visit, so the wait never compounds. The queue shows at most
+**15 at once** and says how many more are waiting — it does not promise a fixed number of
+follow-ups a month. Every entry carries its next due date, its last outcome and a short reason.
+
+Staff record visits from the portal (`POST /api/network/outreach`); the server refuses a place
+that is not on that clinic's own map, a business the network will not route to, a date in the
+future and an outcome that is not one of the four.
 
 ### Routes
 
@@ -241,7 +290,10 @@ npm run typecheck
 npm audit
 ```
 
-The delivered build passed 19 automated tests covering derived numbers, both empty states, filtering, date badges, fictional contact ranges, feed validation, password hashing, anonymous access, generic sign-in errors, clinic isolation, session rotation, sign-out, rate limiting, sample-mode disabling, and HTTP origin/cookie behavior.
+The delivered build passes 76 automated tests covering the monthly cap and duplicate
+prevention, ranking and diversity, ownership-unknown handling, competitor, closed-business and
+exclusivity exclusions, follow-up due dates and the staggered queue, outreach outcomes and
+client-level data access, as well as derived numbers, both empty states, filtering, date badges, fictional contact ranges, feed validation, password hashing, anonymous access, generic sign-in errors, clinic isolation, session rotation, sign-out, rate limiting, sample-mode disabling, and HTTP origin/cookie behavior.
 
 ## Typography and motion
 

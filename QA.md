@@ -3,6 +3,15 @@
 Checked 22 October 2026, and again on 23 October 2026 for the Network Map.
 This report distinguishes automated checks from hosting/visual review.
 
+## Recommendations and follow-ups, 25 October 2026
+
+- TypeScript strict type check: PASS.
+- Automated tests: 76 passed, 0 failed (57 existing, 19 new). No existing test's expectations changed; two test fixtures gained the two new business fields.
+- Production build: PASS. Bundle approximately 307 KB, 95 KB compressed; CSS approximately 58 KB, 12 KB compressed. No new dependency.
+- Browser pass completed on a throwaway database (`var/verify-brain.sqlite`, gitignored) holding a fictional clinic and 38 obviously fictional businesses: sign in, open the Network Map, read "New this month" (15 of 15 with the count explained), read "Follow-ups due" with next due dates and reasons, record a visit and see the next due date come back from the server, reopen a business marked not interested and watch it return to the queue due now. No console errors, no server errors. **The live database was not written to.**
+- NOT verified: a real Google Places call, and a month boundary in real time. The monthly set rolls over on the calendar month; that is proven by passing the day to the store in tests, not by waiting for November.
+- Not built: a report of a client's own outreach history as a screen of its own. The history is stored and is in the plan payload, but the portal shows it only as the "Visited" marker and the follow-up reasons.
+
 ## Network Map, 23 October 2026
 
 - TypeScript strict type check: PASS.
@@ -34,6 +43,7 @@ This report distinguishes automated checks from hosting/visual review.
 - A web operations screen for route requests. They are stored and complete, and handled from the terminal with `npm run route-requests`; there is no admin UI and no email or notification when a client asks for a visit.
 - An embedded Google basemap. It needs a second, HTTP-referrer-restricted browser key and three Content-Security-Policy entries; until then the map is a coordinate plot with Google Maps links.
 - A clinic's saved location is set from the terminal. There is no screen for it.
+- `independent` and `chain` ownership records are imported from the terminal like every other network record. Until an import runs, every business reads "Ownership unknown" — which is the honest answer, not a gap in the product.
 
 ## Results
 

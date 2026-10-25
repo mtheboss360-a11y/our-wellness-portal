@@ -19,9 +19,20 @@ export const routeRequestInput = z.object({
   preferredFrom: day,
   preferredTo: day,
 }).strict().refine(value => value.preferredTo >= value.preferredFrom, { message: 'The end of the date range cannot fall before its start.', path: ['preferredTo'] });
+// Outreach the client's own staff recorded: which business, when they went, and how it went.
+// The outcome is what sets the next follow-up date, so it is a closed list, not free text; the
+// date is checked against today on the server, which is the only place that knows what day it is.
+export const outreachInput = z.object({
+  placeId: z.string().min(1).max(255),
+  visitedOn: day,
+  outcome: z.enum(['interested', 'follow-up-later', 'not-interested', 'unable-to-reach']),
+  note: z.string().trim().max(600).default(''),
+}).strict();
+export const reopenInput = z.object({ placeId: z.string().min(1).max(255) }).strict();
+
 export const networkRecordsFeed = z.array(z.object({
   id: z.string().min(1).max(100),
-  kind: z.enum(['client', 'partner', 'exclusive', 'competitor', 'blocked']),
+  kind: z.enum(['client', 'partner', 'exclusive', 'competitor', 'blocked', 'independent', 'chain']),
   ownerClinicId: z.string().regex(/^[a-z0-9-]{3,80}$/).nullable().default(null),
   placeId: z.string().min(1).max(255).nullable().default(null),
   name: z.string().max(200).nullable().default(null),

@@ -4,7 +4,8 @@ import { townOf, townPicks, type MapBusiness } from '../src/lib/network-math';
 
 const biz = (id: string, address: string | null, score: number, miles = 1, extra: Partial<MapBusiness> = {}): MapBusiness => ({
   placeId: id, name: id, address, category: null, distanceMiles: miles, rating: null, reviewCount: null, googleMapsUri: null,
-  plot: { x: 0, y: 0 }, status: 'fit', statusLabel: '', statusReason: '', routable: true, fit: { score, components: [] }, ...extra,
+  plot: { x: 0, y: 0 }, status: 'fit', statusLabel: '', statusReason: '', routable: true, distanceKnown: true,
+  ownership: { state: 'unknown', label: 'Ownership unknown' }, fit: { score, components: [] }, ...extra,
 });
 
 test('the town comes from the part before the state', () => {
