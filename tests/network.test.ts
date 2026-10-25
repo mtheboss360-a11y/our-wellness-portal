@@ -6,7 +6,7 @@ import { createPortalServer } from '../server/http';
 import { crossReference, fitScore, addressKey, nameKey, matchRecords } from '../server/network/network';
 import { categoryForTypes, CATEGORY_RULES, MAX_ROUTE_STOPS, GOOGLE_RETENTION_DAYS, discoveryQueries } from '../server/network/config';
 import { haversineMiles, plotOffset, withinRadius } from '../server/network/geo';
-import { discoverNearby, normalizePlace, configured, type DiscoveredPlace } from '../server/network/places';
+import { discoverNearby, fetchPlaces, normalizePlace, configured, type DiscoveredPlace } from '../server/network/places';
 import { directionsUrl, filterBusinesses, mapsPlaceUrl, markers, spread, type MapBusiness } from '../src/lib/network-math';
 
 // A clinic in Naperville, and five fictional neighbours around it. No real business names and
@@ -244,6 +244,22 @@ test('Google content is cached, reused and purged at the retention window', asyn
     assert.deepEqual(found.map(row => row.placeId), ['dup'], 'duplicates merge and a closed business is left out');
   } finally { store.close(); }
 });
+
+// A researched shortlist is fetched by place ID, not searched for: discovery answers the
+// nearest twenty per category, and a pick three miles out is never among them.
+test('a shortlist is fetched one place ID at a time, and a closed one is not placed', async () => {
+  const asked: string[] = [];
+  const { found, missing } = await fetchPlaces(['wanted', 'closed', 'gone'], async placeId => {
+    asked.push(placeId);
+    if (placeId === 'closed') return { id: 'closed', displayName: { text: 'Gone' }, businessStatus: 'CLOSED_PERMANENTLY' };
+    if (placeId === 'gone') return null;
+    return { id: 'wanted', displayName: { text: 'Test Strength Room' }, location: { latitude: 41.75, longitude: -88.15 }, types: ['gym'], primaryType: 'gym', businessStatus: 'OPERATIONAL' };
+  });
+  assert.deepEqual(asked, ['wanted', 'closed', 'gone'], 'one lookup per ID, in the order given');
+  assert.deepEqual(found.map(row => row.placeId), ['wanted']);
+  assert.deepEqual(missing, ['closed', 'gone'], 'a closed or unknown ID is reported, not placed');
+});
+
 
 test('the Google Places key is never in anything the portal hands out', () => {
   const previous = process.env.Google_places_API;

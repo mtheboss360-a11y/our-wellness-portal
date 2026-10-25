@@ -16,6 +16,7 @@
     "import-campaigns": "tsx scripts/import-campaigns.ts",
     "set-clinic-location": "tsx scripts/set-clinic-location.ts",
     "import-network-records": "tsx scripts/import-network-records.ts",
+    "import-map-places": "tsx scripts/import-map-places.ts",
     "refresh-network-map": "tsx scripts/refresh-network-map.ts",
     "route-requests": "tsx scripts/route-requests.ts",
     "import-field-log": "tsx scripts/import-field-log.ts"

@@ -40,6 +40,17 @@ export const networkRecordsFeed = z.array(z.object({
   note: z.string().max(400).default(''),
 }).strict().refine(value => value.placeId || value.name || value.address, 'A record needs a place ID, a name or an address to match on.'))
   .max(20000).refine(values => new Set(values.map(value => value.id)).size === values.length, 'Record IDs must be unique.');
+// A hand-researched shortlist of businesses for one clinic's map. Only the place ID reaches
+// the database: `why` and `source` are the agency's own audit trail, printed by the import and
+// kept in the file, because the map has no column for a human's reason and should not pretend
+// one came from Google.
+export const mapPlacesFeed = z.array(z.object({
+  placeId: z.string().min(1).max(255),
+  name: z.string().max(200).default(''),
+  why: z.string().max(600).default(''),
+  source: z.string().max(500).default(''),
+}).strict()).min(1).max(200).refine(values => new Set(values.map(value => value.placeId)).size === values.length, 'Place IDs must be unique.');
+
 export const clinicLocationInput = z.object({
   clinic: z.string().regex(/^[a-z0-9-]{3,80}$/),
   label: z.string().trim().min(1).max(200),
