@@ -2,7 +2,7 @@
 // on the same orb as your referral network. Local bakeries, plus Panera Bread and Krispy Kreme where
 // there's one nearby. Pick one; we bring your treats from there.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { chooseBakery, getBakeries, requestItems, type BakeryPayload, type BakeryRow } from './lib/api';
+import { chooseBakery, emailFromBrowser, getBakeries, requestItems, type BakeryPayload, type BakeryRow } from './lib/api';
 import { dateInputValue } from './lib/network-math';
 import { milesLabel } from './lib/network-math';
 import { Icon } from './Icons';
@@ -94,7 +94,11 @@ function ItemsForm({ bakery, onClose, onSent }: { bakery: BakeryRow; onClose: ()
   const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value });
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError('');
-    try { onSent(await requestItems({ placeId: bakery.placeId, ...form, people: Number(form.people) })); }
+    try {
+      const result = await requestItems({ placeId: bakery.placeId, ...form, people: Number(form.people) });
+      if (result.fallback) await emailFromBrowser(result.fallback);
+      onSent(result);
+    }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'That request could not be sent.'); }
     finally { setBusy(false); }
   }
