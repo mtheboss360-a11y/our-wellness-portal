@@ -5,17 +5,19 @@
 // whole thing reads as one network. Positions are a diagram (each town gets its own side of the orb),
 // not a scale map; the list beside it carries the real distances and addresses.
 import { useEffect, useRef } from 'react';
-import type { MapBusiness, TownGroup } from './lib/network-math';
+/** Anything the orb can draw: an id, a name and a dot colour. Partners and bakeries both fit. */
+export type OrbItem = { placeId: string; name: string | null; category: { color: string } | null };
+export type OrbGroup = { town: string; businesses: OrbItem[] };
 
 const DOTS = 2200, DOT = 1;
 const BEAT = .42, DRAW = .38, POP = .36, TOWN_GAP = .35;
 const C = { phthalo: [18, 63, 49], lit: '#1F6A52', rose: '#BD7189', ink: '#1C3A2C', line: 'rgba(31,106,82,', chip: '#FFFFFF', rule: '#D5E0D5' };
 
-type Props = { loading: boolean; groups: TownGroup[]; focus: number | null; selection: string[]; onOpen: (placeId: string) => void; clinicName: string };
-type Node = { business: MapBusiness; town: number; x: number; y: number; start: number };
+type Props = { loading: boolean; groups: OrbGroup[]; focus: number | null; selection: string[]; onOpen: (placeId: string) => void; clinicName: string };
+type Node = { business: OrbItem; town: number; x: number; y: number; start: number };
 
 /** Where each business sits: its town's side of the orb, or the whole ring when one town is in focus. */
-function layout(groups: TownGroup[], focus: number | null) {
+function layout(groups: OrbGroup[], focus: number | null) {
   const nodes: Node[] = [], towns: Array<{ name: string; x: number; y: number; start: number }> = [];
   const shown = groups.map((g, i) => ({ ...g, i })).filter(g => focus === null || g.i === focus);
   let clock = .55;

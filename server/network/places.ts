@@ -15,6 +15,7 @@ import { discoveryQueries } from './config';
 import { milesToMetres } from './geo';
 
 const NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
+export const TEXT_URL = 'https://places.googleapis.com/v1/places:searchText';
 const SEARCH_TIMEOUT_MS = 15_000;
 /** Discovery's field mask. Every field here is needed to classify or display a candidate. */
 const DISCOVERY_FIELDS = ['places.id', 'places.displayName', 'places.formattedAddress', 'places.location', 'places.types', 'places.primaryType', 'places.businessStatus', 'places.rating', 'places.userRatingCount', 'places.googleMapsUri'];
@@ -75,13 +76,13 @@ export function normalizePlace(place: Record<string, any>): DiscoveredPlace | nu
   };
 }
 
-async function nearby(body: Record<string, unknown>) {
+export async function nearby(body: Record<string, unknown>, url = NEARBY_URL) {
   const key = apiKey();
   if (!key) throw new PlacesError('Google Places is not configured on this server.');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
   try {
-    const response = await fetch(NEARBY_URL, { method: 'POST', signal: controller.signal,
+    const response = await fetch(url, { method: 'POST', signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': DISCOVERY_FIELDS.join(',') },
       body: JSON.stringify(body) });
     const payload = await response.json().catch(() => null);

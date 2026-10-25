@@ -15,6 +15,8 @@ test('privately owned only: no chains, no repeats nearby, nothing public', () =>
   assert.equal(keep(p('Iron Oak Gym')), false, 'two locations nearby');
   assert.equal(keep(p('Westmont Park District Fitness Center')), false, 'public');
   assert.equal(keep(p('Ridgeway Tennis Courts', ['athletic_field'])), false, 'public type');
+  assert.equal(keep(p('Chiropractic at Life Time', ['chiropractor'])), false, 'inside a chain');
+  assert.equal(keep(p('Life Time Chiropractic Oak Brook', ['chiropractor'])), false, 'a chain\'s own service');
   assert.equal(keep(p('Quarry Lane Fitness')), true, 'owner-operated stays');
 });
 

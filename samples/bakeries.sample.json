@@ -1,0 +1,155 @@
+{
+ "_note": "Fictional bakeries for the sample clinic only (the Panera Bread and Krispy Kreme entries are made-up locations). Served instead of a Google call.",
+ "places": [
+  {
+   "placeId": "sample-bakery-rise-and-crumb",
+   "name": "Rise & Crumb Bakehouse",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8392,
+   "lng": -87.9388,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 214,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-honeywheat",
+   "name": "Honeywheat Bakery",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8271,
+   "lng": -87.946,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.7,
+   "reviewCount": 131,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-panera-oakbrook",
+   "name": "Panera Bread",
+   "address": "Oak Brook, IL 60523",
+   "lat": 41.8466,
+   "lng": -87.9512,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.2,
+   "reviewCount": 612,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-maple-glaze",
+   "name": "Maple Glaze Donut Co.",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7951,
+   "lng": -87.9762,
+   "types": [
+    "donut_shop"
+   ],
+   "primaryType": "donut_shop",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 288,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-little-oven",
+   "name": "The Little Oven",
+   "address": "Westmont, IL 60559",
+   "lat": 41.7908,
+   "lng": -87.9701,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 97,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-krispy-kreme-westmont",
+   "name": "Krispy Kreme",
+   "address": "Westmont, IL 60559",
+   "lat": 41.799,
+   "lng": -87.984,
+   "types": [
+    "donut_shop"
+   ],
+   "primaryType": "donut_shop",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.4,
+   "reviewCount": 1204,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-sunday-kolache",
+   "name": "Sunday Kolache House",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.7962,
+   "lng": -88.0101,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.9,
+   "reviewCount": 176,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-grove-street-bagels",
+   "name": "Grove Street Bagels",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.8095,
+   "lng": -88.012,
+   "types": [
+    "bagel_shop"
+   ],
+   "primaryType": "bagel_shop",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.7,
+   "reviewCount": 243,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-butter-and-rye",
+   "name": "Butter & Rye",
+   "address": "Downers Grove, IL 60515",
+   "lat": 41.8033,
+   "lng": -88.018,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.8,
+   "reviewCount": 88,
+   "googleMapsUri": null
+  },
+  {
+   "placeId": "sample-bakery-hinsdale-sweet-shop",
+   "name": "Hinsdale Sweet Shop",
+   "address": "Hinsdale, IL 60521",
+   "lat": 41.8012,
+   "lng": -87.9374,
+   "types": [
+    "bakery"
+   ],
+   "primaryType": "bakery",
+   "businessStatus": "OPERATIONAL",
+   "rating": 4.6,
+   "reviewCount": 152,
+   "googleMapsUri": null
+  }
+ ]
+}
