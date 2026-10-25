@@ -5,7 +5,7 @@
 //   RESEND_API_KEY     optional: send through Resend instead (REQUEST_EMAIL_FROM sets the sender)
 // Never throws: a failed send is reported as false and the request is still saved.
 
-const DEFAULT_INBOX = 'mtheboss360@gmail.com';
+const DEFAULT_INBOX = 'growmyclinic@ourclinicoptimization.com';
 const inbox = () => (process.env.REQUEST_EMAIL_TO?.trim() || DEFAULT_INBOX).split(',').map(a => a.trim()).filter(Boolean);
 
 export async function sendTeamEmail(subject: string, text: string, fields: Record<string, string> = {}) {
