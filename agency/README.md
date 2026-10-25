@@ -22,3 +22,17 @@ A batch carries only businesses the cross-reference clears outright. Run the imp
 status it prints beside each one, and take out anything that is not **Good referral fit** — a
 competitor or a "needs review" is the agency's problem to settle, not something to put in front
 of a client. Six of this batch's first fifteen went that way and were replaced.
+
+## A curated map
+
+A clinic can run on batches alone instead of on what discovery finds. That is two settings
+together, and neither works without the other:
+
+1. `NETWORK_MAP_AUTO_DISCOVER=false` on the server, so opening the map never adds anything.
+2. `npm run prune-map -- --clinic <id> --file ./agency/<batch>.json` (one `--file` per batch
+   the clinic keeps), to take off whatever a discovery pass left behind.
+
+ETHR LAB runs this way: the client is shown researched businesses only, so no competitor and
+no "needs review" ever reaches the screen. The cost is that nothing refills the map — cached
+Google content expires after 30 days, and an expired curated map is an empty one. Re-run
+`import-map-places` for every live batch each month.

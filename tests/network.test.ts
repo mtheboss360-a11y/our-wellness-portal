@@ -260,6 +260,23 @@ test('a shortlist is fetched one place ID at a time, and a closed one is not pla
   assert.deepEqual(missing, ['closed', 'gone'], 'a closed or unknown ID is reported, not placed');
 });
 
+// A curated map keeps its batches and nothing else: what an earlier discovery pass left
+// behind goes, place IDs included, because nothing is kept that nothing displays.
+test('pruning a map keeps the chosen place IDs and drops the rest', () => {
+  const store = openStore(':memory:', false);
+  try {
+    store.createClient(CLINIC.clinic, CLINIC.name, CLINIC.username, CLINIC.password);
+    store.setClinicLocation({ clinicId: CLINIC.clinic, label: 'Test Wellness', lat: HERE.lat, lng: HERE.lng, radiusMiles: 5, placeId: null, competitorCategories: [] });
+    store.saveDiscovery(CLINIC.clinic, NEIGHBOURS);
+    const keep = [NEIGHBOURS[0].placeId, NEIGHBOURS[1].placeId];
+    const outcome = store.pruneDiscovery(CLINIC.clinic, keep);
+    assert.equal(outcome.kept, 2);
+    assert.equal(outcome.removed, NEIGHBOURS.length - 2);
+    assert.deepEqual(store.cachedDiscovery(CLINIC.clinic).map(row => row.placeId).sort(), [...keep].sort());
+    assert.equal(store.pruneDiscovery(CLINIC.clinic, keep).removed, 0, 'pruning twice changes nothing');
+  } finally { store.close(); }
+});
+
 
 test('the Google Places key is never in anything the portal hands out', () => {
   const previous = process.env.Google_places_API;

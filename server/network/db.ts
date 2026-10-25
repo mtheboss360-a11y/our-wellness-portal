@@ -105,6 +105,29 @@ export function openNetwork(db: DatabaseSync) {
   /** Drop every cached business for a clinic (the sample clinic, before its fixed set is loaded). */
   function clearDiscovery(clinicId: string) { db.prepare('DELETE FROM map_places WHERE clinic_id=?').run(clinicId); }
 
+  /**
+   * Keep a clinic's map to a chosen set of place IDs and drop the rest.
+   *
+   * For a clinic whose map is curated rather than discovered: the agency decides what the
+   * client sees, so whatever an earlier discovery pass left behind -- a competitor, a public
+   * leisure centre, a business nobody would walk into -- goes, and only the researched
+   * batches stay. Place IDs go with the content: nothing is kept that nothing displays.
+   */
+  function pruneDiscovery(clinicId: string, keepPlaceIds: string[]) {
+    const keep = new Set(keepPlaceIds);
+    const held = (db.prepare('SELECT place_id FROM map_places WHERE clinic_id=?').all(clinicId) as Array<{ place_id: string }>).map(row => row.place_id);
+    const drop = held.filter(placeId => !keep.has(placeId));
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const placeId of drop) {
+        db.prepare('DELETE FROM map_places WHERE clinic_id=? AND place_id=?').run(clinicId, placeId);
+        db.prepare('DELETE FROM map_place_ids WHERE clinic_id=? AND place_id=?').run(clinicId, placeId);
+      }
+      db.exec('COMMIT');
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+    return { kept: held.length - drop.length, removed: drop.length };
+  }
+
   function cachedDiscovery(clinicId: string, now = Date.now()): DiscoveredPlace[] {
     purgeExpired(now);
     return (db.prepare('SELECT payload FROM map_places WHERE clinic_id=? AND expires_at>?').all(clinicId, now) as Array<{ payload: string }>)
@@ -266,7 +289,7 @@ export function openNetwork(db: DatabaseSync) {
     };
   }
 
-  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, clearDiscovery, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
+  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, clearDiscovery, pruneDiscovery, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
 }
 
 export type NetworkStore = ReturnType<typeof openNetwork>;
