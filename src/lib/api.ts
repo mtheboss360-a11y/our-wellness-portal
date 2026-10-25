@@ -24,18 +24,9 @@ export const requestRoute = (input: { contactName: string; contactPhone: string;
 import type { FieldLog } from '../../data/field-data';
 export const getField = () => request<{ field: FieldLog | null }>('/api/field');
 export type BakeryRow = { placeId: string; name: string | null; address: string | null; town: string | null; kind: 'local' | 'panera' | 'krispy-kreme'; label: string; category: { color: string }; distanceMiles: number; rating: number | null; reviewCount: number | null; googleMapsUri: string | null };
-export type BakeryPayload = { clinic: { name: string; location: { label: string } | null }; bakeries: BakeryRow[]; choice: string | null; placesConfigured: boolean };
+export type BakeryPayload = { clinic: { name: string; location: { label: string } | null }; bakeries: BakeryRow[]; removed: number; choice: string | null; placesConfigured: boolean };
 export const getBakeries = () => request<BakeryPayload>('/api/network/bakeries');
 export const chooseBakery = (placeId: string | null) => request<BakeryPayload>('/api/network/bakery', 'POST', { placeId });
 export type ItemsRequest = { placeId: string; items: string; people: number; neededBy: string; contactName: string; contactPhone: string; notes: string };
-export type EmailFallback = { inbox: string[]; subject: string; fields: Record<string, string> };
-export const requestItems = (input: ItemsRequest) => request<BakeryPayload & { sent: boolean; emailed: boolean; fallback?: EmailFallback }>('/api/network/bakery-request', 'POST', input);
-/** The browser's own send, used only when the server's didn't go through. */
-export async function emailFromBrowser({ inbox, subject, fields }: EmailFallback) {
-  const [to, ...cc] = inbox;
-  try {
-    const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ _subject: subject, _template: 'table', _captcha: 'false', ...(cc.length ? { _cc: cc.join(',') } : {}), ...fields }) });
-    return response.ok;
-  } catch { return false; }
-}
+export const requestItems = (input: ItemsRequest) => request<BakeryPayload & { sent: boolean }>('/api/network/bakery-request', 'POST', input);
+export const removeBakery = (placeId: string | null) => request<BakeryPayload>('/api/network/bakery-remove', 'POST', { placeId });

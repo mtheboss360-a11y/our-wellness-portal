@@ -95,6 +95,7 @@ export function openBakeries(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS bakery_places (clinic_id TEXT NOT NULL, place_id TEXT NOT NULL, payload TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY(clinic_id,place_id));
     CREATE TABLE IF NOT EXISTS bakery_refreshes (clinic_id TEXT PRIMARY KEY, attempted_at INTEGER NOT NULL, status TEXT NOT NULL, detail TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS bakery_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, clinic_id TEXT NOT NULL, place_id TEXT NOT NULL, bakery TEXT NOT NULL, payload TEXT NOT NULL, emailed INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS bakery_hidden (clinic_id TEXT NOT NULL, place_id TEXT NOT NULL, PRIMARY KEY(clinic_id,place_id));
     CREATE TABLE IF NOT EXISTS bakery_choices (clinic_id TEXT PRIMARY KEY, place_id TEXT NOT NULL, chosen_at INTEGER NOT NULL);
   `);
   const held = (clinicId: string, now = Date.now()) => {
@@ -128,7 +129,14 @@ export function openBakeries(db: DatabaseSync) {
   function saveItemsRequest(clinicId: string, placeId: string, bakery: string, payload: unknown, emailed: boolean) {
     db.prepare('INSERT INTO bakery_requests (clinic_id,place_id,bakery,payload,emailed,created_at) VALUES (?,?,?,?,?,?)').run(clinicId, placeId, bakery, JSON.stringify(payload), emailed ? 1 : 0, Date.now());
   }
-  return { saveItemsRequest, heldBakeries: held, saveBakeries, markBakeries, bakeriesDue, bakeryChoice, chooseBakery };
+  /** Bakeries a clinic took off its list. They stay off until the clinic brings them back. */
+  const hiddenBakeries = (clinicId: string) => (db.prepare('SELECT place_id FROM bakery_hidden WHERE clinic_id=?').all(clinicId) as Array<{ place_id: string }>).map(row => row.place_id);
+  function hideBakery(clinicId: string, placeId: string) {
+    db.prepare('INSERT OR IGNORE INTO bakery_hidden (clinic_id,place_id) VALUES (?,?)').run(clinicId, placeId);
+    db.prepare('DELETE FROM bakery_choices WHERE clinic_id=? AND place_id=?').run(clinicId, placeId);
+  }
+  const restoreBakeries = (clinicId: string) => { db.prepare('DELETE FROM bakery_hidden WHERE clinic_id=?').run(clinicId); };
+  return { hiddenBakeries, hideBakery, restoreBakeries, saveItemsRequest, heldBakeries: held, saveBakeries, markBakeries, bakeriesDue, bakeryChoice, chooseBakery };
 }
 
 /** Bring a clinic's bakery list up to date if it is due. Never throws. */
@@ -151,12 +159,13 @@ export async function ensureBakeries(store: PortalStore, clinicId: string) {
 /** What the clinic sees: every bakery kept, nearest first, with its kind. */
 export function bakeryPayload(store: PortalStore, clinicId: string, clinicName: string) {
   const location = store.clinicLocation(clinicId);
-  const bakeries: Bakery[] = location ? bakeriesOnly(store.heldBakeries(clinicId)).map(place => {
+  const hidden = new Set(store.hiddenBakeries(clinicId));
+  const bakeries: Bakery[] = location ? bakeriesOnly(store.heldBakeries(clinicId)).filter(place => !hidden.has(place.placeId)).map(place => {
     const brand = brandOf(place.name);
     const miles = place.lat !== null && place.lng !== null ? haversineMiles(location.lat, location.lng, place.lat, place.lng) : location.radiusMiles;
     return { placeId: place.placeId, name: place.name, address: place.address, town: townOf(place.address), kind: (brand?.id ?? 'local') as Bakery['kind'], label: brand?.label ?? LOCAL.label,
       category: { color: brand?.color ?? LOCAL.color }, distanceMiles: Number(miles.toFixed(2)), rating: place.rating, reviewCount: place.reviewCount, googleMapsUri: place.googleMapsUri };
   }).sort((a, b) => a.distanceMiles - b.distanceMiles) : [];
-  return { clinic: { name: clinicName, location: location ? { label: location.label } : null }, bakeries, choice: store.bakeryChoice(clinicId), placesConfigured: configured() };
+  return { clinic: { name: clinicName, location: location ? { label: location.label } : null }, bakeries, removed: hidden.size, choice: store.bakeryChoice(clinicId), placesConfigured: configured() };
 }
 export type BakeryPayload = ReturnType<typeof bakeryPayload>;

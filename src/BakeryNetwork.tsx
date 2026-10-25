@@ -2,12 +2,15 @@
 // on the same orb as your referral network. Local bakeries, plus Panera Bread and Krispy Kreme where
 // there's one nearby. Pick one; we bring your treats from there.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { chooseBakery, emailFromBrowser, getBakeries, requestItems, type BakeryPayload, type BakeryRow } from './lib/api';
+import { chooseBakery, getBakeries, removeBakery, requestItems, type BakeryPayload, type BakeryRow } from './lib/api';
 import { dateInputValue } from './lib/network-math';
 import { milesLabel } from './lib/network-math';
 import { Icon } from './Icons';
 import NetworkOrb, { type OrbGroup } from './NetworkOrb';
 import { LocateClinic } from './NetworkMap';
+
+/** Item requests go to the support team by email, from the clinic's own mail app. */
+export const SUPPORT_EMAIL = 'growmyclinic@ourclinicoptimization.com';
 
 const KINDS = [{ kind: 'local', label: 'Local bakery', color: '#C2663C' }, { kind: 'panera', label: 'Panera Bread', color: '#7FA96A' }, { kind: 'krispy-kreme', label: 'Krispy Kreme', color: '#9B3B3B' }] as const;
 
@@ -32,6 +35,11 @@ export default function BakeryNetwork({ onClose }: { onClose: () => void }) {
   useEffect(() => { void load(); }, []);
   const groups = useMemo(() => byTown(data?.bakeries ?? []), [data]);
   const chosen = data?.bakeries.find(b => b.placeId === data.choice) ?? null;
+  async function remove(placeId: string | null) {
+    setBusy(true);
+    try { setData(await removeBakery(placeId)); } catch (e) { setError(e instanceof Error ? e.message : 'That change could not be saved.'); }
+    finally { setBusy(false); }
+  }
   async function pick(placeId: string | null) {
     setBusy(true);
     try { setData(await chooseBakery(placeId)); } catch (e) { setError(e instanceof Error ? e.message : 'That choice could not be saved.'); }
@@ -69,8 +77,10 @@ export default function BakeryNetwork({ onClose }: { onClose: () => void }) {
                   </div>
                   <button type="button" className={`network-row-add ${on ? 'is-on' : ''}`} disabled={busy} aria-label={on ? `Unchoose ${b.name}` : `Choose ${b.name}`} onClick={() => on ? void pick(null) : setAsking(b)}>
                     <Icon name={on ? 'check' : 'plus'} size={16}/></button>
+                  <button type="button" className="bakery-remove" disabled={busy} aria-label={`Remove ${b.name} from your list`} onClick={() => void remove(b.placeId)}>×</button>
                 </li>; })}</ul>
               </div>)}
+          {data.removed > 0 && <button type="button" className="field-link bakery-restore" disabled={busy} onClick={() => void remove(null)}>Bring back {data.removed} removed</button>}
         </section>
         <section className="network-route" aria-labelledby="bakery-title">
           <div className="network-route-head"><div><h2 id="bakery-title">Your bakery</h2><p className="section-subtitle">{chosen ? 'We’ll bring your treats from here.' : 'Pick one. We’ll bring your treats from there.'}</p></div></div>
@@ -79,7 +89,7 @@ export default function BakeryNetwork({ onClose }: { onClose: () => void }) {
         </section>
       </div>
     </div>
-    {asking && <ItemsForm bakery={asking} onClose={() => setAsking(null)} onSent={value => { setData(value); setAsking(null); setNotice(`Sent. We’ll get your items from ${asking.name ?? 'the bakery'}.`); }}/>}
+    {asking && <ItemsForm bakery={asking} onClose={() => setAsking(null)} onSent={value => { setData(value); setAsking(null); setNotice(`Send the email to ${SUPPORT_EMAIL} and we’ll get your items from ${asking.name ?? 'the bakery'}.`); }}/>}
   </Shell>;
 }
 
@@ -96,7 +106,9 @@ function ItemsForm({ bakery, onClose, onSent }: { bakery: BakeryRow; onClose: ()
     event.preventDefault(); setBusy(true); setError('');
     try {
       const result = await requestItems({ placeId: bakery.placeId, ...form, people: Number(form.people) });
-      if (result.fallback) await emailFromBrowser(result.fallback);
+      const body = [`Bakery: ${bakery.name} (${bakery.label})`, bakery.address ? `Address: ${bakery.address}` : '', `Items: ${form.items}`, `People: ${form.people}`,
+        `Needed by: ${form.neededBy}`, `Contact: ${form.contactName}${form.contactPhone ? `, ${form.contactPhone}` : ''}`, form.notes ? `Notes: ${form.notes}` : ''].filter(Boolean).join('\n');
+      window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(`Items request: ${bakery.name}`)}&body=${encodeURIComponent(body)}`;
       onSent(result);
     }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'That request could not be sent.'); }
@@ -117,7 +129,8 @@ function ItemsForm({ bakery, onClose, onSent }: { bakery: BakeryRow; onClose: ()
       </div>
       <div className="field"><label htmlFor="items-notes">Notes (optional)</label><textarea id="items-notes" rows={2} maxLength={600} value={form.notes} onChange={set('notes')} disabled={busy}/></div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="items-submit"><button className="signin-button" type="submit" disabled={busy}>{busy ? 'Sending…' : 'Request items'}</button></div>
+      <div className="items-submit"><button className="signin-button" type="submit" disabled={busy}>{busy ? 'Opening…' : 'Request items'}</button>
+        <p className="items-to">Opens an email to <span>{SUPPORT_EMAIL}</span></p></div>
     </form>
   </dialog>;
 }

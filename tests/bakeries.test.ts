@@ -29,7 +29,7 @@ test('the sample clinic gets its bakeries without Google, and can choose one', a
 
 test('an items request is checked, saved and makes that bakery the clinic\'s bakery', async () => {
   const { createPortalServer } = await import('../server/http');
-  process.env.REQUEST_EMAIL_OFF = 'true';
+  
   const previous = process.env.Google_places_API; delete process.env.Google_places_API;
   const store = openStore(':memory:');
   store.createClient('orchard-lantern', 'Orchard Lantern', 'sample', 'password-s-123');
@@ -49,4 +49,21 @@ test('an items request is checked, saved and makes that bakery the clinic\'s bak
     assert.equal((await ok.json()).choice, placeId);
     assert.equal((store.db.prepare('SELECT COUNT(*) AS n FROM bakery_requests').get() as { n: number }).n, 1);
   } finally { server.close(); store.close(); if (previous !== undefined) process.env.Google_places_API = previous; }
+});
+
+test('a clinic can take a bakery off its list and bring removed ones back', async () => {
+  const store = openStore(':memory:');
+  store.createClient('orchard-lantern', 'Orchard Lantern', 'sample', 'password-s-123');
+  try {
+    await ensureBakeries(store, 'orchard-lantern');
+    const first = bakeryPayload(store, 'orchard-lantern', 'x').bakeries[0].placeId;
+    store.chooseBakery('orchard-lantern', first);
+    store.hideBakery('orchard-lantern', first);
+    const after = bakeryPayload(store, 'orchard-lantern', 'x');
+    assert.equal(after.bakeries.length, 9);
+    assert.equal(after.removed, 1);
+    assert.equal(after.choice, null, 'a removed bakery is no longer the chosen one');
+    store.restoreBakeries('orchard-lantern');
+    assert.equal(bakeryPayload(store, 'orchard-lantern', 'x').bakeries.length, 10);
+  } finally { store.close(); }
 });
