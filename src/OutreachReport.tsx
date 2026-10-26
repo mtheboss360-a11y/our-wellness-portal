@@ -88,8 +88,12 @@ function ActivityChart({ rows }: { rows: ReturnType<typeof byMonth> }) {
     </div>
     <div className="rep-plot" role="img" aria-label={series.map(s => `${s.label}: ${rows.map(r => `${monthName(r.month)} ${r[s.key]}`).join(', ')}`).join('. ')}>
       {rows.map(row => <div className="rep-month" key={row.month}>
-        <div className="rep-bars">{series.map(s => <span key={s.key} className={`lg-${s.key}`} style={{ height: `${(row[s.key] / top[s.key]) * 100}%` }}>
-          <b>{number(row[s.key])}</b>
+        <div className="rep-bars">{series.map(s => <span key={s.key}
+          className={`lg-${s.key} ${row[s.key] ? '' : 'is-nil'}`}
+          style={{ height: `${(row[s.key] / top[s.key]) * 100}%` }}>
+          {/* A month with none of something gets a flat line and no figure: a column of
+              zeroes is noise, and the gap already says it. */}
+          {row[s.key] > 0 && <b>{number(row[s.key])}</b>}
         </span>)}</div>
         <span className="rep-month-label">{monthName(row.month)}</span>
       </div>)}

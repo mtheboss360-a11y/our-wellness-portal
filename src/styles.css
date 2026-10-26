@@ -774,11 +774,14 @@
 .lg-materials{background:#B8903F}
 .lg-scans{background:#5C7C6B}
 .lg-inquiries{background:#BD7189}
-.rep-plot{display:flex;align-items:flex-end;gap:clamp(8px,2vw,22px);margin-top:18px;
-  min-height:170px;padding-bottom:4px;overflow-x:auto}
-.rep-month{flex:1 1 0;min-width:52px;display:flex;flex-direction:column;align-items:center;gap:8px}
+/* Months keep a sensible width instead of sharing the row: two months stretched across a
+   desktop put the bars half a screen apart and read as a broken chart. */
+.rep-plot{display:flex;align-items:flex-end;justify-content:flex-start;gap:clamp(10px,2vw,26px);
+  margin-top:18px;min-height:170px;padding:20px 0 4px;overflow-x:auto}
+.rep-month{flex:0 1 96px;min-width:62px;max-width:112px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .rep-bars{display:flex;align-items:flex-end;gap:3px;height:140px;width:100%;justify-content:center}
 .rep-bars span{position:relative;flex:1 1 0;max-width:15px;min-height:2px;border-radius:3px 3px 0 0}
+.rep-bars span.is-nil{opacity:.3}
 .rep-bars b{position:absolute;top:-16px;left:50%;transform:translateX(-50%);
   font:600 .62rem/1 var(--nums);color:var(--ink-3)}
 .rep-month-label{font:500 .72rem/1 var(--nums);color:var(--ink-3);white-space:nowrap}
