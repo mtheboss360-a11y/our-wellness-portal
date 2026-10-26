@@ -167,3 +167,67 @@ test('a clinic that does not exist changes nothing', () => {
   assert.equal(after.outreach.businesses('hyline').length, 2);
   after.close(); rmSync(dir, { recursive: true, force: true });
 });
+
+test('the sample set is removable, and the real records survive it exactly', () => {
+  const { dir, file, store } = world();
+  const realBusiness = store.outreach.businesses('hyline').find(b => b.name === 'Karve Pilates')!;
+  store.outreach.recordVisit('hyline', {
+    businessId: realBusiness.id, staff: 'Alexis', visitedOn: '2026-10-20', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'partner', materials: 40, note: 'A real conversation.',
+    nextAction: '', followUpOn: null,
+  });
+  store.outreach.saveScript('hyline', realBusiness.id, {
+    opening: 'Words I wrote myself.', introduction: 'i', value: 'v', ask: 'a',
+    objections: { busy: 'b', notInterested: 'n', alreadyPartnered: 'p' }, closing: 'c', followUp: 'f',
+  });
+  store.close();
+
+  execFileSync('npx', ['tsx', 'scripts/make-sample-outreach.ts', '--clinic', 'hyline', '--today', '2026-10-26'],
+    { env: { ...process.env, DATABASE_PATH: file }, encoding: 'utf8' });
+
+  const loaded = openStore(file, false);
+  assert.equal(loaded.outreach.businesses('hyline').length, 22, '20 sample + 2 from the fixtures');
+  assert.ok(loaded.outreach.visits('hyline').length > 10, 'illustrative history is there');
+  // Every sample row is labelled, which is the whole reason it can be removed later.
+  const unlabelled = loaded.db.prepare(
+    `SELECT COUNT(*) AS n FROM businesses WHERE clinic_id='hyline' AND demo IS NULL`).get() as { n: number };
+  assert.equal(unlabelled.n, 0, 'nothing the sample script wrote is unlabelled');
+  loaded.close();
+
+  run(file, ['--clinic', 'hyline', '--yes']);
+
+  const after = openStore(file, false);
+  assert.deepEqual(after.outreach.businesses('hyline').map(b => b.name), ['Karve Pilates'],
+    'every sample business gone, the real one untouched');
+  const left = after.outreach.visits('hyline');
+  assert.equal(left.length, 1, 'only the real visit remains');
+  assert.equal(left[0].note, 'A real conversation.');
+  assert.equal(left[0].materials, 40, 'the real figure is exactly what it was');
+  assert.equal(after.outreach.script('hyline', after.outreach.businesses('hyline')[0].id)!.script.opening,
+    'Words I wrote myself.', 'the hand-written script survived');
+  after.close(); rmSync(dir, { recursive: true, force: true });
+});
+
+test('the sample script refuses to write a second copy', () => {
+  const { dir, file, store } = world();
+  store.close();
+  const once = ['tsx', 'scripts/make-sample-outreach.ts', '--clinic', 'hyline', '--today', '2026-10-26'];
+  execFileSync('npx', once, { env: { ...process.env, DATABASE_PATH: file }, encoding: 'utf8' });
+  assert.throws(() => execFileSync('npx', once, { env: { ...process.env, DATABASE_PATH: file }, encoding: 'utf8', stdio: 'pipe' }));
+
+  const after = openStore(file, false);
+  assert.equal(after.outreach.businesses('hyline').length, 22, 'still one copy, not two');
+  after.close(); rmSync(dir, { recursive: true, force: true });
+});
+
+test('sample activity on one clinic cannot reach another clinic figures', () => {
+  const { dir, file, store } = world();
+  store.close();
+  execFileSync('npx', ['tsx', 'scripts/make-sample-outreach.ts', '--clinic', 'hyline', '--today', '2026-10-26'],
+    { env: { ...process.env, DATABASE_PATH: file }, encoding: 'utf8' });
+
+  const after = openStore(file, false);
+  assert.equal(after.outreach.businesses('neighbour').length, 1, 'the neighbour still has only its own');
+  assert.equal(after.outreach.visits('neighbour').length, 0, 'and none of the illustrative visits');
+  after.close(); rmSync(dir, { recursive: true, force: true });
+});

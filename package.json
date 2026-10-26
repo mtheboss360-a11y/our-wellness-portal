@@ -27,7 +27,8 @@
     "activate-live": "tsx scripts/activate-live.ts",
     "set-password": "tsx scripts/set-password.ts",
     "list-logins": "tsx scripts/list-logins.ts",
-    "plan-round": "tsx scripts/plan-round.ts"
+    "plan-round": "tsx scripts/plan-round.ts",
+    "make-sample-outreach": "tsx scripts/make-sample-outreach.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
