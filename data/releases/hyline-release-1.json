@@ -1,0 +1,117 @@
+{
+  "id": "hyline-release-1",
+  "name": "Release 1 — five verified Naperville businesses",
+  "notes": [
+    "Names, addresses, phone numbers, websites and talking points are as supplied by Mustafa.",
+    "No coordinates: none has been geocoded, so lat/lng are left out rather than guessed. The portal routes by the street address, which is what a person would type into Maps.",
+    "Every business starts at 'new'. No visit, contact or partnership is pre-filled.",
+    "Scripts make no promise of referrals, payment or a medical outcome."
+  ],
+  "businesses": [
+    {
+      "name": "Karve Pilates",
+      "category": "Pilates studio",
+      "address": "4827 S Illinois Route 59, Unit 105, Naperville, IL 60564",
+      "phone": "(630) 742-7600",
+      "website": "https://karvepilates.com",
+      "talkingPoint": "Build a local community relationship between a Pilates studio and a family dental practice.",
+      "script": {
+        "opening": "Hi, I'm with the local outreach team representing Hyline Dental here in Naperville. We're introducing the practice to a few businesses in the community that we think could be a good fit. Would the owner or manager be open to a quick introduction?",
+        "introduction": "Hyline Dental is a family dental practice on Route 59, just up the road from you. They look after general and family dentistry for people in this part of Naperville.",
+        "value": "Your members already put time into looking after themselves, and we're building a small network of local independents who know and can point people toward each other. Nothing formal, nothing exclusive.",
+        "ask": "Could we leave a few cards at the front desk, and would the owner be open to a short chat another time?",
+        "objections": {
+          "busy": "No problem at all — I'll leave these and a card. Is there a better morning to catch the owner?",
+          "notInterested": "Understood, thanks for your time. I'll leave a card in case it's ever useful.",
+          "alreadyPartnered": "That's good to hear. We're not asking anyone to drop anything — it's just so people know there's a dental practice nearby. I'll leave a card."
+        },
+        "closing": "Thanks very much. I'll note that I spoke with you, and we'll check back in a few weeks.",
+        "followUp": "Hi, I came by a few weeks ago on behalf of Hyline Dental, the family practice on Route 59. I wanted to see whether the cards have been any use and whether the owner had a moment to say hello."
+      }
+    },
+    {
+      "name": "Yoga Cave",
+      "category": "Yoga studio",
+      "address": "2863 95th Street, Suite 159, Naperville, IL 60564",
+      "phone": "(331) 262-5424",
+      "website": "https://yoga-cave.com",
+      "talkingPoint": "Introduce Hyline Dental as a nearby option for routine and family dental care.",
+      "script": {
+        "opening": "Hi, I'm representing Hyline Dental, a local family dental practice. We're building relationships with neighborhood wellness businesses and wanted to introduce ourselves. Is there someone who handles local partnerships?",
+        "introduction": "Hyline Dental is on Route 59 in Naperville. Routine and family dental care — check-ups, cleanings, the everyday things.",
+        "value": "People ask their studio for local recommendations all the time. We'd just like you to know we're here, and we're glad to do the same for you.",
+        "ask": "Would it be alright to leave a few cards where members can see them?",
+        "objections": {
+          "busy": "Of course — I'll leave these here. When is the quietest time of day to come back?",
+          "notInterested": "That's completely fine. Thanks for hearing me out.",
+          "alreadyPartnered": "Makes sense. We're not asking to replace anything, just to be a name people recognise locally."
+        },
+        "closing": "Appreciate your time. I'll make a note and we'll follow up before long.",
+        "followUp": "Hi, I stopped in a while back for Hyline Dental. Just checking whether the cards are still there and whether whoever handles partnerships has a moment."
+      }
+    },
+    {
+      "name": "Salon Fluxx",
+      "category": "Hair salon",
+      "address": "1048 104th Street, Suite 100, Naperville, IL 60564",
+      "phone": "(630) 579-0100",
+      "website": "https://www.salonfluxx.com",
+      "talkingPoint": "Explore cross-promotion between local businesses serving appearance-conscious clients.",
+      "script": {
+        "opening": "Hi, I'm reaching out on behalf of Hyline Dental. We're connecting with local beauty and wellness businesses to explore ways to support each other's communities. Could I speak briefly with whoever handles partnerships?",
+        "introduction": "Hyline Dental is a family and cosmetic dental practice here in Naperville, on Route 59.",
+        "value": "Your clients care how they look and sound when they walk out. So do ours. A simple cross-introduction between two local independents costs neither of us anything.",
+        "ask": "Could we leave some cards, and would the owner be open to us doing the same for you?",
+        "objections": {
+          "busy": "Totally understand — I'll leave these at the desk. Is there a slower day I could come back?",
+          "notInterested": "No problem, thanks for your time.",
+          "alreadyPartnered": "Good to know. We're not after anything exclusive — just a local name people recognise."
+        },
+        "closing": "Thank you. I'll record that we spoke and we'll check back.",
+        "followUp": "Hi, I came by for Hyline Dental a few weeks ago. Wanted to see how the cards have gone and whether the owner has a minute now."
+      }
+    },
+    {
+      "name": "KidSnips Naperville",
+      "category": "Children's hair salon",
+      "address": "2835 Showplace Drive, Suite 131, Naperville, IL 60564",
+      "phone": "(630) 848-0008",
+      "website": "https://kidsnips.com",
+      "talkingPoint": "Both businesses serve local families, making community introductions a potential fit.",
+      "script": {
+        "opening": "Hi, I'm representing Hyline Dental here in Naperville. Since your salon works with local families, I thought it would be worth introducing our family dental practice. Who would be the best person to speak with about a community partnership?",
+        "introduction": "Hyline Dental is a family practice on Route 59. A lot of what they do is children's check-ups and everyday family dentistry.",
+        "value": "The families coming through your door are the same ones looking for a dentist nearby. We'd like them to know we're here, and we're happy to mention you to ours.",
+        "ask": "Would it be alright to leave a few cards at the desk?",
+        "objections": {
+          "busy": "No problem — here are the cards. When is a calmer time to catch the manager?",
+          "notInterested": "That's fine, thanks for your time.",
+          "alreadyPartnered": "Understood. Nothing exclusive here — just so there's a local name families recognise."
+        },
+        "closing": "Thanks very much. I'll log that we spoke today.",
+        "followUp": "Hi, I visited a few weeks ago on behalf of Hyline Dental, the family practice on Route 59. Just following up to see whether the cards were useful."
+      }
+    },
+    {
+      "name": "Upscale Male",
+      "category": "Men's grooming salon",
+      "address": "1935 95th Street, Suite 123, Naperville, IL 60564",
+      "phone": "(630) 364-2085",
+      "website": "https://www.upscalemale.com",
+      "talkingPoint": "Introduce Hyline Dental's general and cosmetic dental services, subject to the clinic's approved messaging.",
+      "script": {
+        "opening": "Hi, I'm with Hyline Dental's local outreach team. We're introducing the practice to established businesses nearby and exploring some simple cross-promotion opportunities. Would your manager have a minute to hear about it?",
+        "introduction": "Hyline Dental is a general and cosmetic dental practice on Route 59 here in Naperville.",
+        "value": "Your clients are already here for how they present themselves. We're a local independent in the same business, and a quiet introduction between the two of us helps both.",
+        "ask": "Could we leave cards at the desk, and would the manager be open to a short conversation?",
+        "objections": {
+          "busy": "Of course — I'll leave these. Is there a better time of day?",
+          "notInterested": "No problem at all. Thanks for your time.",
+          "alreadyPartnered": "Fair enough. We're not asking for anything exclusive, just to be a name people know locally."
+        },
+        "closing": "Appreciate it. I'll note our conversation and we'll check back in.",
+        "followUp": "Hi, I stopped by for Hyline Dental a few weeks back. Wanted to see whether the cards have moved and whether the manager is around today."
+      }
+    }
+  ]
+}

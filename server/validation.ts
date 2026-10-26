@@ -92,3 +92,44 @@ export const visitNoteInput = z.object({
   note: z.string().max(2000),
   nextRound: z.boolean(),
 }).strict();
+
+// THE STAFF'S OWN WRITES. Each one is checked here and the clinic is never among the fields:
+// it is resolved from the session cookie, so a borrowed business id on another practice's
+// account is simply not found.
+export const recordVisitInput = z.object({
+  businessId: z.string().min(1).max(80),
+  visitedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  spokeWith: z.string().trim().max(120).default(''),
+  contactRole: z.string().trim().max(120).default(''),
+  outcome: z.enum(['interested', 'partner', 'follow-up', 'declined', 'unavailable', 'closed', 'materials']),
+  materials: z.number().int().min(0).max(5000).default(0),
+  note: z.string().trim().max(4000).default(''),
+  nextAction: z.string().trim().max(400).default(''),
+  followUpOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  // The caller's own id for this submission, so a double tap or a retry on a bad signal
+  // returns the visit already saved instead of writing a second one.
+  clientRef: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
+}).strict();
+
+export const editVisitInput = z.object({
+  visitId: z.string().min(1).max(80),
+  spokeWith: z.string().trim().max(120).optional(),
+  contactRole: z.string().trim().max(120).optional(),
+  outcome: z.enum(['interested', 'partner', 'follow-up', 'declined', 'unavailable', 'closed', 'materials']).optional(),
+  materials: z.number().int().min(0).max(5000).optional(),
+  note: z.string().trim().max(4000).optional(),
+  nextAction: z.string().trim().max(400).optional(),
+  followUpOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+}).strict();
+
+export const saveScriptInput = z.object({
+  businessId: z.string().min(1).max(80),
+  script: z.object({
+    opening: z.string().max(2000), introduction: z.string().max(2000), value: z.string().max(2000),
+    ask: z.string().max(2000),
+    objections: z.object({
+      busy: z.string().max(2000), notInterested: z.string().max(2000), alreadyPartnered: z.string().max(2000),
+    }).strict(),
+    closing: z.string().max(2000), followUp: z.string().max(2000),
+  }).strict(),
+}).strict();

@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput } from './validation';
+import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput, recordVisitInput, editVisitInput, saveScriptInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
@@ -44,7 +44,10 @@ export function createPortalServer(options: Options) {
       const url = new URL(request.url ?? '/', origin);
       const cookie = request.headers.cookie?.split(';').map(part => part.trim()).find(part => part.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
       if (url.pathname.startsWith('/api/')) {
-        if (request.method === 'POST' && !allowed.has(request.headers.origin ?? '')) { json(response, 403, { error: 'Please refresh and try again.' }); return; }
+        // Every method that changes something, not only POST. PATCH and DELETE are as much a
+        // cross-site risk as POST, and leaving them out of this check is how that gets missed.
+        const reads = request.method === 'GET' || request.method === 'HEAD';
+        if (!reads && !allowed.has(request.headers.origin ?? '')) { json(response, 403, { error: 'Please refresh and try again.' }); return; }
         // A health check anyone can read: whether the server sees a Places key, never the key itself, and the
         // NAMES (no values) of any environment variables that look like one, so a misnamed key can be spotted.
         if (url.pathname === '/api/health' && request.method === 'GET') {
@@ -86,6 +89,71 @@ export function createPortalServer(options: Options) {
           catch { json(response, 400, { error: 'That business is not on your field log.' }); }
           return;
         }
+        // THE STAFF'S OWN WORK: the businesses this practice has been released, what to say at
+        // each, and what happened when somebody went. Like the network endpoints below, the
+        // clinic comes from the session cookie and from nowhere else — a business id belonging
+        // to another practice is not found rather than refused, which tells the caller nothing.
+        if (url.pathname.startsWith('/api/outreach')) {
+          const clinic = store.clinicFromToken(cookie);
+          if (!clinic) { json(response, 401, { error: 'Please sign in again.' }); return; }
+          const who = store.db.prepare('SELECT display_name FROM users WHERE clinic_id=? AND display_name<>\'\' LIMIT 1')
+            .get(clinic.id) as { display_name: string } | undefined;
+
+          if (url.pathname === '/api/outreach/businesses' && request.method === 'GET') {
+            json(response, 200, {
+              businesses: store.outreach.businesses(clinic.id),
+              releases: store.outreach.releases(clinic.id),
+            });
+            return;
+          }
+          if (url.pathname === '/api/outreach/business' && request.method === 'GET') {
+            const id = url.searchParams.get('id') ?? '';
+            const target = store.outreach.business(clinic.id, id);
+            if (!target) { json(response, 404, { error: 'That business is not on your list.' }); return; }
+            json(response, 200, {
+              business: target,
+              script: store.outreach.script(clinic.id, id),
+              visits: store.outreach.visits(clinic.id, id),
+            });
+            return;
+          }
+          if (url.pathname === '/api/outreach/visits' && request.method === 'GET') {
+            json(response, 200, { visits: store.outreach.visits(clinic.id) }); return;
+          }
+          if (url.pathname === '/api/outreach/visit' && request.method === 'POST') {
+            let input;
+            try { input = recordVisitInput.safeParse(await body(request)); }
+            catch { json(response, 400, { error: 'That visit could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That visit could not be saved. Please check it and try again.' }); return; }
+            try {
+              json(response, 200, store.outreach.recordVisit(clinic.id, {
+                ...input.data, staff: who?.display_name ?? '',
+              }));
+            } catch (error) { json(response, 400, { error: error instanceof Error ? error.message : 'That visit could not be saved.' }); }
+            return;
+          }
+          if (url.pathname === '/api/outreach/visit' && request.method === 'PATCH') {
+            let input;
+            try { input = editVisitInput.safeParse(await body(request)); }
+            catch { json(response, 400, { error: 'That change could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That change could not be saved.' }); return; }
+            const { visitId, ...patch } = input.data;
+            try { json(response, 200, { visit: store.outreach.editVisit(clinic.id, visitId, patch, who?.display_name ?? '') }); }
+            catch (error) { json(response, 400, { error: error instanceof Error ? error.message : 'That change could not be saved.' }); }
+            return;
+          }
+          if (url.pathname === '/api/outreach/script' && request.method === 'POST') {
+            let input;
+            try { input = saveScriptInput.safeParse(await body(request)); }
+            catch { json(response, 400, { error: 'That script could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That script could not be saved.' }); return; }
+            try { json(response, 200, store.outreach.saveScript(clinic.id, input.data.businessId, input.data.script)); }
+            catch (error) { json(response, 400, { error: error instanceof Error ? error.message : 'That script could not be saved.' }); }
+            return;
+          }
+          json(response, 404, { error: 'No such endpoint.' }); return;
+        }
+
         // THE NETWORK MAP. Every endpoint below resolves the clinic from the session cookie and
         // from nowhere else, so `?clinicId=` and a borrowed place ID are both simply ignored.
         if (url.pathname.startsWith('/api/network/')) {

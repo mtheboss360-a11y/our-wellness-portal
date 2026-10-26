@@ -7,6 +7,7 @@ import type { Campaign, PortalSnapshot } from '../data/portal-data';
 import type { FieldLog } from '../data/field-data';
 import { openNetwork } from './network/db';
 import { openBakeries } from './network/bakeries';
+import { openOutreach } from './outreach';
 export type PortalStore = ReturnType<typeof openStore>;
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
@@ -54,6 +55,8 @@ export function openStore(filename: string, enableSample = true) {
 
   const network = openNetwork(db);
   const bakeries = openBakeries(db);
+  // The released businesses, their scripts and the visits recorded against them.
+  const outreach = openOutreach(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
@@ -150,5 +153,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
 }
