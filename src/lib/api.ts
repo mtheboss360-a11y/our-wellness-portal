@@ -53,3 +53,10 @@ export const recordVisit = (input: VisitDraft) =>
   request<{ visit: Visit; business: Business }>('/api/outreach/visit', 'POST', input);
 export const editVisit = (input: { visitId: string } & Partial<VisitDraft>) =>
   request<{ visit: Visit }>('/api/outreach/visit', 'PATCH', input);
+
+// Rounds: a day's work built from the released businesses.
+import type { Round } from './round-math';
+export type { Round };
+export const getRounds = () => request<{
+  rounds: Round[]; visits: Visit[]; clinic: { lat: number; lng: number; label: string } | null;
+}>('/api/outreach/rounds');

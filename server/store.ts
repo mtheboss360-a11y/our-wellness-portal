@@ -91,6 +91,32 @@ export function openStore(filename: string, enableSample = true) {
       throw error;
     }
   }
+  /**
+   * Change one login's password. There was no way to do this at all, which meant a password
+   * handed out to get somebody started stayed that password. A new salt every time, so two
+   * accounts that pick the same word do not share a hash.
+   */
+  function setPassword(username: string, password: string) {
+    if (!password) throw new Error('A password is required.');
+    const salt = randomBytes(24).toString('hex');
+    const changed = db.prepare('UPDATE users SET hash=?, salt=? WHERE email=?')
+      .run(passwordHash(password, salt), salt, username.trim().toLowerCase());
+    if (!changed.changes) throw new Error(`No login called "${username.trim().toLowerCase()}".`);
+    // Every session signed in with the old password stops working, which is the point of
+    // changing it. Anyone still holding a cookie has to sign in again.
+    db.prepare(`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email=?)`)
+      .run(username.trim().toLowerCase());
+  }
+
+  /** Who can sign in, for an audit. Never returns a hash, a salt or anything derived from one. */
+  function logins() {
+    return db.prepare(`SELECT u.email AS username, u.display_name AS name, u.clinic_id AS clinic,
+        c.name AS clinicName, c.demo AS demo,
+        (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>?) AS activeSessions
+      FROM users u JOIN clinics c ON c.id=u.clinic_id ORDER BY c.name, u.email`).all(Date.now()) as Array<{
+        username: string; name: string; clinic: string; clinicName: string; demo: number; activeSessions: number }>;
+  }
+
   /** Is this an illustrative account? Read from the clinic row, never from a request. */
   function isDemoClinic(clinicId: string) {
     return (db.prepare('SELECT demo FROM clinics WHERE id=?').get(clinicId) as { demo: number } | undefined)?.demo === 1;
@@ -169,5 +195,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, setPassword, logins, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
 }

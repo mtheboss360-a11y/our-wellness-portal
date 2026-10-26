@@ -12,6 +12,7 @@ import OutreachReport from './OutreachReport';
 import AgendaScreen from './AgendaScreen';
 import PageStage from './PageStage';
 import AssignedBusinesses from './AssignedBusinesses';
+import RoundAgenda from './RoundAgenda';
 
 
 
@@ -167,7 +168,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       <PageStage view={view}>
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
-      : view === 'agenda' ? <AgendaScreen today={data.today} onClose={() => setView('home')}/>
+      : view === 'agenda' ? <RoundAgenda today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>

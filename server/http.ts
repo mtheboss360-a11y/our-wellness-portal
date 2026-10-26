@@ -117,6 +117,15 @@ export function createPortalServer(options: Options) {
             });
             return;
           }
+          if (url.pathname === '/api/outreach/rounds' && request.method === 'GET') {
+            const where = store.clinicLocation(clinic.id);
+            json(response, 200, {
+              rounds: store.outreach.rounds(clinic.id),
+              visits: store.outreach.visits(clinic.id),
+              clinic: where ? { lat: where.lat, lng: where.lng, label: where.label } : null,
+            });
+            return;
+          }
           if (url.pathname === '/api/outreach/visits' && request.method === 'GET') {
             json(response, 200, { visits: store.outreach.visits(clinic.id) }); return;
           }

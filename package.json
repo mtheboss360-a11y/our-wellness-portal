@@ -24,7 +24,10 @@
     "add-staff-login": "tsx scripts/add-staff-login.ts",
     "release-businesses": "tsx scripts/release-businesses.ts",
     "geocode-release": "tsx scripts/geocode-release.ts",
-    "activate-live": "tsx scripts/activate-live.ts"
+    "activate-live": "tsx scripts/activate-live.ts",
+    "set-password": "tsx scripts/set-password.ts",
+    "list-logins": "tsx scripts/list-logins.ts",
+    "plan-round": "tsx scripts/plan-round.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -141,6 +141,25 @@ const SCHEMA = [
      was TEXT NOT NULL,
      edited_by TEXT NOT NULL DEFAULT '',
      edited_at INTEGER NOT NULL)`,
+  // A ROUND: a day's work, an ordered list of released businesses, assigned to one person.
+  // Stops reference businesses, so a round can never contain somebody a practice was not given.
+  `CREATE TABLE IF NOT EXISTS rounds (
+     id TEXT PRIMARY KEY,
+     clinic_id TEXT NOT NULL REFERENCES clinics(id),
+     on_date TEXT NOT NULL,
+     start_at TEXT NOT NULL DEFAULT '09:00',
+     staff TEXT NOT NULL DEFAULT '',
+     status TEXT NOT NULL DEFAULT 'scheduled',
+     note TEXT NOT NULL DEFAULT '',
+     demo INTEGER,
+     created_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS round_stops (
+     round_id TEXT NOT NULL REFERENCES rounds(id) ON DELETE CASCADE,
+     clinic_id TEXT NOT NULL REFERENCES clinics(id),
+     business_id TEXT NOT NULL REFERENCES businesses(id),
+     position INTEGER NOT NULL,
+     PRIMARY KEY (round_id, business_id))`,
+  `CREATE INDEX IF NOT EXISTS rounds_by_clinic ON rounds(clinic_id, on_date)`,
 ].join(';\n');
 
 const now = () => Date.now();
@@ -366,11 +385,81 @@ export function openOutreach(db: DatabaseSync) {
     return business(clinicId, businessId)!;
   }
 
+  // ── ROUNDS ─────────────────────────────────────────────────────────────────
+
+  /** One day's work: the stops in order, with everything the agenda needs to lay them out. */
+  function rounds(clinicId: string) {
+    const rows = db.prepare(`SELECT id,on_date,start_at,staff,status,note,demo FROM rounds
+      WHERE clinic_id=? ORDER BY on_date DESC`).all(clinicId) as Array<{
+        id: string; on_date: string; start_at: string; staff: string; status: string;
+        note: string; demo: number | null }>;
+    return rows.map(r => ({
+      id: r.id, date: r.on_date, start: r.start_at, staff: r.staff,
+      status: r.status as 'scheduled' | 'done' | 'draft', note: r.note, demo: r.demo,
+      stops: (db.prepare(`SELECT ${BUSINESS_COLUMNS.split(',').map(c => 'b.' + c).join(',')}
+          FROM round_stops s JOIN businesses b ON b.id=s.business_id
+          WHERE s.round_id=? AND s.clinic_id=? ORDER BY s.position`)
+        .all(r.id, clinicId) as BusinessRow[]).map(toBusiness),
+    }));
+  }
+
+  /**
+   * Book a round. Every business id has to be one of this practice's, checked one at a time
+   * rather than trusted, and the whole round is written or none of it is.
+   */
+  function planRound(clinicId: string, input: {
+    id?: string; date: string; start: string; staff: string; businessIds: string[];
+    note?: string; demo?: boolean;
+  }) {
+    if (!input.businessIds.length) throw new Error('A round needs at least one stop.');
+    const mine = new Set(businesses(clinicId).map(b => b.id));
+    const strangers = input.businessIds.filter(id => !mine.has(id));
+    if (strangers.length) throw new Error(`${strangers.length} of those businesses are not on your list.`);
+    if (new Set(input.businessIds).size !== input.businessIds.length) throw new Error('The same business is on this round twice.');
+
+    const id = input.id ?? `r_${randomUUID()}`;
+    begin();
+    try {
+      db.prepare(`INSERT INTO rounds (id,clinic_id,on_date,start_at,staff,status,note,demo,created_at)
+        VALUES (?,?,?,?,?,'scheduled',?,?,?)
+        ON CONFLICT(id) DO UPDATE SET on_date=excluded.on_date, start_at=excluded.start_at,
+          staff=excluded.staff, note=excluded.note`)
+        .run(id, clinicId, input.date, input.start, input.staff, input.note ?? '',
+          input.demo ? 1 : 0, now());
+      db.prepare('DELETE FROM round_stops WHERE round_id=? AND clinic_id=?').run(id, clinicId);
+      input.businessIds.forEach((businessId, position) => {
+        db.prepare('INSERT INTO round_stops (round_id,clinic_id,business_id,position) VALUES (?,?,?,?)')
+          .run(id, clinicId, businessId, position);
+      });
+      commit();
+    } catch (error) { rollback(); throw error; }
+    return rounds(clinicId).find(r => r.id === id)!;
+  }
+
+  /** Put the stops in a different order. Only the ones already on the round. */
+  function reorderRound(clinicId: string, roundId: string, businessIds: string[]) {
+    const round = rounds(clinicId).find(r => r.id === roundId);
+    if (!round) throw new Error('That round is not yours.');
+    const on = new Set(round.stops.map(s => s.id));
+    if (businessIds.length !== on.size || businessIds.some(id => !on.has(id))) {
+      throw new Error('Reordering has to list exactly the stops already on the round.');
+    }
+    begin();
+    try {
+      businessIds.forEach((businessId, position) => {
+        db.prepare('UPDATE round_stops SET position=? WHERE round_id=? AND clinic_id=? AND business_id=?')
+          .run(position, roundId, clinicId, businessId);
+      });
+      commit();
+    } catch (error) { rollback(); throw error; }
+    return rounds(clinicId).find(r => r.id === roundId)!;
+  }
+
   function releases(clinicId: string) {
     return db.prepare(`SELECT id,name,released_at,released_by,size FROM releases
       WHERE clinic_id=? ORDER BY released_at DESC`).all(clinicId) as Array<{
         id: string; name: string; released_at: number; released_by: string; size: number }>;
   }
 
-  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation };
+  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation, rounds, planRound, reorderRound };
 }
