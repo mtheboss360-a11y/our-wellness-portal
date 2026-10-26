@@ -1092,3 +1092,16 @@ a.dash-primary{text-decoration:none}
   .planner-head .dash-primary{width:100%;justify-content:center}
   .planner-pool{grid-template-columns:1fr}
 }
+
+/* A small motif in the corner of each figure card — generated with Higgsfield, cropped to its
+   rings, and faded to nothing at its own edges so it can never read as a pasted square. It is
+   decoration at a tenth opacity behind the number, nothing more: no figure, label or link sits
+   on top of a line of it at a contrast that matters. */
+.dash-figure{position:relative;overflow:hidden}
+.dash-figure::after{
+  content:"";position:absolute;right:-26px;bottom:-30px;width:132px;height:132px;
+  background:url("/assets/card-motif.png") center / contain no-repeat;
+  opacity:.10;pointer-events:none}
+.dash-figure.is-lead::after{opacity:.16;filter:invert(1) sepia(1) saturate(.5) hue-rotate(40deg)}
+.dash-figure>*{position:relative}
+@media (max-width:620px){.dash-figure::after{width:104px;height:104px;right:-20px;bottom:-24px}}

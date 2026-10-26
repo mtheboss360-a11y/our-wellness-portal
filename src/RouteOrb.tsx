@@ -83,17 +83,13 @@ export default function RouteOrb({ clinic, stops, activeId, onHover, onSelect, l
         ctx.beginPath(); ctx.arc(cx + x * R, cy + y * R, DOT, 0, Math.PI * 2); ctx.fill();
       }
 
-      // The route: clinic, then each stop in order. A small light travels it.
+      // The route: clinic, then each stop in order.
       const shown = Math.max(0, Math.min(route.length, Math.floor((now - anim.current.appear) / 120) + 1));
       const laid = orbLayout(live.current.clinic, route).map(p => ({ ...p, px: cx + p.x * R * 0.92, py: cy + p.y * R * 0.92 }));
       const path = [{ px: cx, py: cy }, ...laid.slice(0, shown)];
       ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(28,58,44,.42)'; ctx.setLineDash([4, 5]);
       ctx.lineDashOffset = reduce.matches ? 0 : -now / 60;
       ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.px, p.py) : ctx.moveTo(p.px, p.py)); ctx.stroke(); ctx.setLineDash([]);
-      if (path.length > 1 && !reduce.matches) {
-        const seg = (now / 900) % (path.length - 1), i = Math.floor(seg), f = seg - i, a = path[i], b = path[i + 1];
-        ctx.fillStyle = COLORS.rose; ctx.beginPath(); ctx.arc(a.px + (b.px - a.px) * f, a.py + (b.py - a.py) * f, 3, 0, Math.PI * 2); ctx.fill();
-      }
 
       // The clinic.
       ctx.fillStyle = 'rgba(189,113,137,.18)'; ctx.beginPath(); ctx.arc(cx, cy, 15 + Math.sin(now / 700) * (reduce.matches ? 0 : 1.5), 0, Math.PI * 2); ctx.fill();
