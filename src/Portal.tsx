@@ -13,6 +13,8 @@ import AgendaScreen from './AgendaScreen';
 import PageStage from './PageStage';
 import AssignedBusinesses from './AssignedBusinesses';
 import RoundAgenda from './RoundAgenda';
+import VisitHistory from './VisitHistory';
+import Performance from './Performance';
 
 
 
@@ -87,7 +89,7 @@ function SignIn({ config }: { config: PublicPortal }) {
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
-  const [view, setView] = useState<'home' | 'agenda' | 'businesses' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
+  const [view, setView] = useState<'home' | 'agenda' | 'businesses' | 'history' | 'performance' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
   // Which service this practice buys, read from the account. On the portal-only plan their own
   // staff do the visits, so there are no drivers to introduce and no treats run to arrange.
   const plan = data.clinic?.plan ?? 'a';
@@ -138,6 +140,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'clinic' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
+    ...(plan === 'b' ? [{ id: 'history' as typeof view, label: 'Visit history', icon: 'clock' as IconName }] : []),
+    ...(plan === 'b' ? [{ id: 'performance' as typeof view, label: 'Performance', icon: 'trophy' as IconName }] : []),
     ...(plan === 'b' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
     { id: 'network', label: 'Referral network', icon: 'pin' },
     ...(plan === 'a' ? [{ id: 'bakeries' as typeof view, label: 'Bakery network', icon: 'cake' as IconName }] : []),
@@ -169,6 +173,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'agenda' ? <RoundAgenda today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
+      : view === 'history' ? <VisitHistory onClose={() => setView('home')}/>
+      : view === 'performance' ? <Performance today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
