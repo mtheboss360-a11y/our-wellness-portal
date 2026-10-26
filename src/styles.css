@@ -825,3 +825,49 @@
   .rep-bars{height:110px}
   .rep-month{min-width:46px}
 }
+
+/* A dashboard figure that opens its records. The whole tile is the target. */
+.dash-figure-go{display:block;width:100%;text-align:left;background:none;border:0;padding:0;cursor:pointer;
+  font:inherit;color:inherit;border-radius:8px}
+.dash-figure-go:hover .dash-figure-cue{color:var(--ink);border-bottom-color:currentColor}
+.dash-figure-go:focus-visible{outline:2px solid var(--gold-sm);outline-offset:4px}
+.dash-figure-cue{display:inline-block;margin-top:10px;font:600 .72rem/1 var(--nums);color:var(--ink-3);
+  border-bottom:1px solid transparent;padding-bottom:2px;transition:color .18s ease,border-color .18s ease}
+
+/* Directions, and the line that stops a planned stop reading as a visited one. */
+.field-stop-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.field-stop-pending{font-size:.78rem;color:var(--ink-3)}
+
+/* What was recorded on each visit, kept with that visit. */
+.notes-history{margin-top:12px;border-top:1px solid var(--line-soft);padding-top:10px}
+.notes-history summary{cursor:pointer;font:600 .76rem/1 var(--nums);color:var(--ink-3);
+  list-style:none;display:inline-flex;align-items:center;gap:7px;min-height:32px}
+.notes-history summary::-webkit-details-marker{display:none}
+.notes-history summary::before{content:"▸";font-size:.7rem;transition:transform .15s ease}
+.notes-history[open] summary::before{transform:rotate(90deg)}
+.notes-history summary:hover{color:var(--ink)}
+.notes-history ol{list-style:none;margin:10px 0 2px;padding:0;display:grid;gap:10px}
+.notes-history li{display:flex;gap:12px;align-items:baseline;font-size:.82rem}
+.notes-history time{flex:none;min-width:11ch;font:500 .74rem/1.5 var(--nums);color:var(--ink-3)}
+.notes-history-body strong{display:block;font-weight:600;font-size:.82rem;color:var(--ink)}
+.notes-history-body>span{display:block;margin-top:2px;font-size:.76rem;color:var(--ink-3)}
+.notes-history-body q{display:block;margin-top:5px;font-style:normal;color:var(--ink-2);
+  padding-left:10px;border-left:2px solid var(--line)}
+@media (max-width:620px){
+  .notes-history li{flex-direction:column;gap:3px}
+  .notes-history time{min-width:0}
+}
+
+/* ===========================================================================
+   ONE TYPEFACE ACROSS THE FOUR TABS.
+
+   Dashboard, Your report, Routes and Route notes are tools somebody opens
+   between patients, so they are set in the platform's own interface face.
+   Playfair stays on the brand and on the Referral network, which is not
+   touched here.
+   =========================================================================== */
+.dash,.rep,.drivers-page,.notes-page{font-family:var(--nums)}
+.dash h1,.dash h2,.dash h3,.rep h2,.rep h3,
+.drivers-page h1,.drivers-page h2,.drivers-page h3,.drivers-page h4,
+.notes-page h1,.notes-page h2,.notes-page h3{
+  font-family:var(--nums);font-weight:620;letter-spacing:-.02em}

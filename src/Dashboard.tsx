@@ -14,7 +14,7 @@ import {
   followUps, monthLabel, nextAction, opportunities, participating, thisMonth, type NextAction,
 } from './lib/dashboard-math';
 
-type View = 'report' | 'drivers' | 'network' | 'bakeries';
+type View = 'home' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries';
 type Props = { clinicName: string; today: string; plan: 'a' | 'b'; onGo: (view: View) => void };
 
 function Tile({ title, note, children, action }: { title: string; note?: string; children: React.ReactNode; action?: React.ReactNode }) {
@@ -28,12 +28,28 @@ function Tile({ title, note, children, action }: { title: string; note?: string;
 const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) =>
   <span className={`dash-pill dash-pill-${tone}`}>{children}</span>;
 
-/** A figure with its own word. Never a bare number: the label is what stops it being misread. */
-function Figure({ value, label, note, unknown }: { value: number; label: string; note?: string; unknown?: boolean }) {
-  return <div className="dash-figure">
+/**
+ * A figure with its own word. Never a bare number: the label is what stops it being misread.
+ *
+ * Where there are records behind it, the whole tile is the way to them — a count you cannot
+ * open is a claim you cannot check.
+ */
+function Figure({ value, label, note, unknown, go, goLabel }: {
+  value: number; label: string; note?: string; unknown?: boolean;
+  go?: () => void; goLabel?: string;
+}) {
+  const body = <>
     <dt>{label}</dt>
     <dd>{unknown ? <span className="dash-unrecorded">Not recorded</span> : value}</dd>
     {note && !unknown && <p>{note}</p>}
+  </>;
+  if (unknown || !go) return <div className="dash-figure">{body}</div>;
+  return <div className="dash-figure">
+    <button type="button" className="dash-figure-go" onClick={go}>
+      {body}
+      <span className="dash-figure-cue" aria-hidden="true">{goLabel ?? 'Open'} →</span>
+      <span className="sr-only">{goLabel ?? 'Open the records behind this'}</span>
+    </button>
   </div>;
 }
 
@@ -92,10 +108,14 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
     <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} unknown={!picks.length && placesOff}/>
-      <Figure value={month.visits} label="Visits recorded" note="Completed stops" unknown={!month.hasLog}/>
-      <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" unknown={!month.hasLog}/>
-      <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} unknown={!month.hasLog}/>
+      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined}
+        unknown={!picks.length && placesOff} go={() => onGo('network')} goLabel="See them on the map"/>
+      <Figure value={month.visits} label="Visits recorded" note="Completed stops"
+        unknown={!month.hasLog} go={() => onGo('drivers')} goLabel="See the rounds"/>
+      <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call"
+        unknown={!month.hasLog} go={() => onGo(plan === 'b' ? 'notes' : 'drivers')} goLabel="See who is owed a call"/>
+      <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'}
+        unknown={!month.hasLog} go={() => onGo('report')} goLabel="See the report"/>
     </dl>
 
     <div className="dash-grid">

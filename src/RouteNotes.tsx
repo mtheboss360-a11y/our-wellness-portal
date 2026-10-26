@@ -9,22 +9,34 @@ import { getField, getVisitNotes, saveVisitNote, type VisitNote } from './lib/ap
 import type { FieldLog, FieldStop } from '../data/field-data';
 import { CATEGORY_LABEL, OUTCOME_LABEL, dayLabel } from './lib/field-math';
 
-type Row = { businessId: string; name: string; town: string; category: FieldStop['category']; lastVisit: string; outcome: FieldStop['outcome']; spokeWith: string };
+type Visit = { on: string; outcome: FieldStop['outcome']; spokeWith: string; note: string; cards: number; boxes: number };
+type Row = { businessId: string; name: string; town: string; category: FieldStop['category']; lastVisit: string; outcome: FieldStop['outcome']; spokeWith: string; visits: Visit[] };
 
-/** Every business this clinic has actually visited, most recently visited first. */
+/**
+ * Every business this clinic has actually visited, most recently visited first, each carrying
+ * every visit to it. The note a staff member writes here is about the relationship; what was
+ * recorded on a particular visit stays attached to that visit and is never overwritten.
+ */
 function visited(log: FieldLog): Row[] {
   const rows = new Map<string, Row>();
   for (const route of log.routes.filter(r => r.status === 'done')) {
     for (const stop of route.stops) {
+      const visit: Visit = { on: route.date, outcome: stop.outcome, spokeWith: stop.spokeWith, note: stop.note, cards: stop.cards, boxes: stop.boxes };
       const held = rows.get(stop.businessId);
-      if (!held || route.date > held.lastVisit) {
+      if (!held) {
         rows.set(stop.businessId, {
           businessId: stop.businessId, name: stop.name, town: stop.town, category: stop.category,
-          lastVisit: route.date, outcome: stop.outcome, spokeWith: stop.spokeWith,
+          lastVisit: route.date, outcome: stop.outcome, spokeWith: stop.spokeWith, visits: [visit],
         });
+        continue;
+      }
+      held.visits.push(visit);
+      if (route.date > held.lastVisit) {
+        held.lastVisit = route.date; held.outcome = stop.outcome; held.spokeWith = stop.spokeWith; held.name = stop.name;
       }
     }
   }
+  for (const row of rows.values()) row.visits.sort((a, b) => b.on.localeCompare(a.on));
   return [...rows.values()].sort((a, b) => b.lastVisit.localeCompare(a.lastVisit) || a.name.localeCompare(b.name));
 }
 
@@ -123,6 +135,20 @@ function NoteRow({ row, saved, onSaved, onError }: {
       disabled={busy}
       onChange={event => { setText(event.target.value); setDone(false); }}
     />
+
+    {row.visits.length > 0 && <details className="notes-history">
+      <summary>{row.visits.length} {row.visits.length === 1 ? 'visit' : 'visits'} on record</summary>
+      <ol>{row.visits.map((visit, n) => <li key={`${visit.on}-${n}`}>
+        <time dateTime={visit.on}>{dayLabel(visit.on)}</time>
+        <span className="notes-history-body">
+          <strong>{OUTCOME_LABEL[visit.outcome]}</strong>
+          <span>{[visit.spokeWith && `Spoke with ${visit.spokeWith}`,
+            visit.cards ? `${visit.cards} ${visit.cards === 1 ? 'card' : 'cards'}` : null,
+            visit.boxes ? `${visit.boxes} ${visit.boxes === 1 ? 'box' : 'boxes'}` : null].filter(Boolean).join(' · ')}</span>
+          {visit.note && <q>{visit.note}</q>}
+        </span>
+      </li>)}</ol>
+    </details>}
 
     <div className="notes-row-foot">
       <label className="notes-check">

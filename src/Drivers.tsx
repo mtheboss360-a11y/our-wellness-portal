@@ -159,6 +159,15 @@ function RouteExplorer({ log, route, routes, plan, onPick }: { log: FieldLog; ro
   </section>;
 }
 
+/**
+ * Directions to a stop, from the coordinates the field log already holds. This is the
+ * documented Maps URLs API — a plain link, no key and no billing — and it opens in whatever
+ * maps app the phone uses.
+ */
+const directionsTo = (stop: FieldStop) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}&destination_place_id=`
+    .replace(/&destination_place_id=$/, '') + `&travelmode=driving`;
+
 function StopCard({ log, stop, index, route }: { log: FieldLog; stop: FieldStop; index: number; route: FieldRoute }) {
   const s = signupsAt(log, stop);
   const booked = s.filter(x => x.status === 'booked').length;
@@ -168,6 +177,10 @@ function StopCard({ log, stop, index, route }: { log: FieldLog; stop: FieldStop;
     <h3>{stop.name}</h3>
     <p className="field-stop-sub">{CATEGORY_LABEL[stop.category]} · {stop.town}</p>
     <span className={`field-outcome is-${stop.outcome}`}>{OUTCOME_LABEL[stop.outcome]}</span>
+    <p className="field-stop-actions">
+      <a className="dash-btn" href={directionsTo(stop)} target="_blank" rel="noreferrer noopener">Directions</a>
+      {!done && <span className="field-stop-pending">Nothing is recorded here until the visit is logged.</span>}
+    </p>
     {stop.photo && <img className="field-stop-photo" src={stop.photo} alt={`Delivery at ${stop.name}`} loading="lazy"/>}
     {done && <dl className="field-facts">
       <div><dt>On site</dt><dd>{timeLabel(stop.arrived)} – {timeLabel(stop.left)} <small>({minutesBetween(stop.arrived, stop.left)} min)</small></dd></div>
