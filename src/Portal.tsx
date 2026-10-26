@@ -11,11 +11,12 @@ import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
 import AgendaScreen from './AgendaScreen';
 import PageStage from './PageStage';
+import AssignedBusinesses from './AssignedBusinesses';
 
 
 
 type IconName = 'pin' | 'people' | 'cake' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock'
-  | 'home' | 'chart' | 'route' | 'notebook' | 'exit' | 'sunrise';
+  | 'home' | 'chart' | 'route' | 'notebook' | 'exit' | 'sunrise' | 'clinic';
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths = {
     pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
@@ -30,6 +31,7 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
     route: <><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/></>,
     notebook: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/></>,
+    clinic: <><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5V20h16V9.5M9 20v-6h6v6M8 9.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></>,
     sunrise: <><path d="M12 3v4M5.6 8.6 8 11M18.4 8.6 16 11M3 18h3M18 18h3M8 18a4 4 0 0 1 8 0M2 22h20"/></>,
     exit: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10"/></>,
   };
@@ -84,7 +86,7 @@ function SignIn({ config }: { config: PublicPortal }) {
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
-  const [view, setView] = useState<'home' | 'agenda' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
+  const [view, setView] = useState<'home' | 'agenda' | 'businesses' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
   // Which service this practice buys, read from the account. On the portal-only plan their own
   // staff do the visits, so there are no drivers to introduce and no treats run to arrange.
   const plan = data.clinic?.plan ?? 'a';
@@ -132,6 +134,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
     { id: 'home', label: 'Dashboard', icon: 'home' },
     ...(plan === 'b' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'sunrise' as IconName }] : []),
+    ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'clinic' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
     ...(plan === 'b' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
@@ -165,6 +168,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'agenda' ? <AgendaScreen today={data.today} onClose={() => setView('home')}/>
+      : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>

@@ -35,3 +35,21 @@ export const removeBakery = (placeId: string | null) => request<BakeryPayload>('
 export type VisitNote = { businessId: string; note: string; nextRound: boolean };
 export const getVisitNotes = () => request<{ notes: VisitNote[] }>('/api/field/notes');
 export const saveVisitNote = (input: VisitNote) => request<{ notes: VisitNote[] }>('/api/field/notes', 'POST', input);
+
+// The businesses this practice has been released, what to say at each, and what happened.
+import type { Business, Script, Visit, Outcome } from '../../server/outreach';
+export type { Business, Script, Visit, Outcome };
+export const getBusinesses = () =>
+  request<{ businesses: Business[]; releases: Array<{ id: string; name: string; released_at: number; size: number }> }>('/api/outreach/businesses');
+export const getBusiness = (id: string) =>
+  request<{ business: Business; script: { script: Script; edited: boolean } | null; visits: Visit[] }>(`/api/outreach/business?id=${encodeURIComponent(id)}`);
+export const getVisits = () => request<{ visits: Visit[] }>('/api/outreach/visits');
+export type VisitDraft = {
+  businessId: string; visitedOn: string; spokeWith: string; contactRole: string;
+  outcome: Outcome; materials: number; note: string; nextAction: string;
+  followUpOn: string | null; clientRef?: string;
+};
+export const recordVisit = (input: VisitDraft) =>
+  request<{ visit: Visit; business: Business }>('/api/outreach/visit', 'POST', input);
+export const editVisit = (input: { visitId: string } & Partial<VisitDraft>) =>
+  request<{ visit: Visit }>('/api/outreach/visit', 'PATCH', input);

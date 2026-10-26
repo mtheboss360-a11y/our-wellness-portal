@@ -1282,3 +1282,149 @@ a.dash-primary{text-decoration:none}
   .stage-wait{animation:none}
   .stage-bar i{animation:none;width:100%;opacity:.5}
 }
+
+/* ── ASSIGNED BUSINESSES ────────────────────────────────────────────────── */
+.ab{margin-top:20px;display:flex;flex-direction:column;gap:14px}
+.ab-controls{display:flex;flex-direction:column;gap:12px}
+.ab-controls .network-search{width:100%}
+.ab-controls .network-search input{flex:1;border:0;background:transparent;color:var(--ink);outline:none;min-width:0}
+.ab-filters{display:flex;gap:8px;flex-wrap:wrap}
+.ab-filters button{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;
+  border:1px solid var(--line);border-radius:999px;background:var(--paper);
+  font:600 .8rem/1 var(--nums);color:var(--ink-2)}
+.ab-filters button span{font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ab-filters button:hover{border-color:#C6D2C8}
+.ab-filters button.is-picked{background:var(--ink);border-color:var(--ink);color:#FFF}
+.ab-filters button.is-picked span{color:rgba(255,255,255,.72)}
+.ab-count{font:500 .8rem/1 var(--nums);color:var(--ink-3)}
+.ab-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.ab-row{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;
+  padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}
+.ab-row:hover{border-color:#C6D2C8}
+.ab-main{min-width:0;flex:1}
+.ab-main strong{display:block;font:600 .97rem/1.3 var(--nums);color:var(--ink)}
+.ab-main>span{display:block;margin-top:4px;font-size:.81rem;color:var(--ink-3);line-height:1.4}
+.ab-why{margin-top:9px;font-size:.82rem;line-height:1.5;color:var(--ink-2);max-width:62ch}
+.ab-end{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.ab-more{align-self:center;margin-top:4px}
+@media(max-width:700px){
+  .ab-row{flex-direction:column;gap:14px}
+  .ab-end{flex-direction:row;align-items:center;width:100%;justify-content:space-between}
+}
+
+/* ── GUIDED VISIT ───────────────────────────────────────────────────────────
+   Built for a phone held in one hand outside somebody's front door. One thing
+   per step, and the next action is always the largest target on the screen. */
+.gv{display:flex;flex-direction:column;gap:14px;padding-bottom:96px;max-width:760px}
+.gv-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:18px 0 4px}
+.gv-steps{list-style:none;display:flex;gap:6px;margin:0;padding:0}
+.gv-steps li{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
+  border:1px solid var(--line);background:var(--paper);font:600 .76rem/1 var(--nums);color:var(--ink-3)}
+.gv-steps li span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+  background:var(--stone);font-size:.68rem;color:var(--ink-2)}
+.gv-steps li.is-here{background:var(--ink);border-color:var(--ink);color:#FFF}
+.gv-steps li.is-here span{background:rgba(255,255,255,.2);color:#FFF}
+.gv-steps li.is-done span{background:#CFE0D3;color:#1C3A2C}
+
+.gv-who{padding:20px 22px;border:1px solid var(--ink);border-radius:18px;background:var(--paper)}
+.gv-who h2{font-size:1.5rem;letter-spacing:-.025em}
+.gv-who>p{margin-top:6px;font-size:.85rem;color:var(--ink-3);line-height:1.45}
+.gv-who-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.gv-stage{font:600 .72rem/1 var(--nums);letter-spacing:.03em;padding:7px 12px;border-radius:999px;
+  background:var(--stone);color:var(--ink-2)}
+.gv-stage.is-partner{background:#E6F0E7;color:#2A6141}
+.gv-stage.is-declined{background:#F1F1EF;color:#6B7B70}
+.gv-stage.is-follow-up,.gv-stage.is-interested{background:#F9F3E7;color:#7A5E1F}
+
+.gv-panel{padding:20px 22px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}
+.gv-panel h3{font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3)}
+.gv-prose{margin-top:11px;font-size:.93rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+.gv-meta{margin-top:8px;font-size:.79rem;color:var(--ink-3);line-height:1.5}
+.gv-meta a{color:var(--ink-2)}
+.gv-centred{text-align:center}
+.gv-empty{margin-top:11px;font-size:.88rem;line-height:1.6;color:var(--ink-3);max-width:62ch}
+
+/* The lines that get said out loud, set apart from the lines that are context. */
+.gv-say{border-color:var(--ink);background:#FBFBF8}
+.gv-quote{margin-top:12px;font-size:1.06rem;line-height:1.65;color:var(--ink);max-width:56ch;
+  padding-left:14px;border-left:3px solid #B8903F}
+.gv-returning{margin:0;padding:12px 16px;border:1px solid #D9C48F;border-radius:12px;
+  background:#FBF6EA;color:#7A5E1F;font-size:.84rem;line-height:1.5}
+
+.gv-objections{margin:12px 0 0;display:flex;flex-direction:column;gap:14px}
+.gv-objections dt{font:600 .85rem/1.4 var(--nums);color:var(--ink)}
+.gv-objections dd{margin:5px 0 0;font-size:.88rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+
+.gv-history{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.gv-history li{padding-left:14px;border-left:2px solid var(--line)}
+.gv-history-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.gv-history-top strong{font:600 .88rem/1.3 var(--nums);color:var(--ink)}
+.gv-history-top time{font-size:.75rem;color:var(--ink-3);white-space:nowrap}
+.gv-note{margin-top:7px;font-size:.86rem;line-height:1.55;color:var(--ink-2);font-style:italic}
+.gv-ask-for{margin-top:16px;font-size:.88rem;color:var(--ink-2)}
+
+/* The form. Big targets, nothing cramped, one column on a phone. */
+.gv-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.gv-pair label,.gv-line,.gv-count{display:flex;flex-direction:column;gap:7px;
+  font:600 .78rem/1 var(--nums);color:var(--ink-2)}
+.gv-line,.gv-count{margin-top:14px}
+.gv-pair input,.gv-line input,.gv-count input{height:48px;padding:0 14px;border:1px solid var(--line);
+  border-radius:11px;background:var(--ground);font:inherit;font-size:.93rem;color:var(--ink)}
+.gv-count input{max-width:150px;font-variant-numeric:tabular-nums}
+.gv-pair input:focus,.gv-line input:focus,.gv-count input:focus{border-color:var(--ink);outline:none}
+@media(max-width:620px){.gv-pair{grid-template-columns:1fr}}
+
+.gv-outcomes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}
+.gv-outcomes button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  min-height:62px;padding:12px 15px;text-align:left;border:1px solid var(--line);
+  border-radius:13px;background:var(--ground)}
+.gv-outcomes button strong{font:600 .87rem/1.25 var(--nums);color:var(--ink)}
+.gv-outcomes button span{font-size:.75rem;color:var(--ink-3);line-height:1.35}
+.gv-outcomes button:hover{border-color:#C6D2C8}
+.gv-outcomes button.is-picked{border-color:var(--ink);background:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.gv-outcomes button.is-picked strong{color:#FFF}
+.gv-outcomes button.is-picked span{color:rgba(255,255,255,.72)}
+@media(max-width:620px){.gv-outcomes{grid-template-columns:1fr}}
+
+/* The next action sticks to the bottom of a phone, where a thumb already is. */
+.gv-foot{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:4px}
+.gv-go{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:52px;
+  padding:0 26px;border:1px solid var(--ink);border-radius:999px;background:var(--ink);color:#FFF;
+  font:600 .95rem/1 var(--nums)}
+.gv-go:hover:not(:disabled){background:#2A5240;border-color:#2A5240}
+.gv-go:disabled{opacity:.4;cursor:not-allowed}
+.gv-go-small{min-height:40px;padding:0 17px;font-size:.82rem}
+@media(max-width:700px){
+  .gv{padding-bottom:110px}
+  .gv-foot{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;padding:12px 16px
+    calc(12px + env(safe-area-inset-bottom));background:rgba(250,250,247,.96);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+  .gv-foot .gv-go{flex:1 1 auto}
+  .gv-foot-done{position:static;background:none;border:0;padding:0;backdrop-filter:none}
+  .gv-who h2{font-size:1.3rem}
+}
+
+.gv-done{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;
+  padding:36px 24px 28px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}
+.gv-tick{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;
+  background:#E6F0E7;color:#2A6141}
+.gv-done h3{font-size:1.2rem;text-transform:none;letter-spacing:-.02em}
+.gv-done-out{font:600 .9rem/1 var(--nums);color:#2A6141}
+.gv-done-list{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;
+  font-size:.85rem;color:var(--ink-3)}
+.gv-foot-done{justify-content:center;flex-wrap:wrap;margin-top:12px}
+
+@media(prefers-reduced-motion:reduce){.gv-go,.ab-filters button{transition:none}}
+
+/* On a phone the tabs were stacking one per line, so the whole first screen was navigation and
+   the page began below the fold. They wrap into a compact block instead: every tab visible,
+   none of them full width, and the content starts where it can be seen. */
+@media (max-width:620px){
+  .rail{flex-direction:row;flex-wrap:wrap;align-items:center;height:auto;position:static}
+  .rail-nav{flex-direction:row;flex-wrap:wrap;width:100%;flex:1 0 100%;gap:6px;overflow:visible}
+  .rail-nav button{flex:0 1 auto;width:auto;min-height:36px;padding:7px 11px;gap:7px}
+  .rail-nav button span{font-size:.76rem;white-space:nowrap}
+  .rail-nav button svg{width:15px;height:15px}
+}
