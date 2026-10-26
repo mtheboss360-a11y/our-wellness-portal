@@ -18,8 +18,6 @@ export type Measure = {
   value: number;
   recorded: boolean;
   note: string;
-  /** What this number is not, where it is likely to be read as something it isn't. */
-  caution?: string;
 };
 
 const monthOf = (day: string) => day.slice(0, 7);
@@ -46,23 +44,19 @@ export function measures(log: FieldLog | null, campaigns: Campaign[]): Measure[]
       key: 'materials', label: 'Materials left', value: materialsFromLog + materialsFromCampaigns,
       recorded: !!log || !!campaigns.length,
       note: 'As reported by the person who went.',
-      caution: 'What was handed over, not what a business displayed or gave out.',
     },
     {
       key: 'scans', label: 'QR/NFC scans', value: signups.length, recorded: !!log,
       note: 'Taps on a partner card.',
-      caution: 'A scan is interest. It is not an appointment.',
     },
     {
       key: 'inquiries', label: 'Inquiries with a known source', value: leads.length, recorded: !!campaigns.length,
       note: 'People who came in and said where they heard of you.',
-      caution: 'Anyone who did not say is not counted here, so this is a floor and not a total.',
     },
     {
       key: 'appointments', label: 'Appointments', value: signups.filter(s => s.status === 'booked').length,
       recorded: !!log,
       note: 'Only those your front desk marked booked.',
-      caution: 'Never inferred from a scan.',
     },
   ];
 }

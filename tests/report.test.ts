@@ -48,7 +48,6 @@ test('a scan is never counted as an appointment', () => {
   const rows = measures(l, []);
   assert.equal(find(rows, 'scans').value, 3);
   assert.equal(find(rows, 'appointments').value, 1, 'only the one the practice marked booked');
-  assert.match(find(rows, 'scans').caution!, /not an appointment/i);
 });
 
 test('a scheduled round contributes no visits and no materials', () => {
@@ -61,18 +60,16 @@ test('a scheduled round contributes no visits and no materials', () => {
   assert.equal(find(rows, 'materials').value, 7, 'the planned round’s materials have not been handed to anyone');
 });
 
-test('materials counts what was handed over, and says so', () => {
+test('materials counts what was handed over', () => {
   const rows = measures(null, [campaign()]);
   assert.equal(find(rows, 'materials').value, 100);
-  assert.match(find(rows, 'materials').caution!, /not what a business displayed/i);
 });
 
-test('inquiries are described as a floor, because only the people who said something are in it', () => {
+test('inquiries count only the people who said where they heard of you', () => {
   const rows = measures(null, [campaign({ leads: [
     { id: 'l1', name: 'A', phone: '+16305550100', email: 'a@example.invalid', locationId: 'ridgeline', receivedDate: '2026-10-09', service: 'Cleaning' },
   ] })]);
   assert.equal(find(rows, 'inquiries').value, 1);
-  assert.match(find(rows, 'inquiries').caution!, /floor and not a total/i);
 });
 
 test('by month keeps the four apart and skips months with nothing in them', () => {

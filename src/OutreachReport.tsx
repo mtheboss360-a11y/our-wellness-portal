@@ -62,7 +62,6 @@ function MeasureCard({ card }: { card: Measure }) {
     <dt>{card.label}</dt>
     <dd>{card.recorded ? number(card.value) : <span className="rep-none">Not recorded</span>}</dd>
     <p className="rep-note">{card.recorded ? card.note : 'The portal has no rows of this kind for you yet.'}</p>
-    {card.recorded && card.caution && <p className="rep-caution">{card.caution}</p>}
   </div>;
 }
 
