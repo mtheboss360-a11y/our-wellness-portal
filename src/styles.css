@@ -872,24 +872,10 @@
 .notes-page h1,.notes-page h2,.notes-page h3{
   font-family:var(--nums);font-weight:620;letter-spacing:-.02em}
 
-/* The sign-in page's backdrop: faint contour lines and distance rings radiating from one
-   point, which is the shape of the product. Generated with Higgsfield, kept extremely low
-   contrast and placed only here — behind the dashboard it would sit under live figures and
-   cost them contrast for nothing. The card keeps its own solid background, so the text on it
-   is unaffected whether or not the image loads. */
-.signin-page{
-  background-color:var(--ground);
-  background-image:url("/assets/signin-texture.jpg");
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-}
-.signin-page .signin-card{background:#FFFFFFEE;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-.plan-b .signin-page{background-image:none}
-@media (prefers-reduced-motion:no-preference){
-  .signin-page{animation:signin-settle .8s ease-out both}
-}
-@keyframes signin-settle{from{background-size:108%}to{background-size:cover}}
+/* The sign-in is a plain, quiet screen: the page colour, a white card, and nothing else.
+   It is the first thing anyone sees and there is nothing on it worth decorating. */
+.signin-page{background:var(--ground)}
+.signin-page .signin-card{background:#FFFFFF}
 
 /* THE PORTAL-ONLY PLAN'S BACKDROP.
 
@@ -909,7 +895,7 @@
 .plan-b{position:relative;background-color:transparent}
 .plan-b::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:var(--ground) url("/assets/signin-texture.jpg") center top / cover no-repeat;
+  background:var(--ground) url("/assets/portal-backdrop.jpg") center top / cover no-repeat;
   opacity:.55;
 }
 /* Panels stay opaque: richness belongs in the gaps, never under the data. */
