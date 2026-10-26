@@ -44,13 +44,20 @@ export function openStore(filename: string, enableSample = true) {
   // flag lives on the clinic, so a real client can never be turned into one from the browser
   // and a demo's numbers can never be read as somebody's results.
   if (!clinicColumns.includes('demo')) db.exec('ALTER TABLE clinics ADD COLUMN demo INTEGER NOT NULL DEFAULT 0');
+  // WHO IS SIGNED IN, as distinct from which practice they work for. A clinic account is the
+  // practice; a staff account is a person at it. `staff_id` ties that person to the driver in
+  // the clinic's own field log, which is how the portal knows which rounds are theirs. Both are
+  // optional: an account created before this reads as the practice, exactly as it did.
+  const userColumns = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>).map(c => c.name);
+  if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
+  if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
 
   const network = openNetwork(db);
   const bakeries = openBakeries(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
-  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false) {
+  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false, user: { displayName?: string; staffId?: string } = {}) {
     if (!username.trim()) throw new Error('A username is required.');
     if (!password) throw new Error('A password is required.');
     const salt = randomBytes(24).toString('hex');
@@ -59,7 +66,9 @@ export function openStore(filename: string, enableSample = true) {
       db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan,demo) VALUES (?,?,?,?)').run(clinicId, name, plan, demo ? 1 : 0);
       // A second account on an existing clinic must not quietly change what that clinic buys.
       db.prepare('UPDATE clinics SET plan=? WHERE id=? AND plan IS NULL').run(plan, clinicId);
-      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt) VALUES (?,?,?,?,?)').run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt);
+      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id) VALUES (?,?,?,?,?,?,?)')
+        .run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt,
+             (user.displayName ?? '').trim(), user.staffId?.trim() || null);
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
@@ -107,7 +116,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email,u.display_name,u.staff_id FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string; display_name: string; staff_id: string | null} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -116,7 +125,8 @@ export function openStore(filename: string, enableSample = true) {
     const base = { config, today: new Date().toISOString().slice(0, 10) };
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
-    return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
+    return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 },
+      user: { name: clinic.display_name || null, staffId: clinic.staff_id || null }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
     const now = Date.now();

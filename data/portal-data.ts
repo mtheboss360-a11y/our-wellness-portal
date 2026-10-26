@@ -18,4 +18,6 @@ export type PublicPortal = ReturnType<typeof publicPortal>;
 /** 'a' is the full service, our drivers running the routes. 'b' is the portal on its own,
     where the practice's own staff visit. It is read from the account, never from the browser. */
 export type Plan = 'a' | 'b';
-export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string; plan: Plan; demo: boolean } | null; campaigns: Campaign[]; today: string };
+export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string; plan: Plan; demo: boolean } | null;
+  /** Who is signed in, when the account belongs to a person rather than the practice. */
+  user?: { name: string | null; staffId: string | null }; campaigns: Campaign[]; today: string };

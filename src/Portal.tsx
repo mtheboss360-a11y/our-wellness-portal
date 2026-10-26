@@ -126,7 +126,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
         </button>)}
       </nav>
       <div className="rail-foot">
-        <p className="rail-clinic">{data.clinic?.name}</p>
+        <p className="rail-clinic">{data.user?.name ?? data.clinic?.name}</p>
+        {data.user?.name && <p className="rail-sub">{data.clinic?.name}</p>}
         <button className="rail-signout" onClick={leave} disabled={signingOut}>
           <Icon name="exit" size={18}/><span>{signingOut ? 'Signing out…' : 'Sign out'}</span>
         </button>
@@ -134,9 +135,9 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     </aside>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
-      : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>)
-      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
+      {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
+      : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
+      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>

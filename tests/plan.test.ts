@@ -96,3 +96,35 @@ test('clinics that existed before the demo column read as real, not illustrative
     assert.equal(store.isDemoClinic('legacy'), false, 'a paying client must never be marked illustrative by a migration');
   } finally { store.close(); rmSync(file, { force: true }); }
 });
+
+test('a staff login is a person at a practice, not another practice', () => {
+  const store = openStore(':memory:');
+  try {
+    store.createClient('hyline', 'Hyline Dental', 'hyline', 'pw', 'b', true);
+    store.createClient('hyline', 'Hyline Dental', 'alexis', 'pw', 'a', false, { displayName: 'Alexis', staffId: 'd1' });
+
+    const asStaff = store.snapshot(sign(store, 'alexis', 'pw'));
+    assert.equal(asStaff.clinic?.id, 'hyline', 'same practice');
+    assert.equal(asStaff.user?.name, 'Alexis');
+    assert.equal(asStaff.user?.staffId, 'd1');
+
+    // the clinic keeps what it was created with: a second account cannot change the plan,
+    // and must not turn a demo practice into a real one or the other way round
+    assert.equal(asStaff.clinic?.plan, 'b');
+    assert.equal(asStaff.clinic?.demo, true);
+
+    const asPractice = store.snapshot(sign(store, 'hyline', 'pw'));
+    assert.equal(asPractice.user?.name, null, 'the practice account is nobody in particular');
+  } finally { store.close(); }
+});
+
+test('an account made before names existed reads as the practice', () => {
+  const store = openStore(':memory:');
+  try {
+    store.createClient('old', 'Old Practice', 'old-user', 'pw');
+    const snap = store.snapshot(sign(store, 'old-user', 'pw'));
+    assert.equal(snap.user?.name, null);
+    assert.equal(snap.user?.staffId, null);
+    assert.equal(snap.clinic?.name, 'Old Practice');
+  } finally { store.close(); }
+});

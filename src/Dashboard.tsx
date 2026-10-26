@@ -16,7 +16,7 @@ import {
 } from './lib/dashboard-math';
 
 type View = 'home' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries';
-type Props = { clinicName: string; today: string; plan: 'a' | 'b'; onGo: (view: View) => void };
+type Props = { clinicName: string; today: string; plan: 'a' | 'b'; userName?: string | null; onGo: (view: View) => void };
 
 function Tile({ title, note, children, action }: { title: string; note?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return <section className="dash-tile">
@@ -56,7 +56,7 @@ function Figure({ value, label, note, unknown, go, goLabel, icon, lead }: {
   </div>;
 }
 
-export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
+export default function Dashboard({ clinicName, today, plan, userName, onGo }: Props) {
   const [log, setLog] = useState<FieldLog | null>(null);
   const [map, setMap] = useState<NetworkMapPayload | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -97,7 +97,9 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
 
   // Who the practice sends out, taken from their own log. No log, no name: the header greets
   // the practice instead of inventing a person.
-  const staff = log?.drivers[0]?.name ?? null;
+  // The person signed in, when the account is a person's. Otherwise whoever the log says goes
+  // out, and failing that nobody: the header greets the practice rather than inventing a name.
+  const staff = userName ?? log?.drivers[0]?.name ?? null;
   const todayLabel = new Date(`${today}T12:00:00Z`)
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 

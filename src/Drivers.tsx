@@ -7,6 +7,7 @@
 // screen drops the driver sections and leads with the rounds themselves.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { getField, getVisitNotes, type VisitNote } from './lib/api';
+import RoutePlanner from './RoutePlanner';
 import type { Driver, FieldLog, FieldRoute, FieldStop } from '../data/field-data';
 import { CATEGORY_LABEL, OUTCOME_LABEL, dayLabel, driverOf, minutesBetween, monthsSince, nextAndLast, partners, routesBy, signupsAt, tally, timeLabel, yourDrivers } from './lib/field-math';
 import { number } from './lib/portal-math';
@@ -56,7 +57,7 @@ function Field({ log, today, plan }: { log: FieldLog; today: string; plan: 'a' |
       <Stat value={all.joined} label={plan === 'b' ? 'Businesses that joined' : 'Partner visits that joined'} note={`of ${all.stops} stops`}/>
     </section>
 
-    {plan === 'b' && <NextRound log={log}/>}
+    {plan === 'b' && <Planner log={log}/>}
 
     {plan === 'a' && <Upcoming log={log} today={today} onShow={id => { setRouteId(id); document.getElementById('explorer-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}/>}
 
@@ -75,22 +76,10 @@ function Field({ log, today, plan }: { log: FieldLog; today: string; plan: 'a' |
  * The businesses the practice ticked on Route notes. This is the list they take out next
  * time; nothing here is booked and no business has been told anything.
  */
-function NextRound({ log }: { log: FieldLog }) {
+function Planner({ log }: { log: FieldLog }) {
   const [notes, setNotes] = useState<VisitNote[]>([]);
   useEffect(() => { void getVisitNotes().then(r => setNotes(r.notes)).catch(() => setNotes([])); }, []);
-  const picked = notes.filter(note => note.nextRound);
-  if (!picked.length) return null;
-  const nameOf = (businessId: string) =>
-    log.routes.flatMap(route => route.stops).find(stop => stop.businessId === businessId);
-  return <section className="next-round" aria-labelledby="next-round-title">
-    <h2 id="next-round-title">Your next round</h2>
-    <p>{picked.length} {picked.length === 1 ? 'business' : 'businesses'} picked on Route notes.</p>
-    <ol>{picked.map((note, index) => { const stop = nameOf(note.businessId); return <li key={note.businessId}>
-      <span className="next-round-n">{index + 1}</span>
-      <b>{stop?.name ?? note.businessId}</b>
-      {stop && <em>{CATEGORY_LABEL[stop.category]} · {stop.town}</em>}
-    </li>; })}</ol>
-  </section>;
+  return <RoutePlanner log={log} notes={notes}/>;
 }
 
 function Stat({ value, label, note, accent = false }: { value: number; label: string; note: string; accent?: boolean }) {

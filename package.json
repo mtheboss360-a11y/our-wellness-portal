@@ -20,7 +20,8 @@
     "route-requests": "tsx scripts/route-requests.ts",
     "import-field-log": "tsx scripts/import-field-log.ts",
     "make-demo-field-log": "tsx scripts/make-demo-field-log.ts",
-    "make-demo-account": "tsx scripts/make-demo-account.ts"
+    "make-demo-account": "tsx scripts/make-demo-account.ts",
+    "add-staff-login": "tsx scripts/add-staff-login.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

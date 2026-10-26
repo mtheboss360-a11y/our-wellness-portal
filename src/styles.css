@@ -1045,3 +1045,50 @@
   .dash-welcome-actions .dash-primary,.dash-welcome-actions .dash-datepill{flex:1 1 auto;justify-content:center}
   .dash-figure-icon{width:34px;height:34px;margin-bottom:10px}
 }
+
+/* ===== The route planner ===== */
+.planner{margin:0 0 26px;padding:22px 24px 20px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}
+.planner-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.planner-head h2{font-size:1.2rem}
+.planner-head p{margin-top:5px;font-size:.84rem;color:var(--ink-3);max-width:48ch}
+.dash-primary.is-off{opacity:.45;pointer-events:none}
+a.dash-primary{text-decoration:none}
+
+.planner-order{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:8px}
+.planner-order li{display:flex;align-items:center;gap:12px;padding:11px 13px;
+  border:1px solid var(--line);border-radius:11px;background:var(--ground)}
+.planner-origin{background:var(--stone);border-style:dashed}
+.planner-n{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;
+  background:var(--ink);color:var(--paper);font:650 .74rem/1 var(--nums)}
+.planner-origin .planner-n{background:transparent;color:var(--ink-3);border:1px dashed var(--line)}
+.planner-main{flex:1;min-width:0}
+.planner-order b{display:block;font-size:.88rem;font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.planner-order em{display:block;margin-top:2px;font-style:normal;font-size:.76rem;color:var(--ink-3)}
+.planner-origin b{flex:1}
+.planner-origin em{margin:0}
+.planner-move{display:flex;gap:4px;flex:none}
+.planner-move button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;
+  background:var(--paper);color:var(--ink-2);cursor:pointer;font-size:.8rem;line-height:1}
+.planner-move button:hover:not(:disabled){background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.planner-move button:disabled{opacity:.35;cursor:default}
+
+.planner-sub{margin-top:14px;font-size:.78rem;color:var(--ink-3)}
+.planner-pool{list-style:none;margin:10px 0 0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.planner-pick{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;cursor:pointer;
+  border:1px solid var(--line);border-radius:11px;background:var(--ground);min-height:52px}
+.planner-pick.is-on{border-color:var(--ink);background:var(--paper)}
+.planner-pick:has(input:disabled){opacity:.5;cursor:default}
+.planner-pick input{margin-top:2px;width:16px;height:16px;accent-color:var(--ink);flex:none}
+.planner-pick b{display:block;font-size:.85rem;font-weight:600;color:var(--ink)}
+.planner-pick em{display:block;margin-top:2px;font-style:normal;font-size:.74rem;color:var(--ink-3)}
+
+/* the person over the practice, in the rail */
+.rail-sub{font:500 .72rem/1.3 var(--nums);color:#8EA596;padding:2px 12px 0}
+
+@media (max-width:620px){
+  .planner{padding:18px}
+  .planner-head .dash-primary{width:100%;justify-content:center}
+  .planner-pool{grid-template-columns:1fr}
+}
