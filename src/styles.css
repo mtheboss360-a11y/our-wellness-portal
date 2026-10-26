@@ -1251,3 +1251,34 @@ a.dash-primary{text-decoration:none}
 .dash-row-main span{line-height:1.35}
 .dash-row{gap:12px;align-items:flex-start}
 .dash-row-end{flex:none;display:flex;align-items:center;gap:10px}
+
+/* ── THE STAGE ──────────────────────────────────────────────────────────────
+   The middle of the application, the only part that changes when a tab is
+   clicked. The rail around it never moves. */
+
+.stage{position:relative;min-height:60vh}
+.stage-body.is-entering{animation:stage-in .17s ease-out both}
+@keyframes stage-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Shown only for a wait somebody would notice. Cream, the logo, one gold line. */
+.stage{min-height:60vh}
+/* Opaque, not a wash: the half-drawn page showing through the logo read as a glitch. */
+.stage-wait{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:24px;padding:60px 20px;min-height:360px;
+  background:var(--ground,#FAFAF7);animation:stage-fade .15s ease-out both}
+/* Nothing underneath is readable while it is up, so nothing underneath is read. */
+.stage:has(.stage-wait) .stage-body{visibility:hidden}
+@keyframes stage-fade{from{opacity:0}to{opacity:1}}
+.stage-wait img{width:176px;height:auto;opacity:.92}
+.stage-bar{display:block;width:132px;height:3px;border-radius:99px;overflow:hidden;
+  background:rgba(19,41,31,.1)}
+.stage-bar i{display:block;width:40%;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#13291F,#B8903F);animation:stage-sweep 1.05s ease-in-out infinite}
+@keyframes stage-sweep{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+
+/* Nobody is made to watch an animation they have asked not to see. */
+@media(prefers-reduced-motion:reduce){
+  .stage-body.is-entering{animation:none}
+  .stage-wait{animation:none}
+  .stage-bar i{animation:none;width:100%;opacity:.5}
+}

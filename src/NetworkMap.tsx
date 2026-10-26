@@ -64,7 +64,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
   }
 
   if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your referral network.</h2><p>{error}</p><button className="network-primary" onClick={() => void load()}>Try again</button></div></Shell>;
-  if (!data) return <Shell onClose={onClose}><div className="network-locate"><p className="network-orb-status" role="status">Opening your referral network…</p></div></Shell>;
+  if (!data) return <Shell onClose={onClose}><div className="network-locate" aria-busy="true"><p className="network-orb-status" role="status">Opening your referral network…</p></div></Shell>;
   if (!location) return <Shell onClose={onClose}><LocateClinic onDone={value => { setData(value); if (value.refresh?.status === 'failed') setNotice(value.refresh.detail); }}/></Shell>;
 
   const selectionIds = data.selection;

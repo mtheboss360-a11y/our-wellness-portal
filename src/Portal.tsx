@@ -10,6 +10,7 @@ import DashboardHome from './Dashboard';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
 import AgendaScreen from './AgendaScreen';
+import PageStage from './PageStage';
 
 
 
@@ -93,9 +94,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const [error, setError] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
   const campaign = data.campaigns.find(c => c.id === campaignId) ?? { id: 'empty', name: 'Your campaigns', period: '', locations: [], leads: [] };
-  // A new section starts at the top of itself. Carrying the previous section's scroll position
-  // into the next one drops somebody halfway down a screen they have not seen.
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, [view]);
+  // A new section starts at the top of itself. PageStage does it, in a layout effect, so the
+  // reset lands before the browser paints rather than a frame after it.
 
   // Back and Forward move between sections rather than leaving the portal.
   useEffect(() => {
@@ -161,6 +161,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     </aside>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
+      <PageStage view={view}>
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'agenda' ? <AgendaScreen today={data.today} onClose={() => setView('home')}/>
@@ -171,6 +172,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>
       </>}
+      </PageStage>
       <footer className="report-footer"><p>{data.config.sampleNotice}</p><span>{data.config.name}</span></footer>
     </main>
     <dialog ref={dialog} className="campaign-dialog" onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }} aria-labelledby="past-jobs-title">
