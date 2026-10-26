@@ -11,6 +11,7 @@ import type { NetworkMapPayload } from './lib/network-math';
 import { mapsPlaceUrl } from './lib/network-math';
 import { dayLabel, driverOf, timeLabel, CATEGORY_LABEL } from './lib/field-math';
 import { Icon, type IconName } from './Icons';
+import { agenda, durationLabel } from './lib/agenda-math';
 import {
   followUps, monthLabel, nextAction, opportunities, participating, thisMonth, type NextAction,
 } from './lib/dashboard-math';
@@ -226,10 +227,18 @@ function NextUp({ action, log, plan, onGo }: { action: NextAction; log: FieldLog
       // our drivers; on the portal-only plan it is the practice's own staff member. Either way
       // it comes from their log, so it is never us claiming to send somebody.
       const driver = route && log ? driverOf(log, route) : null;
+      // How long the round should take, from the same arithmetic the agenda uses, so the two
+      // screens never disagree. Estimated, and the agenda is where that is explained.
+      const plan = route && log ? agenda(log, route) : null;
       return {
         title: `A round is booked for ${dayLabel(route!.date)}.`,
-        note: `${route!.stops.length} ${route!.stops.length === 1 ? 'stop' : 'stops'}${driver ? ` · ${driver.name}` : ''}${route!.start ? ` · from ${timeLabel(route!.start)}` : ''}`,
-        cta: 'See the round', go: 'drivers' as View,
+        note: [
+          `${route!.stops.length} ${route!.stops.length === 1 ? 'stop' : 'stops'}`,
+          driver?.name,
+          route!.start ? `from ${timeLabel(route!.start)}` : null,
+          plan ? `about ${durationLabel(plan.totalMinutes)}` : null,
+        ].filter(Boolean).join(' · '),
+        cta: 'Open the agenda', go: 'agenda' as View,
       };
     },
     request: () => ({

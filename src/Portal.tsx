@@ -9,6 +9,7 @@ import BakeryNetwork from './BakeryNetwork';
 import DashboardHome from './Dashboard';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
+import AgendaScreen from './AgendaScreen';
 
 
 
@@ -81,7 +82,7 @@ function SignIn({ config }: { config: PublicPortal }) {
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
-  const [view, setView] = useState<'home' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
+  const [view, setView] = useState<'home' | 'agenda' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
   // Which service this practice buys, read from the account. On the portal-only plan their own
   // staff do the visits, so there are no drivers to introduce and no treats run to arrange.
   const plan = data.clinic?.plan ?? 'a';
@@ -91,6 +92,29 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const [error, setError] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
   const campaign = data.campaigns.find(c => c.id === campaignId) ?? { id: 'empty', name: 'Your campaigns', period: '', locations: [], leads: [] };
+  // A new section starts at the top of itself. Carrying the previous section's scroll position
+  // into the next one drops somebody halfway down a screen they have not seen.
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, [view]);
+
+  // Back and Forward move between sections rather than leaving the portal.
+  useEffect(() => {
+    const open = new URLSearchParams(window.location.search).get('v');
+    if (open && open !== view) setView(open as typeof view);
+    const onPop = () => {
+      const next = new URLSearchParams(window.location.search).get('v');
+      setView((next as typeof view) || 'home');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('v') === view) return;
+    url.searchParams.set('v', view);
+    window.history.pushState({ view }, '', url);
+  }, [view]);
+
   useEffect(() => {
     // Re-check a backgrounded session on return rather than leaving cached personal data on screen.
     const refresh = () => { if (document.visibilityState === 'visible') void router.invalidate().catch(() => setError('We couldn’t refresh the report. Please reload the page.')); };
@@ -106,6 +130,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   }
   const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
     { id: 'home', label: 'Dashboard', icon: 'home' },
+    ...(plan === 'b' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'calendar' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
     ...(plan === 'b' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
@@ -137,6 +162,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       {error && <p className="form-error" role="alert">{error}</p>}
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
+      : view === 'agenda' ? <AgendaScreen today={data.today} onClose={() => setView('home')}/>
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>
