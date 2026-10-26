@@ -49,7 +49,7 @@ try {
     routes: feed.routes.map(route => ({ ...route, driverId: staffId })),
   };
 
-  store.saveFieldLog(clinicId, fieldLogFeed.parse(rebuilt));
+  store.saveFieldLog(clinicId, fieldLogFeed.parse(rebuilt), true); // illustrative: tagged so activate-live can remove exactly this
   const stops = rebuilt.routes.reduce((total, route) => total + route.stops.length, 0);
   console.log(`Demo field log saved for ${clinicId}: ${rebuilt.routes.length} rounds, ${stops} stops, ${rebuilt.signups.length} sign-ups, all under ${staffName}, anchored on ${place.label}.`);
 } finally { store.close(); }

@@ -49,6 +49,12 @@ export type Business = {
   phone: string; website: string; talkingPoint: string;
   stage: Stage; releaseId: string; releasedAt: number;
   lat: number | null; lng: number | null;
+  /** Google's own id for this place. Durable; the coordinates beside it are not. */
+  placeId: string | null;
+  /** When the coordinates were fetched, so a stale pair can be refused rather than used. */
+  geoAt: number | null;
+  /** 1 illustrative, 0 real, null nobody has said. */
+  demo: number | null;
 };
 
 export type Visit = {
@@ -67,7 +73,8 @@ export type ReleaseEntry = {
 type BusinessRow = {
   id: string; name: string; category: string; address: string; phone: string; website: string;
   talking_point: string; stage: string; release_id: string; released_at: number;
-  lat: number | null; lng: number | null;
+  lat: number | null; lng: number | null; place_id: string | null;
+  geo_at: number | null; demo: number | null;
 };
 
 type VisitRow = {
@@ -143,18 +150,39 @@ const asStage = (value: string): Stage =>
 export function openOutreach(db: DatabaseSync) {
   db.exec(SCHEMA);
 
+  // ADDITIVE COLUMNS. ADD COLUMN is not idempotent the way CREATE TABLE IF NOT EXISTS is, so
+  // each is asked for only when genuinely missing.
+  //
+  // place_id / lat / lng / geo_at: Google's terms let a place ID be kept indefinitely but
+  // coordinates only 30 days, which is the rule the network cache already follows. So the id is
+  // the durable thing and the coordinates carry the moment they were fetched; anything older
+  // than the window is re-fetched rather than served stale.
+  //
+  // demo: whether this row is illustrative. Deliberately NULLABLE with no default — a row
+  // written before tagging existed reads as NULL, which means "nobody said", and
+  // activate-live refuses to delete what nobody said is fictional rather than guessing.
+  const add = (table: string, column: string, type: string) => {
+    const columns = (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(c => c.name);
+    if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  };
+  add('businesses', 'place_id', 'TEXT');
+  add('businesses', 'geo_at', 'INTEGER');
+  add('businesses', 'demo', 'INTEGER');
+  add('visits', 'demo', 'INTEGER');
+
   // Transactions are run as statements rather than through exec so the whole file keeps one way
   // of talking to the database.
   const begin = () => { db.prepare('BEGIN').run(); };
   const commit = () => { db.prepare('COMMIT').run(); };
   const rollback = () => { db.prepare('ROLLBACK').run(); };
 
-  const BUSINESS_COLUMNS = `id,name,category,address,phone,website,talking_point,stage,release_id,released_at,lat,lng`;
+  const BUSINESS_COLUMNS = `id,name,category,address,phone,website,talking_point,stage,release_id,released_at,lat,lng,place_id,geo_at,demo`;
 
   const toBusiness = (r: BusinessRow): Business => ({
     id: r.id, name: r.name, category: r.category, address: r.address, phone: r.phone,
     website: r.website, talkingPoint: r.talking_point, stage: asStage(r.stage),
     releaseId: r.release_id, releasedAt: r.released_at, lat: r.lat, lng: r.lng,
+    placeId: r.place_id, geoAt: r.geo_at, demo: r.demo,
   });
 
   const toVisit = (r: VisitRow): Visit => ({
@@ -233,7 +261,7 @@ export function openOutreach(db: DatabaseSync) {
     begin();
     try {
       db.prepare(`INSERT INTO visits (id,clinic_id,business_id,staff,visited_on,spoke_with,contact_role,
-          outcome,materials,note,next_action,follow_up_on,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+          outcome,materials,note,next_action,follow_up_on,created_at,demo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)`)
         .run(id, clinicId, input.businessId, input.staff, input.visitedOn, input.spokeWith,
           input.contactRole, input.outcome, Math.max(0, Math.trunc(input.materials)), input.note,
           input.nextAction, input.followUpOn, now());
@@ -284,7 +312,7 @@ export function openOutreach(db: DatabaseSync) {
    * A script somebody has edited is left alone. A release does not overwrite a person.
    */
   function release(clinicId: string, releaseId: string, releaseName: string, releasedBy: string,
-    entries: ReleaseEntry[]) {
+    entries: ReleaseEntry[], demo = false) {
     const stamp = now();
     const added: string[] = [], updated: string[] = [], keptScript: string[] = [];
 
@@ -307,10 +335,10 @@ export function openOutreach(db: DatabaseSync) {
           updated.push(entry.name);
         } else {
           db.prepare(`INSERT INTO businesses (id,clinic_id,name,category,address,phone,website,
-              talking_point,lat,lng,stage,release_id,released_at) VALUES (?,?,?,?,?,?,?,?,?,?,'new',?,?)`)
+              talking_point,lat,lng,stage,release_id,released_at,demo) VALUES (?,?,?,?,?,?,?,?,?,?,'new',?,?,?)`)
             .run(id, clinicId, entry.name, entry.category, entry.address, entry.phone ?? '',
               entry.website ?? '', entry.talkingPoint ?? '', entry.lat ?? null, entry.lng ?? null,
-              releaseId, stamp);
+              releaseId, stamp, demo ? 1 : 0);
           added.push(entry.name);
         }
 
@@ -327,11 +355,22 @@ export function openOutreach(db: DatabaseSync) {
     return { added, updated, keptScript, total: entries.length };
   }
 
+  /**
+   * Record where a business actually is. The place id is kept indefinitely, the coordinates
+   * are stamped so they can be refused once they are older than Google allows us to hold them.
+   */
+  function setLocation(clinicId: string, businessId: string, place: { placeId: string; lat: number; lng: number }, at = now()) {
+    const changed = db.prepare('UPDATE businesses SET place_id=?, lat=?, lng=?, geo_at=? WHERE id=? AND clinic_id=?')
+      .run(place.placeId, place.lat, place.lng, at, businessId, clinicId);
+    if (!changed.changes) throw new Error('That business is not on your list.');
+    return business(clinicId, businessId)!;
+  }
+
   function releases(clinicId: string) {
     return db.prepare(`SELECT id,name,released_at,released_by,size FROM releases
       WHERE clinic_id=? ORDER BY released_at DESC`).all(clinicId) as Array<{
         id: string; name: string; released_at: number; released_by: string; size: number }>;
   }
 
-  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases };
+  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation };
 }

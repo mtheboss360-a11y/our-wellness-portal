@@ -53,6 +53,14 @@ export function openStore(filename: string, enableSample = true) {
   if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
   if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
 
+  // WHETHER A ROW IS ILLUSTRATIVE. Nullable with no default: an existing row reads NULL,
+  // meaning nobody has said, and the activate-live command refuses to delete what nobody has
+  // labelled rather than deciding for itself which records are fictional.
+  for (const [table, column] of [['campaigns', 'demo'], ['field_logs', 'demo'], ['visit_notes', 'demo']] as const) {
+    const columns = (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(c => c.name);
+    if (!columns.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} INTEGER`);
+  }
+
   const network = openNetwork(db);
   const bakeries = openBakeries(db);
   // The released businesses, their scripts and the visits recorded against them.
@@ -79,18 +87,18 @@ export function openStore(filename: string, enableSample = true) {
   function isDemoClinic(clinicId: string) {
     return (db.prepare('SELECT demo FROM clinics WHERE id=?').get(clinicId) as { demo: number } | undefined)?.demo === 1;
   }
-  function saveCampaigns(clinicId: string, values: Campaign[]) {
+  function saveCampaigns(clinicId: string, values: Campaign[], demo = false) {
     if (!db.prepare('SELECT id FROM clinics WHERE id=?').get(clinicId)) throw new Error('Create this clinic first.');
     db.exec('BEGIN IMMEDIATE');
     try {
-      values.forEach((value, position) => db.prepare(`INSERT INTO campaigns (id,clinic_id,name,period,locations,leads,position) VALUES (?,?,?,?,?,?,?) ON CONFLICT(id,clinic_id) DO UPDATE SET name=excluded.name,period=excluded.period,locations=excluded.locations,leads=excluded.leads,position=excluded.position`).run(value.id, clinicId, value.name, value.period, JSON.stringify(value.locations), JSON.stringify(value.leads), position));
+      values.forEach((value, position) => db.prepare(`INSERT INTO campaigns (id,clinic_id,name,period,locations,leads,position,demo) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id,clinic_id) DO UPDATE SET name=excluded.name,period=excluded.period,locations=excluded.locations,leads=excluded.leads,position=excluded.position,demo=excluded.demo`).run(value.id, clinicId, value.name, value.period, JSON.stringify(value.locations), JSON.stringify(value.leads), position, demo ? 1 : 0));
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
   }
   // One field log per clinic, replaced whole on each import: the Google Form sheet is the record.
-  function saveFieldLog(clinicId: string, value: FieldLog) {
+  function saveFieldLog(clinicId: string, value: FieldLog, demo = false) {
     if (!db.prepare('SELECT id FROM clinics WHERE id=?').get(clinicId)) throw new Error('Create this clinic first.');
-    db.prepare('INSERT INTO field_logs (clinic_id,feed,updated_at) VALUES (?,?,?) ON CONFLICT(clinic_id) DO UPDATE SET feed=excluded.feed,updated_at=excluded.updated_at').run(clinicId, JSON.stringify(value), Date.now());
+    db.prepare('INSERT INTO field_logs (clinic_id,feed,updated_at,demo) VALUES (?,?,?,?) ON CONFLICT(clinic_id) DO UPDATE SET feed=excluded.feed,updated_at=excluded.updated_at,demo=excluded.demo').run(clinicId, JSON.stringify(value), Date.now(), demo ? 1 : 0);
   }
   /** Every note this clinic has written, newest wins. Scoped to the clinic, always. */
   function visitNotes(clinicId: string) {
