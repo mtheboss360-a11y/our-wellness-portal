@@ -85,3 +85,10 @@ export const deviceLocationInput = z.object({
   lng: z.number().min(-180).max(180),
   accuracy: z.number().min(0).max(100000).optional(),
 }).strict();
+
+/** One note a staff member wrote about a business they visited. */
+export const visitNoteInput = z.object({
+  businessId: z.string().min(1).max(100),
+  note: z.string().max(2000),
+  nextRound: z.boolean(),
+}).strict();

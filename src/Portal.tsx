@@ -7,6 +7,7 @@ import NetworkMap from './NetworkMap';
 import Drivers from './Drivers';
 import BakeryNetwork from './BakeryNetwork';
 import DashboardHome from './Dashboard';
+import RouteNotes from './RouteNotes';
 
 
 
@@ -73,7 +74,7 @@ function SignIn({ config }: { config: PublicPortal }) {
 function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
-  const [view, setView] = useState<'home' | 'report' | 'drivers' | 'network' | 'bakeries'>('home');
+  const [view, setView] = useState<'home' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries'>('home');
   // Which service this practice buys, read from the account. On the portal-only plan their own
   // staff do the visits, so there are no drivers to introduce and no treats run to arrange.
   const plan = data.clinic?.plan ?? 'a';
@@ -103,6 +104,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
         <button className={view === 'home' ? 'is-current' : ''} aria-current={view === 'home' ? 'page' : undefined} onClick={() => setView('home')}>Dashboard</button>
         <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
         <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> {plan === 'b' ? 'Routes' : <>Drivers &amp; routes</>}</button>
+        {plan === 'b' && <button className={view === 'notes' ? 'is-current' : ''} aria-current={view === 'notes' ? 'page' : undefined} onClick={() => setView('notes')}>Route notes</button>}
         <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Referral network</button>
         {plan === 'a' && <button className={view === 'bakeries' ? 'is-current' : ''} aria-current={view === 'bakeries' ? 'page' : undefined} onClick={() => setView('bakeries')}><Icon name="cake" size={16}/> Bakery network</button>}
       </nav>
@@ -110,6 +112,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
+      : view === 'notes' ? (plan === 'b' ? <RouteNotes onClose={() => setView('home')}/> : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>)
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>

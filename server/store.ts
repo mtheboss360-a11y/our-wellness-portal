@@ -23,6 +23,10 @@ export function openStore(filename: string, enableSample = true) {
     CREATE TABLE IF NOT EXISTS attempts (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS seeds (id TEXT PRIMARY KEY);
     CREATE TABLE IF NOT EXISTS field_logs (clinic_id TEXT PRIMARY KEY REFERENCES clinics(id), feed TEXT NOT NULL, updated_at INTEGER NOT NULL);
+    -- WHAT THE STAFF MEMBER WROTE ABOUT A BUSINESS THEY VISITED, and whether they want it on the
+    -- next round. Keyed by the clinic and the business from that clinic's own field log, so one
+    -- practice's notes are unreachable from another's session.
+    CREATE TABLE IF NOT EXISTS visit_notes (clinic_id TEXT NOT NULL REFERENCES clinics(id), business_id TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', next_round INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, PRIMARY KEY (clinic_id, business_id));
     CREATE INDEX IF NOT EXISTS sessions_expiration ON sessions(expires_at);
   `);
   // The Network Map's own tables. Additive: every statement is CREATE ... IF NOT EXISTS, so an
@@ -76,6 +80,25 @@ export function openStore(filename: string, enableSample = true) {
     if (!db.prepare('SELECT id FROM clinics WHERE id=?').get(clinicId)) throw new Error('Create this clinic first.');
     db.prepare('INSERT INTO field_logs (clinic_id,feed,updated_at) VALUES (?,?,?) ON CONFLICT(clinic_id) DO UPDATE SET feed=excluded.feed,updated_at=excluded.updated_at').run(clinicId, JSON.stringify(value), Date.now());
   }
+  /** Every note this clinic has written, newest wins. Scoped to the clinic, always. */
+  function visitNotes(clinicId: string) {
+    return db.prepare('SELECT business_id,note,next_round FROM visit_notes WHERE clinic_id=?').all(clinicId)
+      .map(row => { const r = row as { business_id: string; note: string; next_round: number };
+        return { businessId: r.business_id, note: r.note, nextRound: r.next_round === 1 }; });
+  }
+  /**
+   * Save one note. The business must appear in this clinic's own field log: without that check
+   * a signed-in client could write a note against any id it cared to send.
+   */
+  function saveVisitNote(clinicId: string, businessId: string, note: string, nextRound: boolean) {
+    const log = fieldLog(clinicId);
+    const known = log?.routes.some(route => route.stops.some(stop => stop.businessId === businessId));
+    if (!known) throw new Error('That business is not on this clinic’s field log.');
+    db.prepare(`INSERT INTO visit_notes (clinic_id,business_id,note,next_round,updated_at) VALUES (?,?,?,?,?)
+      ON CONFLICT(clinic_id,business_id) DO UPDATE SET note=excluded.note,next_round=excluded.next_round,updated_at=excluded.updated_at`)
+      .run(clinicId, businessId, note.slice(0, 2000), nextRound ? 1 : 0, Date.now());
+    return visitNotes(clinicId);
+  }
   function fieldLog(clinicId: string): FieldLog | null {
     const row = db.prepare('SELECT feed FROM field_logs WHERE clinic_id=?').get(clinicId) as { feed: string } | undefined;
     return row ? JSON.parse(row.feed) : null;
@@ -117,5 +140,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, clinicFromToken: session, ...network, ...bakeries, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, close: () => db.close() };
 }

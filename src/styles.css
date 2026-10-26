@@ -700,3 +700,38 @@
 .plan-b .portal-nav button.is-current{background:var(--paper);color:var(--ink)}
 .plan-b .signout-button{border-color:var(--ink);color:var(--ink)}
 .plan-b .signout-button:hover{background:var(--ink);color:var(--paper)}
+
+/* ===== Route notes ===== */
+.notes-page .section-heading{margin-top:8px}
+.notes-round{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:18px;
+  padding:14px 18px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:.86rem;color:var(--ink-2)}
+.notes-round strong{font:650 .72rem/1 var(--nums);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.notes-round-empty{color:var(--ink-3)}
+.notes-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.notes-row{border:1px solid var(--line);border-radius:14px;background:var(--paper);padding:18px 20px}
+.notes-row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.notes-row-main strong{display:block;font-size:.95rem;font-weight:600;color:var(--ink)}
+.notes-row-main span{display:block;margin-top:3px;font-size:.78rem;color:var(--ink-3)}
+.notes-field{width:100%;margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  background:var(--ground);color:var(--ink);font:inherit;font-size:.88rem;line-height:1.5;resize:vertical}
+.notes-field:focus{outline:2px solid var(--gold-sm);outline-offset:2px;border-color:var(--ink)}
+.notes-row-foot{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+.notes-check{display:inline-flex;align-items:center;gap:9px;font-size:.85rem;color:var(--ink-2);cursor:pointer;min-height:40px}
+.notes-check input{width:17px;height:17px;accent-color:var(--ink);cursor:pointer}
+.notes-status{font-size:.76rem;color:var(--ink-3);margin-right:auto;min-width:7ch}
+@media (max-width:620px){
+  .notes-row{padding:16px}
+  .notes-row-head{flex-direction:column;gap:8px}
+  .notes-row-foot .dash-btn{width:100%}
+  .notes-status{margin-right:0}
+}
+
+/* The picked businesses, shown on the routes screen where the round is built. */
+.next-round{margin:0 0 26px;padding:18px 20px;border:1px solid var(--ink);border-radius:14px;background:var(--paper)}
+.next-round h2{font-size:1.05rem;margin-bottom:4px}
+.next-round p{font-size:.82rem;color:var(--ink-3)}
+.next-round ol{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.next-round li{display:flex;align-items:baseline;gap:10px;font-size:.88rem;color:var(--ink-2)}
+.next-round li b{font-weight:600;color:var(--ink)}
+.next-round li em{font-style:normal;color:var(--ink-3);font-size:.8rem}
+.next-round-n{font:650 .72rem/1 var(--nums);min-width:1.6em;color:var(--ink-3)}

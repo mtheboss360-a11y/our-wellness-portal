@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
-import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput } from './validation';
+import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput } from './validation';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
@@ -67,6 +67,24 @@ export function createPortalServer(options: Options) {
           const clinic = store.clinicFromToken(cookie);
           if (!clinic) { json(response, 401, { error: 'Please sign in again to see your routes.' }); return; }
           json(response, 200, { field: store.fieldLog(clinic.id) }); return;
+        }
+        // ROUTE NOTES. What the practice's own staff wrote about a business they visited, and
+        // whether they want it on the next round. Clinic comes from the cookie; a business id
+        // that is not on this clinic's field log is refused by the store.
+        if (url.pathname === '/api/field/notes' && request.method === 'GET') {
+          const clinic = store.clinicFromToken(cookie);
+          if (!clinic) { json(response, 401, { error: 'Please sign in again to see your notes.' }); return; }
+          json(response, 200, { notes: store.visitNotes(clinic.id) }); return;
+        }
+        if (url.pathname === '/api/field/notes' && request.method === 'POST') {
+          const clinic = store.clinicFromToken(cookie);
+          if (!clinic) { json(response, 401, { error: 'Please sign in again to save your note.' }); return; }
+          let input;
+          try { input = visitNoteInput.safeParse(await body(request)); } catch { json(response, 400, { error: 'That note could not be read.' }); return; }
+          if (!input.success) { json(response, 400, { error: 'That note could not be saved. Please check it and try again.' }); return; }
+          try { json(response, 200, { notes: store.saveVisitNote(clinic.id, input.data.businessId, input.data.note, input.data.nextRound) }); }
+          catch { json(response, 400, { error: 'That business is not on your field log.' }); }
+          return;
         }
         // THE NETWORK MAP. Every endpoint below resolves the clinic from the session cookie and
         // from nowhere else, so `?clinicId=` and a borrowed place ID are both simply ignored.

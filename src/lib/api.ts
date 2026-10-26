@@ -30,3 +30,8 @@ export const chooseBakery = (placeId: string | null) => request<BakeryPayload>('
 export type ItemsRequest = { placeId: string; items: string; people: number; neededBy: string; contactName: string; contactPhone: string; notes: string };
 export const requestItems = (input: ItemsRequest) => request<BakeryPayload & { sent: boolean }>('/api/network/bakery-request', 'POST', input);
 export const removeBakery = (placeId: string | null) => request<BakeryPayload>('/api/network/bakery-remove', 'POST', { placeId });
+
+// Route notes: what the practice's own staff wrote about a business they visited.
+export type VisitNote = { businessId: string; note: string; nextRound: boolean };
+export const getVisitNotes = () => request<{ notes: VisitNote[] }>('/api/field/notes');
+export const saveVisitNote = (input: VisitNote) => request<{ notes: VisitNote[] }>('/api/field/notes', 'POST', input);

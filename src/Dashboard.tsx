@@ -11,8 +11,7 @@ import type { NetworkMapPayload } from './lib/network-math';
 import { mapsPlaceUrl } from './lib/network-math';
 import { dayLabel, driverOf, timeLabel, CATEGORY_LABEL } from './lib/field-math';
 import {
-  followUps, monthLabel, nextAction, opportunities, participating, recentActivity,
-  STATUS_TONE, thisMonth, type NextAction,
+  followUps, monthLabel, nextAction, opportunities, participating, thisMonth, type NextAction,
 } from './lib/dashboard-math';
 
 type View = 'report' | 'drivers' | 'network' | 'bakeries';
@@ -60,7 +59,6 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
   const due = followUps(log);
   const partners = participating(log);
   const picks = opportunities(map);
-  const activity = recentActivity(log);
   const action = nextAction(log, map, today);
   const placesOff = map ? !map.data.placesConfigured : false;
 
@@ -94,7 +92,7 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
     <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-      <Figure value={picks.length} label="New opportunities" note={picks.length ? 'Worth approaching' : undefined} unknown={!picks.length && placesOff}/>
+      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} unknown={!picks.length && placesOff}/>
       <Figure value={month.visits} label="Visits recorded" note="Completed stops" unknown={!month.hasLog}/>
       <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" unknown={!month.hasLog}/>
       <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} unknown={!month.hasLog}/>
@@ -102,7 +100,7 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
 
     <div className="dash-grid">
       <Tile
-        title="Worth approaching"
+        title="New businesses"
         note="Recommended by the portal. None of these has agreed to anything yet."
         action={<button className="dash-link" onClick={() => onGo('network')}>Open the map</button>}>
         {/* What the tile has comes first. A demo account is served a fixed fictional map, so it
@@ -128,24 +126,6 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
               : <p className="dash-empty">No new businesses met the bar this month. A short list beats a padded one.</p>}
       </Tile>
 
-      <Tile
-        title="Participating"
-        note="Businesses a staff member recorded as having agreed to take part."
-        action={partners.length ? <button className="dash-link" onClick={() => onGo('drivers')}>See all</button> : undefined}>
-        {!month.hasLog
-          ? <p className="dash-empty">No field log yet. Visits appear here once your team starts recording them.</p>
-          : !partners.length
-            ? <p className="dash-empty">Nobody has agreed yet. A business only appears here when your staff records that it said yes.</p>
-            : <ul className="dash-list">{partners.slice(0, 6).map(stop => <li key={stop.businessId}>
-                <div className="dash-row">
-                  <div className="dash-row-main">
-                    <strong>{stop.name}</strong>
-                    <span>{CATEGORY_LABEL[stop.category]} · {stop.town}</span>
-                  </div>
-                  <Pill tone="good">Participating</Pill>
-                </div>
-              </li>)}</ul>}
-      </Tile>
 
       <Tile
         title="Follow-ups due"
@@ -167,24 +147,22 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
       </Tile>
 
       <Tile
-        title="Recent activity"
-        note="Visits your staff recorded, and taps on partner cards. Kept apart."
-        action={activity.length ? <button className="dash-link" onClick={() => onGo('drivers')}>Full log</button> : undefined}>
-        {!activity.length
-          ? <p className="dash-empty">Nothing recorded yet. Visits and tap sign-ups will appear here as they happen.</p>
-          : <ol className="dash-feed">{activity.map(item => <li key={item.id}>
-              <span className={`dash-dot dash-dot-${item.kind}`} aria-hidden="true"/>
-              <div className="dash-row-main">
-                <strong>{item.title}</strong>
-                <span>{item.detail}</span>
-              </div>
-              <div className="dash-row-end">
-                {item.kind === 'signup'
-                  ? <Pill tone="info">Tap sign-up</Pill>
-                  : item.outcome && <Pill tone={STATUS_TONE[item.outcome].tone}>{STATUS_TONE[item.outcome].label}</Pill>}
-                <time dateTime={item.on}>{dayLabel(item.on)}</time>
-              </div>
-            </li>)}</ol>}
+        title="Participating"
+        note="Businesses a staff member recorded as having agreed to take part."
+        action={partners.length ? <button className="dash-link" onClick={() => onGo('drivers')}>See all</button> : undefined}>
+        {!month.hasLog
+          ? <p className="dash-empty">No field log yet. Visits appear here once your team starts recording them.</p>
+          : !partners.length
+            ? <p className="dash-empty">Nobody has agreed yet. A business only appears here when your staff records that it said yes.</p>
+            : <ul className="dash-list">{partners.slice(0, 6).map(stop => <li key={stop.businessId}>
+                <div className="dash-row">
+                  <div className="dash-row-main">
+                    <strong>{stop.name}</strong>
+                    <span>{CATEGORY_LABEL[stop.category]} · {stop.town}</span>
+                  </div>
+                  <Pill tone="good">Participating</Pill>
+                </div>
+              </li>)}</ul>}
       </Tile>
     </div>
   </div>;
