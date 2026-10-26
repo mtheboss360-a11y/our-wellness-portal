@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FieldLog, FieldRoute } from '../data/field-data';
 import { CATEGORY_LABEL, OUTCOME_LABEL, dayLabel, driverOf, signupsAt } from './lib/field-math';
 import {
-  agenda, clockOf, durationLabel, typicalVisit, DEFAULTS, type Assumptions, type AgendaStop,
+  agenda, clockOf, durationLabel, typicalVisit, DEFAULTS, WEEKDAY, type Assumptions, type AgendaStop,
 } from './lib/agenda-math';
 import { Icon } from './Icons';
 
@@ -50,6 +50,8 @@ export default function Agenda({ log, today, routeId, onPickRoute, onOpenStop }:
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
   const plan = agenda(log, route, { assumptions: as, today, nowMinutes });
   const driver = driverOf(log, route);
+  const [oh, om] = (plan.opening.opens ?? '09:00').split(':').map(Number);
+  const hoursStart = oh * 60 + om;
 
   return <section className="agenda" aria-labelledby="agenda-title">
     <div className="agenda-head">
@@ -65,6 +67,19 @@ export default function Agenda({ log, today, routeId, onPickRoute, onOpenStop }:
         <Icon name="route" size={16}/>Start the drive
       </a>
     </div>
+
+    {plan.opening.closed
+      ? <p className="agenda-hours is-shut" role="status">
+          <Icon name="calendar" size={15}/>
+          The practice is closed on {WEEKDAY[plan.opening.weekday]}. This round is booked on a day
+          nobody is in, so there is nothing to collect and nobody to report back to.
+        </p>
+      : <p className="agenda-hours">
+          <Icon name="calendar" size={15}/>
+          {plan.opening.heldBack
+            ? `${WEEKDAY[plan.opening.weekday]} opening is ${clockOf(plan.startsAt)}, so the round starts then rather than earlier.`
+            : `${WEEKDAY[plan.opening.weekday]} opening is ${clockOf(hoursStart)}. The round starts at ${clockOf(plan.startsAt)}.`}
+        </p>}
 
     <dl className="agenda-totals">
       <div><dt>Expected</dt><dd>{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</dd></div>

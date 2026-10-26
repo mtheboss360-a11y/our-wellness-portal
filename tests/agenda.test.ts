@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { FieldLog, FieldStop } from '../data/field-data';
-import { agenda, clockOf, driveMinutes, durationLabel, milesBetween, typicalVisit, DEFAULTS } from '../src/lib/agenda-math';
+import { agenda, clockOf, driveMinutes, durationLabel, milesBetween, typicalVisit, weekdayOf, DEFAULTS, OPENS } from '../src/lib/agenda-math';
 
 const stop = (over: Partial<FieldStop> & { id: string; businessId: string }): FieldStop => ({
   name: 'A business', category: 'gym', town: 'Naperville', lat: 41.78, lng: -88.15,
@@ -85,16 +85,17 @@ test('the assumptions change the plan, which is the point of them being on scree
 });
 
 test('a stop is only in progress on the day, and only inside its own window', () => {
-  const l = log([{ id: 'r1', date: '2026-10-28', start: '09:00', driverId: 'd1', status: 'scheduled', stops: [
+  // A Monday, so the nine o'clock start stands and the clock here is the thing under test.
+  const l = log([{ id: 'r1', date: '2026-10-26', start: '09:00', driverId: 'd1', status: 'scheduled', stops: [
     stop({ id: 's1', businessId: 'b1' }),
   ] }]);
-  const inside = agenda(l, l.routes[0], { today: '2026-10-28', nowMinutes: 9 * 60 + 10 });
+  const inside = agenda(l, l.routes[0], { today: '2026-10-26', nowMinutes: 9 * 60 + 10 });
   assert.equal(inside.stops[0].status, 'in-progress');
 
-  const before = agenda(l, l.routes[0], { today: '2026-10-28', nowMinutes: 7 * 60 });
+  const before = agenda(l, l.routes[0], { today: '2026-10-26', nowMinutes: 7 * 60 });
   assert.equal(before.stops[0].status, 'upcoming');
 
-  const anotherDay = agenda(l, l.routes[0], { today: '2026-10-27', nowMinutes: 9 * 60 + 10 });
+  const anotherDay = agenda(l, l.routes[0], { today: '2026-10-25', nowMinutes: 9 * 60 + 10 });
   assert.equal(anotherDay.stops[0].status, 'upcoming', 'the clock does not apply to another day');
 });
 
@@ -120,4 +121,43 @@ test('a round with no stops does not produce a negative day', () => {
   const plan = agenda(l, l.routes[0]);
   assert.equal(plan.totalMinutes, 0);
   assert.equal(plan.endsAt, plan.startsAt);
+});
+
+test('a round cannot start before the practice opens', () => {
+  // 2026-10-28 is a Wednesday, when they open at eleven.
+  const l = log([{ id: 'r1', date: '2026-10-28', start: '08:00', driverId: 'd1', status: 'scheduled', stops: [
+    stop({ id: 's1', businessId: 'b1' }),
+  ] }]);
+  const plan = agenda(l, l.routes[0]);
+  assert.equal(clockOf(plan.startsAt), '11:00 AM');
+  assert.equal(plan.opening.heldBack, true, 'opening, not the booked time, set the start');
+  assert.equal(plan.opening.closed, false);
+});
+
+test('a start after opening is left alone', () => {
+  // 2026-10-26 is a Monday: open at nine, and this round is booked for half past.
+  const l = log([{ id: 'r1', date: '2026-10-26', start: '09:30', driverId: 'd1', status: 'scheduled', stops: [
+    stop({ id: 's1', businessId: 'b1' }),
+  ] }]);
+  const plan = agenda(l, l.routes[0]);
+  assert.equal(clockOf(plan.startsAt), '9:30 AM');
+  assert.equal(plan.opening.heldBack, false);
+});
+
+test('a closed day is reported, not quietly scheduled over', () => {
+  // 2026-10-31 is a Saturday.
+  const l = log([{ id: 'r1', date: '2026-10-31', start: '09:00', driverId: 'd1', status: 'scheduled', stops: [
+    stop({ id: 's1', businessId: 'b1' }),
+  ] }]);
+  const plan = agenda(l, l.routes[0]);
+  assert.equal(plan.opening.closed, true);
+  assert.equal(plan.opening.opens, null);
+  assert.equal(clockOf(plan.startsAt), '9:00 AM', 'the booked time still stands, with the warning beside it');
+});
+
+test('the weekday is read from the date itself, with no timezone slip', () => {
+  assert.equal(weekdayOf('2026-10-26'), 1, 'Monday');
+  assert.equal(weekdayOf('2026-10-28'), 3, 'Wednesday');
+  assert.equal(weekdayOf('2026-11-01'), 0, 'Sunday');
+  assert.equal(OPENS[4], '11:00', 'Thursday opens at eleven, like Wednesday');
 });

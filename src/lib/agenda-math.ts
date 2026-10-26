@@ -24,6 +24,43 @@ export const DEFAULTS: Assumptions = {
   roadFactor: 1.3, // roads are longer than the straight line between two points
 };
 
+/**
+ * WHEN THE PRACTICE OPENS, by weekday, 0 = Sunday. `null` is a closed day.
+ *
+ * A round cannot start before the practice does — nobody is there to hand materials to, and a
+ * staff member sent out at eight has nowhere to be. So the day's opening time is a floor on the
+ * round's start, and a closed day is said out loud rather than quietly scheduled over.
+ */
+export type OpeningHours = (string | null)[];
+
+export const OPENS: OpeningHours = [
+  null,    // Sunday — closed
+  '09:00', // Monday
+  '09:00', // Tuesday
+  '11:00', // Wednesday
+  '11:00', // Thursday
+  '09:00', // Friday
+  null,    // Saturday — closed
+];
+
+export const WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** The weekday of a 'YYYY-MM-DD' date, read at local noon so no timezone can shift it a day. */
+export const weekdayOf = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 12).getDay();
+};
+
+/** What the opening time does to one round: the floor it sets, or the closed day it lands on. */
+export type Opening = {
+  weekday: number;
+  /** The day's opening clock, or null when the practice is closed that day. */
+  opens: string | null;
+  closed: boolean;
+  /** True when opening, rather than the booked start, is what the round now starts at. */
+  heldBack: boolean;
+};
+
 export type Basis = 'their-own-visits' | 'default';
 
 const median = (values: number[]) => {
@@ -100,6 +137,8 @@ export type Agenda = {
   visitingMinutes: number;
   /** Where the visit length came from, so the screen can say so. */
   visit: ReturnType<typeof typicalVisit>;
+  /** What the practice's opening hours did to the start time. */
+  opening: Opening;
   estimated: boolean;
 };
 
@@ -112,13 +151,22 @@ export type Agenda = {
 export function agenda(
   log: FieldLog,
   route: FieldRoute,
-  options: { assumptions?: Partial<Assumptions>; today?: string; nowMinutes?: number } = {},
+  options: { assumptions?: Partial<Assumptions>; today?: string; nowMinutes?: number; hours?: OpeningHours } = {},
 ): Agenda {
   const as = { ...DEFAULTS, ...options.assumptions };
   const visit = typicalVisit(log);
   const base = options.assumptions?.visitMinutes ?? visit.minutes;
 
-  let cursor = toMinutes(route.start);
+  // The round starts when the practice opens, or at the booked time, whichever is later. On a
+  // closed day there is no opening to hold to, so the booked time stands and the screen says why.
+  const hours = options.hours ?? OPENS;
+  const weekday = weekdayOf(route.date);
+  const opens = hours[weekday] ?? null;
+  const booked = toMinutes(route.start);
+  const startsAt = opens === null ? booked : Math.max(booked, toMinutes(opens));
+  const opening: Opening = { weekday, opens, closed: opens === null, heldBack: opens !== null && startsAt > booked };
+
+  let cursor = startsAt;
   let from: { lat: number; lng: number } = log.clinic;
   let driving = 0, visiting = 0;
   const isToday = options.today === route.date;
@@ -146,14 +194,13 @@ export function agenda(
     return { stop, index, arriveAt, leaveAt, driveFromPrevious: drive, visitLength, measured, status };
   });
 
-  const startsAt = toMinutes(route.start);
   const endsAt = stops.length ? stops[stops.length - 1].leaveAt : startsAt;
   return {
     route, stops, startsAt, endsAt,
     totalMinutes: Math.max(0, endsAt - startsAt),
     drivingMinutes: driving,
     visitingMinutes: visiting,
-    visit,
+    visit, opening,
     estimated: stops.some(s => !s.measured),
   };
 }

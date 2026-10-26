@@ -1164,3 +1164,18 @@ a.dash-primary{text-decoration:none}
   .agenda-tune input{width:100%}
   .agenda-tune label{flex:1 1 130px}
 }
+
+/* The round's opening-hours line: why the morning starts when it does. */
+.agenda-hours{display:flex;align-items:center;gap:9px;margin:16px 0 0;padding:12px 15px;
+  border:1px solid var(--line);border-radius:14px;background:var(--stone);
+  font-size:.84rem;line-height:1.5;color:var(--ink-2)}
+.agenda-hours svg{flex:none;color:var(--ink-3)}
+.agenda-hours.is-shut{border-color:#D9C48F;background:#FBF6EA;color:#7A5E1F}
+.agenda-hours.is-shut svg{color:#A7843C}
+
+/* Routes: softer corners, so the panels and the date chips match the rest of the portal. */
+.field-route-tab{border-radius:16px}
+.field-orb-wrap,.field-side,.field-stat,.field-next{border-radius:22px}
+.field-next-stops li,.field-stop-photo,.field-xref{border-radius:16px}
+.field-stop-list button{border-radius:14px}
+.network-plot{border-radius:20px}
