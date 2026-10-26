@@ -12,7 +12,8 @@ import OutreachReport from './OutreachReport';
 
 
 
-type IconName = 'pin' | 'people' | 'cake' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock';
+type IconName = 'pin' | 'people' | 'cake' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock'
+  | 'home' | 'chart' | 'route' | 'notebook' | 'exit';
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths = {
     pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
@@ -23,6 +24,11 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     arrow: <><path d="M5 12h14M14 7l5 5-5 5"/></>,
     close: <><path d="m6 6 12 12M18 6 6 18"/></>,
     lock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
+    home: <><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></>,
+    chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
+    route: <><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/></>,
+    notebook: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/></>,
+    exit: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -98,18 +104,34 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     catch { setError('We couldn’t sign you out. Please try again.'); }
     finally { setSigningOut(false); }
   }
-  return <div className={`portal-page ${plan === 'b' ? 'plan-b' : ''}`}>
-    <a className="skip-link" href="#report">Skip to report</a>
-    <header className="site-header"><Brand name={data.config.name} onHome={() => setView('home')}/>
-      <nav className="portal-nav" aria-label="Your portal">
-        <button className={view === 'home' ? 'is-current' : ''} aria-current={view === 'home' ? 'page' : undefined} onClick={() => setView('home')}>Dashboard</button>
-        <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
-        <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> {plan === 'b' ? 'Routes' : <>Drivers &amp; routes</>}</button>
-        {plan === 'b' && <button className={view === 'notes' ? 'is-current' : ''} aria-current={view === 'notes' ? 'page' : undefined} onClick={() => setView('notes')}>Route notes</button>}
-        <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Referral network</button>
-        {plan === 'a' && <button className={view === 'bakeries' ? 'is-current' : ''} aria-current={view === 'bakeries' ? 'page' : undefined} onClick={() => setView('bakeries')}><Icon name="cake" size={16}/> Bakery network</button>}
+  const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
+    { id: 'home', label: 'Dashboard', icon: 'home' },
+    { id: 'report', label: 'Your report', icon: 'chart' },
+    { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
+    ...(plan === 'b' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
+    { id: 'network', label: 'Referral network', icon: 'pin' },
+    ...(plan === 'a' ? [{ id: 'bakeries' as typeof view, label: 'Bakery network', icon: 'cake' as IconName }] : []),
+  ];
+  return <div className={`portal-page portal-shell ${plan === 'b' ? 'plan-b' : ''}`}>
+    <a className="skip-link" href="#report">Skip to the page</a>
+    {/* The rail. On a phone it lies down under the brand and scrolls sideways. */}
+    <aside className="rail">
+      <div className="rail-brand"><Brand name={data.config.name} onHome={() => setView('home')}/></div>
+      <nav className="rail-nav" aria-label="Your portal">
+        {tabs.map(tab => <button key={tab.id}
+          className={view === tab.id ? 'is-current' : ''}
+          aria-current={view === tab.id ? 'page' : undefined}
+          onClick={() => setView(tab.id)}>
+          <Icon name={tab.icon} size={18}/><span>{tab.label}</span>
+        </button>)}
       </nav>
-      <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
+      <div className="rail-foot">
+        <p className="rail-clinic">{data.clinic?.name}</p>
+        <button className="rail-signout" onClick={leave} disabled={signingOut}>
+          <Icon name="exit" size={18}/><span>{signingOut ? 'Signing out…' : 'Sign out'}</span>
+        </button>
+      </div>
+    </aside>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
       {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>

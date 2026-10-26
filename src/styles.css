@@ -868,3 +868,143 @@
 .drivers-page h1,.drivers-page h2,.drivers-page h3,.drivers-page h4,
 .notes-page h1,.notes-page h2,.notes-page h3{
   font-family:var(--nums);font-weight:620;letter-spacing:-.02em}
+
+/* The sign-in page's backdrop: faint contour lines and distance rings radiating from one
+   point, which is the shape of the product. Generated with Higgsfield, kept extremely low
+   contrast and placed only here — behind the dashboard it would sit under live figures and
+   cost them contrast for nothing. The card keeps its own solid background, so the text on it
+   is unaffected whether or not the image loads. */
+.signin-page{
+  background-color:var(--ground);
+  background-image:url("/assets/signin-texture.jpg");
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+.signin-page .signin-card{background:#FFFFFFEE;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.plan-b .signin-page{background-image:none}
+@media (prefers-reduced-motion:no-preference){
+  .signin-page{animation:signin-settle .8s ease-out both}
+}
+@keyframes signin-settle{from{background-size:108%}to{background-size:cover}}
+
+/* THE PORTAL-ONLY PLAN'S BACKDROP.
+
+   Faint contour lines and distance rings radiating from one point, which is the shape of the
+   product. Generated with Higgsfield, held at very low contrast and fixed so it does not
+   travel with the content.
+
+   It is only ever seen in the gaps between panels: every card on this plan is solid white, so
+   no figure, label or table row is ever read against it. The sign-in screen is shared by both
+   plans — there is no clinic, and so no plan, until after sign-in — so it is left alone. The
+   full-service portal keeps its plain ground.
+   =========================================================================== */
+/* A viewport-anchored layer, not a page background: with background-attachment:fixed and
+   cover, a page taller than the image simply runs out and leaves a visible seam partway down.
+   A fixed pseudo-element behind the content always covers the window, whatever the page
+   height, and costs nothing on scroll. */
+.plan-b{position:relative;background-color:transparent}
+.plan-b::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:var(--ground) url("/assets/signin-texture.jpg") center top / cover no-repeat;
+  opacity:.55;
+}
+/* Panels stay opaque: richness belongs in the gaps, never under the data. */
+.plan-b .dash-tile,.plan-b .dash-figures,.plan-b .dash-next,.plan-b .rep-cards,
+.plan-b .rep-chart,.plan-b .rep-panel,.plan-b .notes-row,.plan-b .notes-round,
+.plan-b .field-stat,.plan-b .field-explorer,.plan-b .next-round,.plan-b .stat-card,
+.plan-b .report-panel,.plan-b .leads-section,.plan-b .month-table-wrap,
+.plan-b .network-state,.plan-b .dash-empty-page{background-color:#FFFFFF}
+.plan-b .site-header{background:rgba(252,252,251,.94)}
+@media (max-width:760px){
+  .plan-b::before{background-size:200% auto;opacity:.4}
+}
+
+/* ===========================================================================
+   THE RAIL. Navigation down the left in deep forest green, the way a tool
+   somebody lives in is usually built: the page gets the full width of the
+   window and the tabs stop competing with the practice name for the top of
+   the screen.
+
+   On a phone it lies down under the brand and scrolls sideways, because a
+   fixed rail would eat a third of a 390px screen.
+   =========================================================================== */
+.portal-shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100dvh;align-items:start}
+.rail{position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;
+  background:#13291F;color:#E7EDE8;padding:22px 16px 18px;gap:18px}
+.rail-brand{padding:0 6px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.rail-brand .brand img{width:150px}
+.rail-brand .brand-home{background:none;border:0;padding:0;cursor:pointer}
+.rail-nav{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0;overflow-y:auto}
+.rail-nav button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:none;border:0;border-radius:10px;padding:11px 12px;min-height:44px;cursor:pointer;
+  font:550 .88rem/1.2 var(--nums);color:#AFC2B5;transition:background-color .18s ease,color .18s ease}
+.rail-nav button:hover{background:rgba(255,255,255,.06);color:#F3F7F3}
+.rail-nav button.is-current{background:rgba(255,255,255,.1);color:#FFFFFF;font-weight:650}
+.rail-nav button.is-current svg{color:var(--gold-bright)}
+.rail-nav svg{flex:none}
+.rail-foot{border-top:1px solid rgba(255,255,255,.1);padding-top:14px;display:grid;gap:8px}
+.rail-clinic{font:600 .8rem/1.3 var(--nums);color:#E7EDE8;padding:0 12px}
+.rail-signout{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;
+  border:0;border-radius:10px;padding:10px 12px;min-height:42px;cursor:pointer;
+  font:550 .84rem/1 var(--nums);color:#AFC2B5}
+.rail-signout:hover{background:rgba(255,255,255,.06);color:#FFFFFF}
+.rail-nav button:focus-visible,.rail-signout:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px}
+
+/* The page beside it keeps its own gutters; the old centred wrap is gone. */
+.portal-shell .report,.portal-shell .site-header{max-width:none;margin:0}
+.portal-shell>main{padding:0 clamp(20px,3vw,40px);min-width:0}
+
+@media (max-width:900px){
+  .portal-shell{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;gap:14px;
+    padding:12px 16px;overflow:hidden}
+  .rail-brand{border-bottom:0;padding:0;flex:none}
+  .rail-brand .brand img{width:118px}
+  .rail-nav{flex-direction:row;overflow-x:auto;gap:4px;scrollbar-width:none;flex:1}
+  .rail-nav::-webkit-scrollbar{display:none}
+  .rail-nav button{flex:none;padding:9px 12px;min-height:40px}
+  .rail-nav button span{white-space:nowrap}
+  .rail-foot{border-top:0;padding-top:0;flex:none;grid-auto-flow:column;align-items:center}
+  .rail-clinic{display:none}
+  .rail-signout span{display:none}
+  .rail-signout{padding:10px}
+  .portal-shell>main{padding:0 20px}
+}
+@media (max-width:620px){
+  .rail{flex-wrap:wrap}
+  .rail-nav{order:3;width:100%;flex:1 0 100%}
+}
+
+/* The logo is dark green and gold, so on the rail it sits on its own warm-white plate rather
+   than being filtered or recoloured — the mark stays exactly as drawn. */
+.rail-brand{background:#FBFBF9;border-radius:12px;padding:14px 12px;border-bottom:0;
+  display:flex;justify-content:center}
+.rail-brand .brand{margin:0}
+.rail-brand .brand img{width:138px}
+
+/* The rail's colour belongs to the column, not to a box inside it: with a sticky rail and a
+   page taller than the window, colouring only the element leaves the column bare below it. */
+.portal-shell{background:linear-gradient(90deg,#13291F 0 248px,var(--ground) 248px)}
+.rail{background:transparent}
+
+@media (max-width:900px){
+  .portal-shell{background:none}
+  .rail{background:#13291F}
+  .rail-brand{padding:8px 10px;border-radius:9px}
+  .rail-brand .brand img{width:104px}
+}
+
+/* On a phone the tabs wrap onto as many lines as they need. A sideways-scrolling row showed
+   one tab and gave no sign the others were there. */
+@media (max-width:900px){
+  .rail-nav{flex-wrap:wrap;overflow-x:visible}
+  .rail-nav button{font-size:.8rem;padding:8px 11px;min-height:38px;gap:8px}
+}
+@media (max-width:620px){
+  .rail{padding:10px 14px;gap:10px}
+  .rail-nav{order:3;width:100%;flex:1 0 100%;gap:5px}
+  .rail-nav button span{font-size:.78rem}
+  /* the row of actions on a dashboard list keeps to one line */
+  .dash-row-end{flex-direction:row;align-items:center;gap:10px}
+}
