@@ -45,12 +45,6 @@ export default function OutreachReport({ campaigns, children }: { campaigns: Cam
       : <>
         <dl className="rep-cards">{cards.map(card => <MeasureCard key={card.key} card={card}/>)}</dl>
 
-        <p className="rep-caveat" role="note">
-          <strong>Scans are not appointments.</strong> A tap on a card shows interest. An appointment appears
-          here only where your front desk recorded one. And anyone who came in without saying where they
-          heard of you is not in the inquiry count, so a low number there can mean nobody asked.
-        </p>
-
         {months.length > 1 && <ActivityChart rows={months}/>}
 
         <div className="rep-split">
