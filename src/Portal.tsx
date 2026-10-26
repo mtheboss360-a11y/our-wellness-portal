@@ -109,8 +109,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} onGo={setView}/>
-      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} onGo={setView}/>
+      {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
+      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}

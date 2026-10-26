@@ -16,7 +16,7 @@ import {
 } from './lib/dashboard-math';
 
 type View = 'report' | 'drivers' | 'network' | 'bakeries';
-type Props = { clinicName: string; today: string; onGo: (view: View) => void };
+type Props = { clinicName: string; today: string; plan: 'a' | 'b'; onGo: (view: View) => void };
 
 function Tile({ title, note, children, action }: { title: string; note?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return <section className="dash-tile">
@@ -38,7 +38,7 @@ function Figure({ value, label, note, unknown }: { value: number; label: string;
   </div>;
 }
 
-export default function Dashboard({ clinicName, today, onGo }: Props) {
+export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
   const [log, setLog] = useState<FieldLog | null>(null);
   const [map, setMap] = useState<NetworkMapPayload | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -91,7 +91,7 @@ export default function Dashboard({ clinicName, today, onGo }: Props) {
       </nav>
     </header>
 
-    <NextUp action={action} log={log} onGo={onGo}/>
+    <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
       <Figure value={picks.length} label="New opportunities" note={placesOff ? undefined : 'Worth approaching'} unknown={placesOff}/>
@@ -188,7 +188,7 @@ export default function Dashboard({ clinicName, today, onGo }: Props) {
 }
 
 /** The one panel that tells a client what to do, pointing at a screen that exists. */
-function NextUp({ action, log, onGo }: { action: NextAction; log: FieldLog | null; onGo: (view: View) => void }) {
+function NextUp({ action, log, plan, onGo }: { action: NextAction; log: FieldLog | null; plan: 'a' | 'b'; onGo: (view: View) => void }) {
   if (action.kind === 'none') return <section className="dash-next dash-next-quiet">
     <div><p className="dash-eyebrow">Next</p><h3>Nothing is waiting on you.</h3>
       <p className="dash-next-note">When a round is booked or a business is recommended, it shows up here.</p></div>
@@ -197,7 +197,9 @@ function NextUp({ action, log, onGo }: { action: NextAction; log: FieldLog | nul
   const content = {
     route: () => {
       const route = action.kind === 'route' ? action.route : null;
-      const driver = route && log ? driverOf(log, route) : null;
+      // On the portal-only plan the practice's own staff go, so naming one of our drivers
+      // on their round would be telling them someone is coming who is not.
+      const driver = plan === 'a' && route && log ? driverOf(log, route) : null;
       return {
         title: `A round is booked for ${dayLabel(route!.date)}.`,
         note: `${route!.stops.length} ${route!.stops.length === 1 ? 'stop' : 'stops'}${driver ? ` · ${driver.name}` : ''}${route!.start ? ` · from ${timeLabel(route!.start)}` : ''}`,
