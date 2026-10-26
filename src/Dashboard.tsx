@@ -105,6 +105,9 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
   return <div className={`dash ${plan === 'b' ? 'dash-lean' : ''}`}>
+    {/* The greeting and the one thing waiting are the same statement, so they share one panel.
+        Split across two cards they read as two unrelated announcements. */}
+    <div className="dash-hero">
     <header className="dash-welcome">
       <div>
         <p className="dash-welcome-eyebrow">Welcome back,</p>
@@ -131,6 +134,7 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
     </header>}
 
     <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
+    </div>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
       <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} icon="clinic" lead

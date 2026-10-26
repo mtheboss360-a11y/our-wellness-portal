@@ -1179,3 +1179,75 @@ a.dash-primary{text-decoration:none}
 .field-next-stops li,.field-stop-photo,.field-xref{border-radius:16px}
 .field-stop-list button{border-radius:14px}
 .network-plot{border-radius:20px}
+
+/* ── THE FIRST SCREEN ───────────────────────────────────────────────────────
+   The greeting and the one thing waiting share a single dark panel, so the
+   screen opens on one statement rather than three competing cards. Everything
+   below it is white on the page colour, ranked by how often it is read. */
+
+.dash-hero{position:relative;overflow:hidden;margin:18px 0 0;padding:4px 30px 26px;
+  border-radius:24px;background:#13291F;color:#E8EFE9;
+  background-image:radial-gradient(ellipse 70% 150% at 88% -20%,rgba(184,144,63,.22),transparent 62%),
+    radial-gradient(circle at 12% 120%,rgba(255,255,255,.07),transparent 55%)}
+/* The faint ring is the same mark as the route orb, turned down until it is texture. */
+.dash-hero::after{content:"";position:absolute;right:-90px;top:-120px;width:420px;height:420px;
+  border-radius:50%;border:1px solid rgba(232,239,233,.12);
+  box-shadow:0 0 0 48px rgba(232,239,233,.035);pointer-events:none}
+.dash-hero>*{position:relative;z-index:1}
+
+.dash-hero .dash-welcome{padding:26px 0 22px;border-bottom:1px solid rgba(232,239,233,.14)}
+.dash-hero .dash-welcome-eyebrow{color:#9FB7A6;font-weight:600;letter-spacing:.02em}
+.dash-hero .dash-welcome h2{color:#FFFFFF;letter-spacing:-.03em}
+.dash-hero .dash-welcome-sub{color:#9FB7A6}
+.dash-hero .dash-datepill{background:rgba(255,255,255,.08);border-color:rgba(232,239,233,.2);color:#D6E2D8}
+
+/* The round waiting: no card inside a card, just the line and its way in. */
+.dash-hero .dash-next{margin:0;padding:22px 0 0;border:0;background:transparent;border-radius:0}
+.dash-hero .dash-next .dash-eyebrow{color:var(--gold-bright,#D4AC5E)}
+.dash-hero .dash-next h3{color:#FFFFFF;font-size:1.22rem;letter-spacing:-.02em}
+.dash-hero .dash-next-note{color:#A8BFAE}
+.dash-hero .dash-next .dash-btn-solid{background:#FFFFFF;border-color:#FFFFFF;color:#13291F}
+.dash-hero .dash-next .dash-btn-solid:hover{background:var(--gold-bright,#D4AC5E);border-color:var(--gold-bright,#D4AC5E)}
+
+/* The four figures: separate cards, not one banded strip. The lead one is marked
+   with gold rather than a block of dark, now that the panel above is dark. */
+.dash-figures{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:14px;
+  background:transparent;border:0;border-radius:0;overflow:visible}
+.dash-figure{border:1px solid var(--line);border-radius:18px;background:var(--paper);
+  padding:20px 22px 18px;transition:border-color .18s ease,transform .18s ease}
+.dash-figure:hover{border-color:#C6D2C8;transform:translateY(-2px)}
+.dash-figure.is-lead{background:var(--paper);color:inherit;border-color:#E2CFA4;
+  box-shadow:inset 0 2px 0 0 #B8903F}
+.dash-figure.is-lead dt,.dash-figure.is-lead p,.dash-figure.is-lead .dash-unrecorded{color:var(--ink-3)}
+.dash-figure.is-lead dd{color:#8C6A23}
+.dash-figure.is-lead .dash-figure-icon{background:#F7F0E1;color:#8C6A23}
+.dash-figure.is-lead .dash-figure-cue{color:#8C6A23}
+.dash-figure.is-lead::after{opacity:.05;filter:none}
+
+/* Three tiles, three columns: the third stopped hanging alone under the other two. */
+@media(min-width:1080px){.dash-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dash-tile{border-radius:18px}
+
+/* Every button is a centred box. Without this an <a class="dash-btn"> — Directions
+   on each agenda stop — kept its text on the first line and sat off-centre. */
+.dash-btn,.dash-btn-solid{display:inline-flex;align-items:center;justify-content:center;
+  gap:8px;text-align:center;text-decoration:none;white-space:nowrap}
+.agenda-actions{align-items:stretch}
+.agenda-actions .dash-btn{min-width:112px}
+
+@media(max-width:1080px){.dash-hero{padding:4px 22px 22px}}
+@media(max-width:620px){
+  .dash-hero{padding:2px 18px 18px;border-radius:20px}
+  .dash-hero .dash-next{flex-direction:column;align-items:flex-start}
+  .dash-hero .dash-next .dash-btn-solid{width:100%}
+}
+
+/* Three columns only once there is room for them; below that a clipped business
+   name is worse than a second row. Names wrap, they are not cut off — a half
+   name is not something you can act on. */
+@media(min-width:1080px){.dash-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1280px){.dash-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dash-row-main strong{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.3}
+.dash-row-main span{line-height:1.35}
+.dash-row{gap:12px;align-items:flex-start}
+.dash-row-end{flex:none;display:flex;align-items:center;gap:10px}
