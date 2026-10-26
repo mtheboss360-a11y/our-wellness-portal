@@ -197,3 +197,16 @@ test('the login audit lists accounts and never a hash or a salt', () => {
   assert.ok(rows.every(r => r.username && r.clinic));
   store.close();
 });
+
+test('naming a login is what makes a visit carry a staff name', () => {
+  const store = openStore(':memory:', false);
+  // A clinic account: no person on it, which is how make-demo-account leaves one.
+  store.createClient('hyline', 'Hyline Dental', 'hyline', 'pw', 'b');
+  assert.equal((store.db.prepare('SELECT display_name FROM users WHERE email=?').get('hyline') as { display_name: string }).display_name, '');
+
+  store.db.prepare('UPDATE users SET display_name=? WHERE email=?').run('Alexis', 'hyline');
+  const who = store.db.prepare("SELECT display_name FROM users WHERE clinic_id=? AND display_name<>'' LIMIT 1")
+    .get('hyline') as { display_name: string } | undefined;
+  assert.equal(who?.display_name, 'Alexis', 'the endpoint that stamps a visit can now find a name');
+  store.close();
+});

@@ -28,7 +28,8 @@
     "set-password": "tsx scripts/set-password.ts",
     "list-logins": "tsx scripts/list-logins.ts",
     "plan-round": "tsx scripts/plan-round.ts",
-    "make-sample-outreach": "tsx scripts/make-sample-outreach.ts"
+    "make-sample-outreach": "tsx scripts/make-sample-outreach.ts",
+    "name-login": "tsx scripts/name-login.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
