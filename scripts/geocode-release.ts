@@ -82,6 +82,7 @@ try {
   const todo = values.force ? all : all.filter(b => !fresh(b));
 
   console.log(`${clinic.name} (${clinicId}) — ${all.length} businesses, ${todo.length} to look up.`);
+  if (!all.length) { console.log('This account has no businesses yet. Release a batch first, then run this again.'); process.exit(0); }
   if (!todo.length) { console.log('Every one already has a current coordinate. Nothing to do.'); process.exit(0); }
   if (dryRun) console.log('DRY RUN: Google will be asked, but nothing will be written.\n');
 
