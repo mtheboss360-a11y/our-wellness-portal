@@ -81,7 +81,15 @@ export function openStore(filename: string, enableSample = true) {
         .run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt,
              (user.displayName ?? '').trim(), user.staffId?.trim() || null);
       db.exec('COMMIT');
-    } catch (error) { db.exec('ROLLBACK'); throw error; }
+    } catch (error) {
+      db.exec('ROLLBACK');
+      // A login is unique across every clinic, so the clash is usually a username already used
+      // on another account. "UNIQUE constraint failed: users.email" does not say that.
+      if (/UNIQUE constraint failed: users\.email/.test((error as Error).message)) {
+        throw new Error(`The username "${username.trim().toLowerCase()}" is already in use on another account. Usernames are unique across every clinic, so pick a different one. Nothing has been created.`);
+      }
+      throw error;
+    }
   }
   /** Is this an illustrative account? Read from the clinic row, never from a request. */
   function isDemoClinic(clinicId: string) {

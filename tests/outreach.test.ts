@@ -159,3 +159,13 @@ test('the release file we ship for Hyline is five distinct, verified businesses'
   const openings = new Set(release.businesses.map((b: { script: { opening: string } }) => b.script.opening));
   assert.equal(openings.size, 5, 'each business has its own script, not one shared one');
 });
+
+test('a username already used elsewhere is refused by name, and creates nothing', () => {
+  const store = openStore(':memory:', false);
+  store.createClient('one', 'First Practice', 'shared-name', 'pw', 'b');
+  assert.throws(() => store.createClient('two', 'Second Practice', 'Shared-Name', 'pw', 'b'),
+    /already in use on another account/);
+  // The clinic row went in the same transaction as the login, so neither survived.
+  assert.equal(store.db.prepare('SELECT id FROM clinics WHERE id=?').get('two'), undefined);
+  store.close();
+});
