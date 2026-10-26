@@ -10,6 +10,7 @@ import type { FieldLog } from '../data/field-data';
 import type { NetworkMapPayload } from './lib/network-math';
 import { mapsPlaceUrl } from './lib/network-math';
 import { dayLabel, driverOf, timeLabel, CATEGORY_LABEL } from './lib/field-math';
+import { Icon, type IconName } from './Icons';
 import {
   followUps, monthLabel, nextAction, opportunities, participating, thisMonth, type NextAction,
 } from './lib/dashboard-math';
@@ -34,17 +35,19 @@ const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) =
  * Where there are records behind it, the whole tile is the way to them — a count you cannot
  * open is a claim you cannot check.
  */
-function Figure({ value, label, note, unknown, go, goLabel }: {
+function Figure({ value, label, note, unknown, go, goLabel, icon, lead }: {
   value: number; label: string; note?: string; unknown?: boolean;
-  go?: () => void; goLabel?: string;
+  go?: () => void; goLabel?: string; icon?: IconName; lead?: boolean;
 }) {
   const body = <>
+    {icon && <span className="dash-figure-icon" aria-hidden="true"><Icon name={icon} size={19}/></span>}
     <dt>{label}</dt>
     <dd>{unknown ? <span className="dash-unrecorded">Not recorded</span> : value}</dd>
     {note && !unknown && <p>{note}</p>}
   </>;
-  if (unknown || !go) return <div className="dash-figure">{body}</div>;
-  return <div className="dash-figure">
+  const klass = `dash-figure ${lead ? 'is-lead' : ''}`;
+  if (unknown || !go) return <div className={klass}>{body}</div>;
+  return <div className={klass}>
     <button type="button" className="dash-figure-go" onClick={go}>
       {body}
       <span className="dash-figure-cue" aria-hidden="true">{goLabel ?? 'Open'} →</span>
@@ -92,7 +95,26 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
     </div>
   </div>;
 
+  // Who the practice sends out, taken from their own log. No log, no name: the header greets
+  // the practice instead of inventing a person.
+  const staff = log?.drivers[0]?.name ?? null;
+  const todayLabel = new Date(`${today}T12:00:00Z`)
+    .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
   return <div className={`dash ${plan === 'b' ? 'dash-lean' : ''}`}>
+    <header className="dash-welcome">
+      <div>
+        <p className="dash-welcome-eyebrow">Welcome back,</p>
+        <h2>{staff ?? clinicName}</h2>
+        {staff && <p className="dash-welcome-sub">{clinicName}</p>}
+      </div>
+      <div className="dash-welcome-actions">
+        <span className="dash-datepill"><Icon name="calendar" size={16}/>{todayLabel}</span>
+        <button className="dash-primary" onClick={() => onGo('network')}>
+          <Icon name="route" size={16}/>Plan a new route
+        </button>
+      </div>
+    </header>
     {plan === 'a' && <header className="dash-head">
       <div>
         <p className="dash-eyebrow">{monthLabel(today)}</p>
@@ -108,13 +130,13 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
     <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined}
+      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} icon="clinic" lead
         unknown={!picks.length && placesOff} go={() => onGo('network')} goLabel="See them on the map"/>
-      <Figure value={month.visits} label="Visits recorded" note="Completed stops"
+      <Figure value={month.visits} label="Visits recorded" note="Completed stops" icon="check"
         unknown={!month.hasLog} go={() => onGo('drivers')} goLabel="See the rounds"/>
-      <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call"
+      <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" icon="calendar"
         unknown={!month.hasLog} go={() => onGo(plan === 'b' ? 'notes' : 'drivers')} goLabel="See who is owed a call"/>
-      <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'}
+      <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} icon="sparkle"
         unknown={!month.hasLog} go={() => onGo('report')} goLabel="See the report"/>
     </dl>
 

@@ -1008,3 +1008,40 @@
   /* the row of actions on a dashboard list keeps to one line */
   .dash-row-end{flex-direction:row;align-items:center;gap:10px}
 }
+
+/* ===== The welcome header, and metric cards that carry an icon ===== */
+.dash-welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  flex-wrap:wrap;padding:26px 0 20px}
+.dash-welcome-eyebrow{font:500 .9rem/1.2 var(--nums);color:var(--ink-3)}
+.dash-welcome h2{margin-top:2px;font:650 clamp(1.8rem,1.3rem + 2vw,2.6rem)/1.05 var(--nums);
+  letter-spacing:-.03em;color:var(--ink)}
+.dash-welcome-sub{margin-top:5px;font:500 .85rem/1.3 var(--nums);color:var(--ink-3)}
+.dash-welcome-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dash-datepill{display:inline-flex;align-items:center;gap:9px;padding:0 15px;min-height:42px;
+  border:1px solid var(--line);border-radius:10px;background:var(--paper);
+  font:550 .82rem/1 var(--nums);color:var(--ink-2);white-space:nowrap}
+.dash-primary{display:inline-flex;align-items:center;gap:9px;padding:0 18px;min-height:42px;
+  border:1px solid #B8903F;border-radius:10px;background:#B8903F;color:#1B1F23;cursor:pointer;
+  font:650 .84rem/1 var(--nums);white-space:nowrap;
+  transition:background-color .2s ease,border-color .2s ease}
+.dash-primary:hover{background:#A67F33;border-color:#A67F33}
+.dash-primary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+.dash-figure-icon{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;
+  background:var(--stone);color:var(--ink);margin-bottom:14px}
+/* The first card is the one the eye should land on, so it is filled. */
+.dash-figure.is-lead{background:#15311F;color:#E7EDE8}
+.dash-figure.is-lead dt{color:#AFC2B5}
+.dash-figure.is-lead dd{color:#FFFFFF}
+.dash-figure.is-lead p{color:#AFC2B5}
+.dash-figure.is-lead .dash-figure-icon{background:rgba(255,255,255,.12);color:var(--gold-bright)}
+.dash-figure.is-lead .dash-figure-cue{color:#C9D7CC}
+.dash-figure.is-lead .dash-figure-go:hover .dash-figure-cue{color:#FFFFFF}
+.dash-figure.is-lead .dash-unrecorded{color:#AFC2B5}
+
+@media (max-width:620px){
+  .dash-welcome{padding:18px 0 14px;align-items:flex-start}
+  .dash-welcome-actions{width:100%}
+  .dash-welcome-actions .dash-primary,.dash-welcome-actions .dash-datepill{flex:1 1 auto;justify-content:center}
+  .dash-figure-icon{width:34px;height:34px;margin-bottom:10px}
+}
