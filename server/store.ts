@@ -27,18 +27,30 @@ export function openStore(filename: string, enableSample = true) {
   `);
   // The Network Map's own tables. Additive: every statement is CREATE ... IF NOT EXISTS, so an
   // existing database keeps its clinics, users, campaigns and sessions untouched.
+  // WHICH SERVICE THE PRACTICE BUYS, on the account itself rather than anywhere the browser
+  // can reach. 'a' is the full service, where our drivers run the routes. 'b' is the portal on
+  // its own, where the practice's own staff do the visits. Existing clinics are 'a', which is
+  // what every account was before this column existed.
+  //
+  // ADD COLUMN is not idempotent the way CREATE TABLE IF NOT EXISTS is, so it is asked for only
+  // when the column is genuinely missing.
+  const clinicColumns = (db.prepare('PRAGMA table_info(clinics)').all() as Array<{ name: string }>).map(c => c.name);
+  if (!clinicColumns.includes('plan')) db.exec("ALTER TABLE clinics ADD COLUMN plan TEXT NOT NULL DEFAULT 'a'");
+
   const network = openNetwork(db);
   const bakeries = openBakeries(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
-  function createClient(clinicId: string, name: string, username: string, password: string) {
+  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a') {
     if (!username.trim()) throw new Error('A username is required.');
     if (!password) throw new Error('A password is required.');
     const salt = randomBytes(24).toString('hex');
     db.exec('BEGIN IMMEDIATE');
     try {
-      db.prepare('INSERT OR IGNORE INTO clinics (id,name) VALUES (?,?)').run(clinicId, name);
+      db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan) VALUES (?,?,?)').run(clinicId, name, plan);
+      // A second account on an existing clinic must not quietly change what that clinic buys.
+      db.prepare('UPDATE clinics SET plan=? WHERE id=? AND plan IS NULL').run(plan, clinicId);
       db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt) VALUES (?,?,?,?,?)').run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt);
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
@@ -64,7 +76,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; email: string} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,u.email FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; email: string} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -73,7 +85,7 @@ export function openStore(filename: string, enableSample = true) {
     const base = { config, today: new Date().toISOString().slice(0, 10) };
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
-    return { ...base, clinic: { id: clinic.id, name: clinic.name }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
+    return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a' }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
     const now = Date.now();

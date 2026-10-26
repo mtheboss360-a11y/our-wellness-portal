@@ -1,6 +1,10 @@
-// DRIVERS & ROUTES. Who is driving the clinic's routes, where they stopped, what they handed out
-// and what came back — read from the field log, which is the drivers' stop form and the staff
-// sign-up form. Nothing on this screen is estimated: an empty log shows an empty screen.
+// ROUTES. Where the rounds went, what was handed over and what came back — read from the field
+// log, which is the stop form and the staff sign-up form. Nothing here is estimated: an empty
+// log shows an empty screen.
+//
+// On the full service our drivers run the rounds, so the screen names them and shows the roster.
+// On the portal-only plan the practice's own staff go, so there is nobody to introduce: the same
+// screen drops the driver sections and leads with the rounds themselves.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { getField } from './lib/api';
 import type { Driver, FieldLog, FieldRoute, FieldStop } from '../data/field-data';
@@ -8,48 +12,55 @@ import { CATEGORY_LABEL, OUTCOME_LABEL, dayLabel, driverOf, minutesBetween, mont
 import { number } from './lib/portal-math';
 import RouteOrb from './RouteOrb';
 
-export default function Drivers({ today, onClose }: { today: string; onClose: () => void }) {
+export default function Drivers({ today, plan = 'a', onClose }: { today: string; plan?: 'a' | 'b'; onClose: () => void }) {
   const [log, setLog] = useState<FieldLog | null | undefined>(undefined);
   const [error, setError] = useState('');
   useEffect(() => { getField().then(r => setLog(r.field)).catch(e => setError(e instanceof Error ? e.message : 'We couldn’t open your routes.')); }, []);
-  if (error) return <Shell onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your routes.</h2><p>{error}</p></div></Shell>;
-  if (log === undefined) return <Shell onClose={onClose}><div className="network-state"><p role="status">Opening your routes…</p></div></Shell>;
-  if (!log || !log.routes.length) return <Shell onClose={onClose}><div className="network-state"><h2>Your first route hasn’t been driven yet.</h2>
-    <p>When a driver finishes their first stop for you, you’ll see who drove, where they went and what they handed out — straight from their stop log.</p></div></Shell>;
-  return <Shell onClose={onClose}><Field log={log} today={today}/></Shell>;
+  if (error) return <Shell plan={plan} onClose={onClose}><div className="network-state" role="alert"><h2>We couldn’t open your routes.</h2><p>{error}</p></div></Shell>;
+  if (log === undefined) return <Shell plan={plan} onClose={onClose}><div className="network-state"><p role="status">Opening your routes…</p></div></Shell>;
+  if (!log || !log.routes.length) return <Shell plan={plan} onClose={onClose}><div className="network-state"><h2>{plan === 'b' ? 'No rounds logged yet.' : 'Your first route hasn’t been driven yet.'}</h2>
+    <p>{plan === 'b'
+      ? 'Once your team records its first stop, you’ll see the round on the map, which businesses were reached and which were missed.'
+      : 'When a driver finishes their first stop for you, you’ll see who drove, where they went and what they handed out — straight from their stop log.'}</p></div></Shell>;
+  return <Shell plan={plan} onClose={onClose}><Field log={log} today={today} plan={plan}/></Shell>;
 }
 
-function Shell({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Shell({ children, plan, onClose }: { children: React.ReactNode; plan: 'a' | 'b'; onClose: () => void }) {
   return <section className="network-page drivers-page" aria-labelledby="drivers-title">
     <div className="network-head">
-      <h1 id="drivers-title" className="sr-only">Drivers &amp; routes</h1>
+      <h1 id="drivers-title" className="sr-only">{plan === 'b' ? 'Routes' : 'Drivers & routes'}</h1>
       <button className="network-back" onClick={onClose}>Back to your report</button>
     </div>
     {children}
   </section>;
 }
 
-function Field({ log, today }: { log: FieldLog; today: string }) {
+function Field({ log, today, plan }: { log: FieldLog; today: string; plan: 'a' | 'b' }) {
   const all = tally(log);
   const { next, last } = nextAndLast(log, today);
   const ordered = useMemo(() => [...log.routes].sort((a, b) => b.date.localeCompare(a.date)), [log]);
   const [routeId, setRouteId] = useState((last ?? next ?? ordered[0]).id);
   const route = log.routes.find(r => r.id === routeId) ?? ordered[0];
+  // Stops on rounds still to happen. Counted apart from visits, never added to them: a business
+  // on next week's list has not been reached and must not read as though it has.
+  const stillToVisit = log.routes.filter(r => r.status === 'scheduled').reduce((total, r) => total + r.stops.length, 0);
   return <>
     <section className="field-stats" aria-label="Every route so far">
-      <Stat value={all.stops} label="Stops visited" note={`${all.routes} routes driven`}/>
-      <Stat value={all.staff} label="Staff reached" note="on shift when we arrived"/>
+      <Stat value={all.stops} label="Stops visited" note={plan === 'b' ? `${all.routes} ${all.routes === 1 ? 'round' : 'rounds'} completed` : `${all.routes} routes driven`}/>
+      {plan === 'b'
+        ? <Stat value={stillToVisit} label="Still to visit" note={stillToVisit ? 'on rounds already scheduled' : 'nothing scheduled yet'}/>
+        : <Stat value={all.staff} label="Staff reached" note="on shift when we arrived"/>}
       <Stat value={all.cards} label="Referral cards handed out" note={`${all.boxes} boxes · ${all.coffees} coffees`}/>
       <Stat value={all.signups} label="Staff sign-ups" note="from the tap card and QR form" accent/>
       <Stat value={all.booked} label="Booked by your front desk" note={all.signups ? `${Math.round(all.booked / all.signups * 100)}% of sign-ups` : 'none yet'} accent/>
-      <Stat value={all.joined} label="Partner visits that joined" note={`of ${all.stops} stops`}/>
+      <Stat value={all.joined} label={plan === 'b' ? 'Businesses that joined' : 'Partner visits that joined'} note={`of ${all.stops} stops`}/>
     </section>
 
-    <Upcoming log={log} today={today} onShow={id => { setRouteId(id); document.getElementById('explorer-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}/>
+    {plan === 'a' && <Upcoming log={log} today={today} onShow={id => { setRouteId(id); document.getElementById('explorer-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}/>}
 
-    <RouteExplorer log={log} route={route} routes={ordered} onPick={setRouteId}/>
+    <RouteExplorer log={log} route={route} routes={ordered} plan={plan} onPick={setRouteId}/>
 
-    <Roster log={log} today={today}/>
+    {plan === 'a' && <Roster log={log} today={today}/>}
 
     <div className="field-columns">
       <Signups log={log}/>
@@ -80,7 +91,7 @@ function Upcoming({ log, today, onShow }: { log: FieldLog; today: string; onShow
   </section>;
 }
 
-function RouteExplorer({ log, route, routes, onPick }: { log: FieldLog; route: FieldRoute; routes: FieldRoute[]; onPick: (id: string) => void }) {
+function RouteExplorer({ log, route, routes, plan, onPick }: { log: FieldLog; route: FieldRoute; routes: FieldRoute[]; plan: 'a' | 'b'; onPick: (id: string) => void }) {
   // Click, not hover: the route view is the default, and a stop's details open only when it's clicked.
   const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => { setPicked(null); }, [route.id]);
@@ -93,7 +104,8 @@ function RouteExplorer({ log, route, routes, onPick }: { log: FieldLog; route: F
       </div>
     <div className="field-route-picker" role="tablist" aria-label="Routes">
       {routes.map(r => { const d = driverOf(log, r); return <button key={r.id} role="tab" aria-selected={r.id === route.id} className={`field-route-tab ${r.id === route.id ? 'is-current' : ''}`} onClick={() => onPick(r.id)}>
-        <Avatar driver={d} size={28}/><span><strong>{dayLabel(r.date)}</strong><small>{d?.name.split(' ')[0] ?? 'TBC'} · {r.stops.length} stops{r.status === 'scheduled' ? ' · scheduled' : ''}</small></span></button>; })}
+        {plan === 'a' && <Avatar driver={d} size={28}/>}
+        <span><strong>{dayLabel(r.date)}</strong><small>{plan === 'a' ? `${d?.name.split(' ')[0] ?? 'TBC'} · ` : ''}{r.stops.length} stops{r.status === 'scheduled' ? ' · scheduled' : ''}</small></span></button>; })}
     </div>
     <div className="field-explorer-grid">
       <div className="field-orb-wrap">
@@ -103,8 +115,13 @@ function RouteExplorer({ log, route, routes, onPick }: { log: FieldLog; route: F
       </div>
       <div className="field-side">
         {stop ? <><button type="button" className="field-link field-back" onClick={() => setPicked(null)}>← Back to the route</button><StopCard log={log} stop={stop} index={route.stops.indexOf(stop)} route={route}/></> : <>
-          <div className="field-route-head"><Avatar driver={driver} size={52}/><div><h3>{dayLabel(route.date)} with {driver?.name ?? 'a driver to be confirmed'}</h3>
-            <p>{route.status === 'done' ? `${t.stops} stops · ${t.staff} staff met · ${t.cards} cards · ${t.signups} sign-ups so far` : `Starts ${timeLabel(route.start)}. Stops are planned; nothing is logged until the driver arrives.`}</p></div></div>
+          <div className="field-route-head">{plan === 'a' && <Avatar driver={driver} size={52}/>}<div>
+            <h3>{plan === 'a' ? `${dayLabel(route.date)} with ${driver?.name ?? 'a driver to be confirmed'}` : dayLabel(route.date)}</h3>
+            <p>{route.status === 'done'
+              ? `${t.stops} stops · ${t.staff} staff met · ${t.cards} cards · ${t.signups} sign-ups so far`
+              : plan === 'a'
+                ? `Starts ${timeLabel(route.start)}. Stops are planned; nothing is logged until the driver arrives.`
+                : `Starts ${timeLabel(route.start)}. These stops are planned; nothing is recorded until your team logs the visit.`}</p></div></div>
           <ol className="field-stop-list">{route.stops.map((s, i) => { const n = signupsAt(log, s).length; return <li key={s.id}>
             <button onClick={() => setPicked(s.id)}>
               <span className={`field-stop-num is-${s.outcome}`}>{i + 1}</span>

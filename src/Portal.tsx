@@ -74,6 +74,9 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // Three screens behind one sign-in: the campaign report, drivers & routes, and the referral network.
   const [view, setView] = useState<'home' | 'report' | 'drivers' | 'network' | 'bakeries'>('home');
+  // Which service this practice buys, read from the account. On the portal-only plan their own
+  // staff do the visits, so there are no drivers to introduce and no treats run to arrange.
+  const plan = data.clinic?.plan ?? 'a';
   const [campaignId, setCampaignId] = useState(data.campaigns[0]?.id ?? '');
   const [selected, setSelected] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -99,15 +102,16 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       <nav className="portal-nav" aria-label="Your portal">
         <button className={view === 'home' ? 'is-current' : ''} aria-current={view === 'home' ? 'page' : undefined} onClick={() => setView('home')}>Dashboard</button>
         <button className={view === 'report' ? 'is-current' : ''} aria-current={view === 'report' ? 'page' : undefined} onClick={() => setView('report')}>Your report</button>
-        <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> Drivers &amp; routes</button>
+        <button className={view === 'drivers' ? 'is-current' : ''} aria-current={view === 'drivers' ? 'page' : undefined} onClick={() => setView('drivers')}><Icon name="people" size={16}/> {plan === 'b' ? 'Routes' : <>Drivers &amp; routes</>}</button>
         <button className={view === 'network' ? 'is-current' : ''} aria-current={view === 'network' ? 'page' : undefined} onClick={() => setView('network')}><Icon name="pin" size={16}/> Referral network</button>
-        <button className={view === 'bakeries' ? 'is-current' : ''} aria-current={view === 'bakeries' ? 'page' : undefined} onClick={() => setView('bakeries')}><Icon name="cake" size={16}/> Bakery network</button>
+        {plan === 'a' && <button className={view === 'bakeries' ? 'is-current' : ''} aria-current={view === 'bakeries' ? 'page' : undefined} onClick={() => setView('bakeries')}><Icon name="cake" size={16}/> Bakery network</button>}
       </nav>
       <div className="account"><span>{data.clinic?.name}</span><button className="signout-button" onClick={leave} disabled={signingOut}>{signingOut ? 'Signing out…' : 'Sign out'}</button></div></header>
     <main id="report" className="report">
       {error && <p className="form-error" role="alert">{error}</p>}
-      {view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} onGo={setView}/>
-      : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} onClose={() => setView('home')}/> : <>
+      {view === 'bakeries' && plan !== 'a' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} onGo={setView}/>
+      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} onGo={setView}/>
+      : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>

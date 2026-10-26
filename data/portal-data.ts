@@ -15,4 +15,7 @@ export const campaigns: Campaign[] = [];
 // No sample in this build: the sign-in screen renders no sample button and no notice.
 export const publicPortal = (_enableSample = true) => ({ name: portal.name, supportPhone: portal.supportPhone, supportDial: portal.supportDial, sampleLogin: null as { username: string; password: string } | null, sampleNotice: '', palette: portal.palette });
 export type PublicPortal = ReturnType<typeof publicPortal>;
-export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string } | null; campaigns: Campaign[]; today: string };
+/** 'a' is the full service, our drivers running the routes. 'b' is the portal on its own,
+    where the practice's own staff visit. It is read from the account, never from the browser. */
+export type Plan = 'a' | 'b';
+export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string; plan: Plan } | null; campaigns: Campaign[]; today: string };
