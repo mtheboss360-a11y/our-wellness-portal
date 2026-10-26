@@ -29,7 +29,8 @@
     "list-logins": "tsx scripts/list-logins.ts",
     "plan-round": "tsx scripts/plan-round.ts",
     "make-sample-outreach": "tsx scripts/make-sample-outreach.ts",
-    "name-login": "tsx scripts/name-login.ts"
+    "name-login": "tsx scripts/name-login.ts",
+    "remove-login": "tsx scripts/remove-login.ts"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -210,3 +210,24 @@ test('naming a login is what makes a visit carry a staff name', () => {
   assert.equal(who?.display_name, 'Alexis', 'the endpoint that stamps a visit can now find a name');
   store.close();
 });
+
+test('removing a login takes the login and nothing else', () => {
+  const store = openStore(':memory:', false);
+  store.createClient('hyline', 'Hyline Dental', 'keeper', 'pw', 'b');
+  store.createClient('hyline', 'Hyline Dental', 'spare', 'pw', 'b', false, { displayName: 'Alexis' });
+  store.outreach.release('hyline', 'r1', 'Release 1', 't', [at('Karve Pilates', 41.7, -88.16)], false);
+  const business = store.outreach.businesses('hyline')[0];
+  store.outreach.recordVisit('hyline', {
+    businessId: business.id, staff: 'Alexis', visitedOn: '2026-10-26', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'interested', materials: 5, note: '', nextAction: '', followUpOn: null,
+  });
+
+  store.db.prepare('DELETE FROM users WHERE email=?').run('spare');
+
+  assert.equal(store.outreach.businesses('hyline').length, 1, 'the business stayed');
+  const visits = store.outreach.visits('hyline');
+  assert.equal(visits.length, 1, 'the visit stayed');
+  assert.equal(visits[0].staff, 'Alexis', 'and keeps the name it was recorded under');
+  assert.equal(store.signIn('keeper', 'pw', '1.2.3.4').ok, true, 'the remaining login still works');
+  store.close();
+});

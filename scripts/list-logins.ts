@@ -12,10 +12,29 @@ try {
   const rows = store.logins();
   if (!rows.length) { console.log('No logins exist.'); process.exit(0); }
   console.log(`${rows.length} logins\n`);
-  console.log('USERNAME'.padEnd(26) + 'CLINIC'.padEnd(22) + 'PERSON'.padEnd(16) + 'ACCOUNT'.padEnd(9) + 'SESSIONS');
+  // The clinic ID is the whole point of this listing — which practice's records does this
+  // login reach — so it is never truncated. Columns are sized to the longest value present.
+  const wide = (pick: (r: typeof rows[number]) => string, head: string) =>
+    Math.max(head.length, ...rows.map(r => pick(r).length)) + 2;
+  const user = wide(r => r.username, 'USERNAME');
+  const clinic = wide(r => r.clinic, 'CLINIC ID');
+  const person = wide(r => r.name || '—', 'PERSON');
+
+  console.log('USERNAME'.padEnd(user) + 'CLINIC ID'.padEnd(clinic) + 'PERSON'.padEnd(person) + 'ACCOUNT'.padEnd(9) + 'SESSIONS');
   for (const r of rows) {
-    console.log(r.username.padEnd(26) + `${r.clinicName} (${r.clinic})`.slice(0, 21).padEnd(22) +
-      (r.name || '—').slice(0, 15).padEnd(16) + (r.demo === 1 ? 'demo' : 'LIVE').padEnd(9) + String(r.activeSessions));
+    console.log(r.username.padEnd(user) + r.clinic.padEnd(clinic) +
+      (r.name || '—').padEnd(person) + (r.demo === 1 ? 'demo' : 'LIVE').padEnd(9) + String(r.activeSessions));
   }
-  console.log(`\nChange one with:  NEW_PASSWORD='…' npm run set-password -- --username <username>`);
+
+  // Several logins on one practice is how an account nobody remembers keeps working.
+  const perClinic = new Map<string, string[]>();
+  for (const r of rows) perClinic.set(r.clinic, [...(perClinic.get(r.clinic) ?? []), r.username]);
+  const crowded = [...perClinic.entries()].filter(([, names]) => names.length > 2);
+  if (crowded.length) {
+    console.log('\nMore than two logins reach the same practice:');
+    for (const [id, names] of crowded) console.log(`  ${id}: ${names.join(', ')}`);
+    console.log('  Each one is a way in. Remove the ones nobody uses.');
+  }
+  console.log(`\nChange a password:  NEW_PASSWORD='…' npm run set-password -- --username <username>`);
+  console.log(`Remove a login:     npm run remove-login -- --username <username>`);
 } finally { store.close(); }
