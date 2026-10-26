@@ -70,3 +70,29 @@ test('a database written before the plan column keeps its clinics and reads as f
     rmSync(file, { force: true });
   }
 });
+
+test('a demo account is flagged on the clinic, and a real one is not', () => {
+  const store = openStore(':memory:');
+  try {
+    store.createClient('demo-co', 'Demo Practice', 'demo-user', 'pw', 'b', true);
+    store.createClient('real-co', 'Real Practice', 'real-user', 'pw', 'b');
+    assert.equal(store.snapshot(sign(store, 'demo-user', 'pw')).clinic?.demo, true);
+    assert.equal(store.snapshot(sign(store, 'real-user', 'pw')).clinic?.demo, false);
+    assert.equal(store.isDemoClinic('demo-co'), true);
+    assert.equal(store.isDemoClinic('real-co'), false);
+  } finally { store.close(); }
+});
+
+test('clinics that existed before the demo column read as real, not illustrative', () => {
+  const file = `/tmp/demo-migration-${process.pid}.sqlite`;
+  rmSync(file, { force: true });
+  const old = new DatabaseSync(file);
+  old.prepare('CREATE TABLE clinics (id TEXT PRIMARY KEY, name TEXT NOT NULL)').run();
+  old.prepare('CREATE TABLE users (id TEXT PRIMARY KEY, clinic_id TEXT NOT NULL REFERENCES clinics(id), email TEXT NOT NULL UNIQUE, hash TEXT NOT NULL, salt TEXT NOT NULL)').run();
+  old.prepare('INSERT INTO clinics (id,name) VALUES (?,?)').run('legacy', 'Legacy Clinic');
+  old.close();
+  const store = openStore(file);
+  try {
+    assert.equal(store.isDemoClinic('legacy'), false, 'a paying client must never be marked illustrative by a migration');
+  } finally { store.close(); rmSync(file, { force: true }); }
+});

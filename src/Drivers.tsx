@@ -105,7 +105,7 @@ function RouteExplorer({ log, route, routes, plan, onPick }: { log: FieldLog; ro
     <div className="field-route-picker" role="tablist" aria-label="Routes">
       {routes.map(r => { const d = driverOf(log, r); return <button key={r.id} role="tab" aria-selected={r.id === route.id} className={`field-route-tab ${r.id === route.id ? 'is-current' : ''}`} onClick={() => onPick(r.id)}>
         {plan === 'a' && <Avatar driver={d} size={28}/>}
-        <span><strong>{dayLabel(r.date)}</strong><small>{plan === 'a' ? `${d?.name.split(' ')[0] ?? 'TBC'} · ` : ''}{r.stops.length} stops{r.status === 'scheduled' ? ' · scheduled' : ''}</small></span></button>; })}
+        <span><strong>{dayLabel(r.date)}</strong><small>{d ? `${d.name.split(' ')[0]} · ` : plan === 'a' ? 'TBC · ' : ''}{r.stops.length} stops{r.status === 'scheduled' ? ' · scheduled' : ''}</small></span></button>; })}
     </div>
     <div className="field-explorer-grid">
       <div className="field-orb-wrap">
@@ -116,7 +116,9 @@ function RouteExplorer({ log, route, routes, plan, onPick }: { log: FieldLog; ro
       <div className="field-side">
         {stop ? <><button type="button" className="field-link field-back" onClick={() => setPicked(null)}>← Back to the route</button><StopCard log={log} stop={stop} index={route.stops.indexOf(stop)} route={route}/></> : <>
           <div className="field-route-head">{plan === 'a' && <Avatar driver={driver} size={52}/>}<div>
-            <h3>{plan === 'a' ? `${dayLabel(route.date)} with ${driver?.name ?? 'a driver to be confirmed'}` : dayLabel(route.date)}</h3>
+            <h3>{plan === 'a'
+              ? `${dayLabel(route.date)} with ${driver?.name ?? 'a driver to be confirmed'}`
+              : driver ? `${dayLabel(route.date)} · logged by ${driver.name}` : dayLabel(route.date)}</h3>
             <p>{route.status === 'done'
               ? `${t.stops} stops · ${t.staff} staff met · ${t.cards} cards · ${t.signups} sign-ups so far`
               : plan === 'a'

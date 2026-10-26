@@ -96,7 +96,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     catch { setError('We couldn’t sign you out. Please try again.'); }
     finally { setSigningOut(false); }
   }
-  return <div className="portal-page">
+  return <div className={`portal-page ${plan === 'b' ? 'plan-b' : ''}`}>
     <a className="skip-link" href="#report">Skip to report</a>
     <header className="site-header"><Brand name={data.config.name} onHome={() => setView('home')}/>
       <nav className="portal-nav" aria-label="Your portal">

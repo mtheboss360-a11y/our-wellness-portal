@@ -10,7 +10,7 @@
 
 import type { PortalStore } from '../store';
 import { discoverNearby, configured, PlacesError } from './places';
-import { isSampleClinic, sampleMap } from './sample';
+import { isSampleClinic, sampleMap, sampleMapAt } from './sample';
 import { DEFAULT_RADIUS_MILES } from './config';
 
 export const autoDiscoverEnabled = () => process.env.NETWORK_MAP_AUTO_DISCOVER !== 'false';
@@ -24,19 +24,25 @@ export type RefreshOutcome = { ran: boolean; status: 'ok' | 'failed' | 'skipped'
  * @param force a terminal refresh, which ignores the cooldown but not a missing key
  */
 export async function ensureDiscovery(store: PortalStore, clinicId: string, { force = false, auto = true } = {}): Promise<RefreshOutcome> {
-  // The sample clinic: its fixed, fictional map, its own spot, and never a Google call.
-  if (isSampleClinic(clinicId)) {
+  // A demo account: its fixed, fictional map and never a Google call. The named sample clinic
+  // is moved to the sample's own spot, as it always has been. A clinic flagged demo in the
+  // database keeps the address it was set up with — that address is the practice's, not ours
+  // to overwrite — and the fictional places are carried over to sit around it.
+  const demo = store.isDemoClinic(clinicId);
+  if (isSampleClinic(clinicId) || demo) {
     const sample = sampleMap();
     const here = store.clinicLocation(clinicId);
-    if (!here || here.lat !== sample.clinic.lat || here.lng !== sample.clinic.lng)
+    const keepAddress = demo && !isSampleClinic(clinicId) && here;
+    if (!keepAddress && (!here || here.lat !== sample.clinic.lat || here.lng !== sample.clinic.lng))
       store.setClinicLocation({ clinicId, label: sample.clinic.label, lat: sample.clinic.lat, lng: sample.clinic.lng, radiusMiles: DEFAULT_RADIUS_MILES, placeId: null, competitorCategories: [] });
+    const places = keepAddress ? sampleMapAt(here) : sample.places;
     const held = store.cachedDiscovery(clinicId);
-    if (held.length !== sample.places.length || held.some(place => !place.placeId.startsWith('sample-'))) {
+    if (held.length !== places.length || held.some(place => !place.placeId.startsWith('sample-'))) {
       store.clearDiscovery(clinicId);
-      store.saveDiscovery(clinicId, sample.places);
-      store.markRefresh(clinicId, 'ok', '', sample.places.length);
+      store.saveDiscovery(clinicId, places);
+      store.markRefresh(clinicId, 'ok', '', places.length);
     }
-    return { ran: false, status: 'skipped', detail: '', found: sample.places.length };
+    return { ran: false, status: 'skipped', detail: '', found: places.length };
   }
   const location = store.clinicLocation(clinicId);
   if (!location) return { ran: false, status: 'skipped', detail: 'This clinic has no saved map location yet.', found: 0 };

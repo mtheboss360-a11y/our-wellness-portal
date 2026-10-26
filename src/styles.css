@@ -639,3 +639,64 @@
   .portal-nav::-webkit-scrollbar{display:none}
   .portal-nav button{scroll-snap-align:start;flex:none}
 }
+
+/* ===========================================================================
+   THE PORTAL-ONLY PLAN'S OWN SKIN.
+
+   A dental practice is not the agency's brand, and the cream-and-Playfair
+   dressing that suits a wellness marketing site reads as decorative on a tool
+   somebody opens between patients. On this plan the page is a restrained grey
+   and every word is set in the platform's own interface face — San Francisco
+   on a Mac, Segoe on Windows — so it looks like the other software on their
+   desk rather than like an advert.
+
+   Scoped to .plan-b. The full-service portal and the partner-facing screens
+   are untouched: the class only goes on when the account says plan b.
+   =========================================================================== */
+.plan-b{
+  --ground:#F4F5F6;   /* the page */
+  --paper:#FFFFFF;    /* panels on it */
+  --stone:#EDEFF1;    /* filled rows and table headers */
+  --cream:#E8EBED;
+  --line:#DCDFE3;
+  --line-soft:#E8EAED;
+  --ink:#1B1F23;      /* near-black, not the brand green */
+  --ink-2:#3C434B;
+  --ink-3:#616A73;
+  --muted:#6E767E;
+  /* one typeface, the platform's */
+  --hero:var(--nums);
+  --sans:var(--nums);
+}
+/* Playfair is the playful half of the brand; on this plan nothing uses it. */
+.plan-b h1,.plan-b h2,.plan-b h3,
+.plan-b .dash-head h2,.plan-b .dash-next h3,.plan-b .dash-tile-head h3,
+.plan-b .section-heading h2,.plan-b .leads-heading h2,.plan-b .report-panel h2,
+.plan-b .empty-panel h2,.plan-b .dialog-heading h2,.plan-b .network-head h1,
+.plan-b .field-explorer h2,.plan-b .dash-empty-page h2{
+  font-family:var(--nums);font-weight:620;letter-spacing:-.02em}
+.plan-b .dash-tile-head h3{font-size:1.06rem}
+.plan-b .dash-next h3{font-size:clamp(1.05rem,.95rem + .5vw,1.3rem)}
+
+/* The gold rule and peony eyebrow are brand ornament; a status colour still
+   carries meaning, so those stay. */
+.plan-b .section-heading::before,.plan-b .leads-section::before{background:var(--line)}
+.plan-b .dash-eyebrow,.plan-b .eyebrow{color:var(--ink-3)}
+.plan-b .dash-link{color:var(--ink-2)}
+.plan-b .dash-link:hover{border-bottom-color:var(--ink-2)}
+.plan-b .dash-next{background:#FFFFFF;border-color:var(--ink)}
+.plan-b .dash-pill-neutral{background:var(--stone);border-color:#CDD2D7;color:var(--ink-2)}
+
+/* With the name and month gone, the page starts at the first thing that matters. */
+.dash-lean{padding-top:14px}
+.dash-lean .dash-next{margin-top:0}
+
+
+
+/* The header bar and tab row carry the brand cream from the full-service skin; on this plan
+   they follow the page. */
+.plan-b .site-header{background:rgba(244,245,246,.94);border-bottom-color:var(--line)}
+.plan-b .portal-nav{background:var(--stone)}
+.plan-b .portal-nav button.is-current{background:var(--paper);color:var(--ink)}
+.plan-b .signout-button{border-color:var(--ink);color:var(--ink)}
+.plan-b .signout-button:hover{background:var(--ink);color:var(--paper)}

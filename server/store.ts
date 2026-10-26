@@ -36,24 +36,32 @@ export function openStore(filename: string, enableSample = true) {
   // when the column is genuinely missing.
   const clinicColumns = (db.prepare('PRAGMA table_info(clinics)').all() as Array<{ name: string }>).map(c => c.name);
   if (!clinicColumns.includes('plan')) db.exec("ALTER TABLE clinics ADD COLUMN plan TEXT NOT NULL DEFAULT 'a'");
+  // A DEMO ACCOUNT. Its figures are illustrative and the portal says so on every screen. The
+  // flag lives on the clinic, so a real client can never be turned into one from the browser
+  // and a demo's numbers can never be read as somebody's results.
+  if (!clinicColumns.includes('demo')) db.exec('ALTER TABLE clinics ADD COLUMN demo INTEGER NOT NULL DEFAULT 0');
 
   const network = openNetwork(db);
   const bakeries = openBakeries(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
-  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a') {
+  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false) {
     if (!username.trim()) throw new Error('A username is required.');
     if (!password) throw new Error('A password is required.');
     const salt = randomBytes(24).toString('hex');
     db.exec('BEGIN IMMEDIATE');
     try {
-      db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan) VALUES (?,?,?)').run(clinicId, name, plan);
+      db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan,demo) VALUES (?,?,?,?)').run(clinicId, name, plan, demo ? 1 : 0);
       // A second account on an existing clinic must not quietly change what that clinic buys.
       db.prepare('UPDATE clinics SET plan=? WHERE id=? AND plan IS NULL').run(plan, clinicId);
       db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt) VALUES (?,?,?,?,?)').run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt);
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
+  }
+  /** Is this an illustrative account? Read from the clinic row, never from a request. */
+  function isDemoClinic(clinicId: string) {
+    return (db.prepare('SELECT demo FROM clinics WHERE id=?').get(clinicId) as { demo: number } | undefined)?.demo === 1;
   }
   function saveCampaigns(clinicId: string, values: Campaign[]) {
     if (!db.prepare('SELECT id FROM clinics WHERE id=?').get(clinicId)) throw new Error('Create this clinic first.');
@@ -76,7 +84,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,u.email FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; email: string} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -85,7 +93,7 @@ export function openStore(filename: string, enableSample = true) {
     const base = { config, today: new Date().toISOString().slice(0, 10) };
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
-    return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a' }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
+    return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
     const now = Date.now();
@@ -109,5 +117,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, saveCampaigns, saveFieldLog, fieldLog, clinicFromToken: session, ...network, ...bakeries, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, clinicFromToken: session, ...network, ...bakeries, close: () => db.close() };
 }

@@ -78,8 +78,8 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
     </div>
   </div>;
 
-  return <div className="dash">
-    <header className="dash-head">
+  return <div className={`dash ${plan === 'b' ? 'dash-lean' : ''}`}>
+    {plan === 'a' && <header className="dash-head">
       <div>
         <p className="dash-eyebrow">{monthLabel(today)}</p>
         <h2>{clinicName}</h2>
@@ -89,12 +89,12 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
         <button className="dash-btn" onClick={() => onGo('drivers')}>Routes &amp; schedule</button>
         <button className="dash-btn" onClick={() => onGo('report')}>Campaign report</button>
       </nav>
-    </header>
+    </header>}
 
     <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
 
     <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-      <Figure value={picks.length} label="New opportunities" note={placesOff ? undefined : 'Worth approaching'} unknown={placesOff}/>
+      <Figure value={picks.length} label="New opportunities" note={picks.length ? 'Worth approaching' : undefined} unknown={!picks.length && placesOff}/>
       <Figure value={month.visits} label="Visits recorded" note="Completed stops" unknown={!month.hasLog}/>
       <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" unknown={!month.hasLog}/>
       <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} unknown={!month.hasLog}/>
@@ -105,13 +105,11 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
         title="Worth approaching"
         note="Recommended by the portal. None of these has agreed to anything yet."
         action={<button className="dash-link" onClick={() => onGo('network')}>Open the map</button>}>
-        {placesOff
-          ? <p className="dash-empty">Google Places isn’t configured on this server, so nothing nearby has been looked up. Nothing is invented here.</p>
-          : !map?.clinic.location
-            ? <p className="dash-empty">Your practice address hasn’t been set yet, so there’s nowhere to search from. We’ll add it for you.</p>
-            : !picks.length
-              ? <p className="dash-empty">No new businesses met the bar this month. A short list beats a padded one.</p>
-              : <ul className="dash-list">{picks.map(business => <li key={business.placeId}>
+        {/* What the tile has comes first. A demo account is served a fixed fictional map, so it
+            has businesses to show even where Google Places is not configured; asking about the
+            key before looking at the list told it there was nothing when there was. */}
+        {picks.length
+          ? <ul className="dash-list">{picks.map(business => <li key={business.placeId}>
                   <div className="dash-row">
                     <div className="dash-row-main">
                       <strong>{business.name ?? 'Unnamed business'}</strong>
@@ -122,7 +120,12 @@ export default function Dashboard({ clinicName, today, plan, onGo }: Props) {
                       <a className="dash-link" href={mapsPlaceUrl(business)} target="_blank" rel="noreferrer noopener">Map</a>
                     </div>
                   </div>
-                </li>)}</ul>}
+                </li>)}</ul>
+          : !map?.clinic.location
+            ? <p className="dash-empty">Your practice address hasn’t been set yet, so there’s nowhere to search from. We’ll add it for you.</p>
+            : placesOff
+              ? <p className="dash-empty">Google Places isn’t configured on this server, so nothing nearby has been looked up. Nothing is invented here.</p>
+              : <p className="dash-empty">No new businesses met the bar this month. A short list beats a padded one.</p>}
       </Tile>
 
       <Tile
@@ -197,9 +200,10 @@ function NextUp({ action, log, plan, onGo }: { action: NextAction; log: FieldLog
   const content = {
     route: () => {
       const route = action.kind === 'route' ? action.route : null;
-      // On the portal-only plan the practice's own staff go, so naming one of our drivers
-      // on their round would be telling them someone is coming who is not.
-      const driver = plan === 'a' && route && log ? driverOf(log, route) : null;
+      // The name on a round is whoever the log says went. On the full service that is one of
+      // our drivers; on the portal-only plan it is the practice's own staff member. Either way
+      // it comes from their log, so it is never us claiming to send somebody.
+      const driver = route && log ? driverOf(log, route) : null;
       return {
         title: `A round is booked for ${dayLabel(route!.date)}.`,
         note: `${route!.stops.length} ${route!.stops.length === 1 ? 'stop' : 'stops'}${driver ? ` · ${driver.name}` : ''}${route!.start ? ` · from ${timeLabel(route!.start)}` : ''}`,
@@ -217,8 +221,8 @@ function NextUp({ action, log, plan, onGo }: { action: NextAction; log: FieldLog
       cta: 'Plan a round', go: 'drivers' as View,
     }),
     choose: () => ({
-      title: `${action.kind === 'choose' ? action.count : 0} businesses are worth approaching.`,
-      note: 'Pick your stops and we’ll build the round.',
+      title: 'Pick the stops for your next round.',
+      note: 'The map ranks the businesses nearby that share your patients.',
       cta: 'Choose stops', go: 'network' as View,
     }),
     locate: () => ({
