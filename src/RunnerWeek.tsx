@@ -1,0 +1,230 @@
+// THE WEEK. Seven columns, and the stops of each day inside the day itself.
+//
+// This is the study planner's layout: a column per day, small cards stacked in it, a total at
+// the foot. A route is not an agenda somewhere below a calendar — it is what the day column
+// holds. A card carries a time, a name and an icon, and nothing else; an address is something
+// you want in your hand at the door, which is what the drawer is for.
+//
+// Dragging is the reference's behaviour on pointer events rather than HTML5 drag-and-drop,
+// because this is used on a phone, where HTML5 dragging does not exist: the card you are moving
+// fades, a gold line shows where it would land, and the grip appears under the cursor.
+//
+// One rule the study planner does not have: a stop cannot leave its round. The office decides
+// which businesses are on which day; a runner decides the order they are driven in.
+import { useEffect, useRef, useState } from 'react';
+import { Icon, type IconName } from './Icons';
+import { clockOf, durationLabel, itemName, type PlannedItem } from './lib/route-math';
+import type { RunnerItem, RunnerRoute } from './lib/api';
+
+export type DayPlan = {
+  route: RunnerRoute;
+  items: PlannedItem[];
+  startsAt: number;
+  totalMinutes: number;
+  completed: number;
+};
+
+export const refOf = (item: RunnerItem) => `${item.kind}:${item.id}`;
+
+const tileFor = (entry: PlannedItem): IconName =>
+  entry.done ? 'check' : entry.item.kind === 'pickup' ? 'box' : 'shop';
+
+/** What a card says under its name — the one thing worth knowing at a glance, or nothing. */
+function noteFor(entry: PlannedItem) {
+  if (entry.item.kind === 'pickup') {
+    if (entry.late > 0) return 'After the window closes';
+    if (entry.item.pickup.status === 'collected') return 'Picked up';
+    return `Window ${entry.item.pickup.windowStart}–${entry.item.pickup.windowEnd}`;
+  }
+  if (entry.done) return entry.visit?.outcomeLabel ?? 'Visited';
+  if (entry.item.locked) return 'Fixed by your office';
+  return null;
+}
+
+export function StopCard({ entry, roundId, dragging, busy, onOpen, onMove, large }: {
+  entry: PlannedItem;
+  roundId: string;
+  dragging: boolean;
+  busy: boolean;
+  onOpen: () => void;
+  /** Where to put it: one place up, one place down, or anywhere a drag lands. */
+  onMove: (by: -1 | 1) => void;
+  large?: boolean;
+}) {
+  const [menu, setMenu] = useState(false);
+  const fixed = entry.done || entry.item.locked;
+  const name = itemName(entry.item);
+  const note = noteFor(entry);
+
+  return <article
+    className={`rr-card ${entry.item.kind === 'pickup' ? 'is-pickup' : ''} ${entry.done ? 'is-done' : ''} ${dragging ? 'is-source' : ''}`}
+    data-stop={refOf(entry.item)} data-round={roundId}>
+    <button className="rr-grip-btn rr-tile-wrap" disabled={fixed || busy}
+      aria-label={fixed ? `${name} cannot be moved` : `Drag ${name} to reorder it`}
+      data-grip={refOf(entry.item)}>
+      <span className="rr-tile"><Icon name={tileFor(entry)} size={large ? 16 : 14}/></span>
+      {!fixed && <span className="rr-grip" aria-hidden="true"><Icon name="grip" size={14}/></span>}
+    </button>
+
+    {/* Name first, then the one line under it — the reference's title and description. A time
+        and a name on the same row squeeze each other to nothing in a 190px column. */}
+    <button className="rr-card-main" onClick={onOpen} aria-label={`Open ${name}`}>
+      <span className="rr-card-title">{name}</span>
+      <span className="rr-card-note">
+        <b>{clockOf(entry.arriveAt)}</b>{note ? ` · ${note}` : ''}
+      </span>
+    </button>
+
+    <button className="rr-card-menu" aria-label={`More for ${name}`} aria-expanded={menu}
+      onClick={event => { event.stopPropagation(); setMenu(open => !open); }}>
+      <Icon name="grip" size={14}/>
+    </button>
+
+    {menu && <div className="rr-menu" role="menu" onMouseLeave={() => setMenu(false)}>
+      <button role="menuitem" onClick={() => { setMenu(false); onOpen(); }}>
+        <Icon name="arrow" size={15}/>Open
+      </button>
+      <button role="menuitem" disabled={fixed || busy} onClick={() => { setMenu(false); onMove(-1); }}>
+        <Icon name="up" size={15}/>Move up
+      </button>
+      <button role="menuitem" disabled={fixed || busy} onClick={() => { setMenu(false); onMove(1); }}>
+        <Icon name="down" size={15}/>Move down
+      </button>
+    </div>}
+  </article>;
+}
+
+/** The stops of one round, with the line that shows where a dragged card would land. */
+export function RoundStops({ plan, label, dragKey, dropAt, busy, onOpen, onMove, large }: {
+  plan: DayPlan;
+  label: string | null;
+  dragKey: string | null;
+  dropAt: number | null;
+  busy: boolean;
+  onOpen: (entry: PlannedItem) => void;
+  /** Put this stop at that index within its round. */
+  onMove: (roundId: string, key: string, toIndex: number) => void;
+  large?: boolean;
+}) {
+  return <>
+    {label && <p className="rr-round-label">{label}</p>}
+    {plan.items.map((entry, index) => <div key={refOf(entry.item)}>
+      {dropAt === index && <div className="rr-drop-line"/>}
+      <StopCard entry={entry} roundId={plan.route.id} large={large}
+        dragging={dragKey === refOf(entry.item)} busy={busy}
+        onOpen={() => onOpen(entry)}
+        onMove={by => onMove(plan.route.id, refOf(entry.item), index + by)}/>
+    </div>)}
+    {dropAt === plan.items.length && <div className="rr-drop-line"/>}
+  </>;
+}
+
+/**
+ * The seven columns. Everything about a drag lives here: which card is held, and where it would
+ * land. Dropping is refused across rounds, so a stop cannot change the day it was assigned to.
+ */
+export default function RunnerWeek({ days, today, liveDay, plansFor, busy, onOpenDay, onOpen, onMove, practice }: {
+  days: string[];
+  today: string;
+  /** The day worth looking at. Where the columns scroll sideways, this is the one in view. */
+  liveDay: string | null;
+  plansFor: (day: string) => DayPlan[];
+  busy: boolean;
+  onOpenDay: (day: string) => void;
+  onOpen: (roundId: string, entry: PlannedItem) => void;
+  /** Put this stop at that index within its round. The page writes it. */
+  onMove: (roundId: string, key: string, toIndex: number) => void;
+  practice: string;
+}) {
+  const [drag, setDrag] = useState<{ key: string; roundId: string } | null>(null);
+  const [drop, setDrop] = useState<{ roundId: string; index: number } | null>(null);
+  const held = useRef<{ key: string; roundId: string; x: number; y: number; moved: boolean } | null>(null);
+  const grid = useRef<HTMLDivElement>(null);
+
+  // On a phone the seven columns scroll sideways, and the one that matters is rarely Monday.
+  useEffect(() => {
+    const box = grid.current;
+    if (!box || !liveDay || box.scrollWidth <= box.clientWidth + 4) return;
+    const column = box.querySelector<HTMLElement>(`[data-day="${liveDay}"]`);
+    if (column) box.scrollTo({ left: column.offsetLeft - box.offsetLeft, behavior: 'auto' });
+  }, [liveDay, days]);
+
+  function finish() {
+    const current = held.current;
+    const landing = drop;
+    held.current = null;
+    setDrag(null);
+    setDrop(null);
+    if (!current?.moved || !landing || landing.roundId !== current.roundId) return;
+    // The line sits BETWEEN cards, so an index past the card it came from counts one too many
+    // once the card is lifted out.
+    const plan = days.flatMap(plansFor).find(p => p.route.id === current.roundId);
+    const from = plan?.items.findIndex(entry => refOf(entry.item) === current.key) ?? -1;
+    if (from < 0) return;
+    const to = from < landing.index ? landing.index - 1 : landing.index;
+    if (to !== from) onMove(current.roundId, current.key, to);
+  }
+
+  return <div className="rr-grid" ref={grid}
+    onPointerMove={event => {
+      const current = held.current;
+      if (!current) return;
+      if (!current.moved && Math.abs(event.clientY - current.y) + Math.abs(event.clientX - current.x) < 6) return;
+      current.moved = true;
+      setDrag({ key: current.key, roundId: current.roundId });
+      const under = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-stop]');
+      const group = under?.getAttribute('data-round');
+      if (!under || group !== current.roundId) { setDrop(null); return; }
+      const siblings = Array.from(document.querySelectorAll(`[data-round="${CSS.escape(current.roundId)}"]`));
+      const index = siblings.indexOf(under as Element);
+      const box = under.getBoundingClientRect();
+      setDrop({ roundId: current.roundId, index: event.clientY > box.top + box.height / 2 ? index + 1 : index });
+    }}
+    onPointerUp={finish} onPointerCancel={finish}
+    onPointerDownCapture={event => {
+      const grip = (event.target as HTMLElement).closest<HTMLElement>('[data-grip]');
+      if (!grip || (grip as HTMLButtonElement).disabled) return;
+      const card = grip.closest('[data-stop]');
+      const roundId = card?.getAttribute('data-round');
+      if (!roundId) return;
+      event.preventDefault();
+      grip.setPointerCapture(event.pointerId);
+      held.current = { key: grip.dataset.grip!, roundId, x: event.clientX, y: event.clientY, moved: false };
+    }}>
+    {days.map(day => {
+      const plans = plansFor(day);
+      const stops = plans.reduce((total, plan) => total + plan.items.length, 0);
+      const done = plans.reduce((total, plan) => total + plan.completed, 0);
+      const minutes = plans.reduce((total, plan) => total + plan.totalMinutes, 0);
+      const [, , date] = day.split('-');
+      const weekday = new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+      return <section className={`rr-day ${day === today ? 'is-today' : ''}`} key={day} data-day={day}>
+        <button className="rr-day-head" onClick={() => onOpenDay(day)}
+          aria-label={`Open ${weekday} ${Number(date)}`}>
+          {day === today && <span className="rr-dot" aria-hidden="true"/>}
+          <span className={`rr-day-name ${day === today ? 'is-today' : ''}`}>{weekday} {Number(date)}</span>
+          {stops > 0 && <span className="rr-day-count">{done}/{stops}</span>}
+        </button>
+
+        <div className="rr-day-body">
+          {!plans.length
+            ? <p className="rr-day-empty">No route</p>
+            : plans.map((plan, index) => <RoundStops key={plan.route.id} plan={plan}
+                label={plans.length > 1 ? `Round ${index + 1} · ${clockOf(plan.startsAt)}` : null}
+                dragKey={drag?.roundId === plan.route.id ? drag.key : null}
+                dropAt={drop?.roundId === plan.route.id ? drop.index : null}
+                busy={busy}
+                onOpen={entry => onOpen(plan.route.id, entry)}
+                onMove={onMove}/>)}
+        </div>
+
+        <div className="rr-day-foot">
+          <div className="rr-day-sep"/>
+          <p className="rr-day-total">{stops
+            ? `${stops} stop${stops === 1 ? '' : 's'} · ${done} done · ${durationLabel(minutes)} est.`
+            : practice ? 'Nothing assigned' : ''}</p>
+        </div>
+      </section>;
+    })}
+  </div>;
+}
