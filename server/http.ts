@@ -96,6 +96,13 @@ export function createPortalServer(options: Options) {
         if (url.pathname.startsWith('/api/outreach')) {
           const clinic = store.clinicFromToken(cookie);
           if (!clinic) { json(response, 401, { error: 'Please sign in again.' }); return; }
+
+          // THE ROLE BOUNDARY, ENFORCED HERE AND NOT IN THE BROWSER. Hiding a navigation item
+          // hides nothing: the endpoint is still one fetch away, and anybody who opens the
+          // network tab can read what it returns. So the server decides, every request.
+          const role = store.roleOf(cookie);
+          const fieldWork = store.mayDoFieldWork(role);
+          const refuse = (what: string) => json(response, 403, { error: `A ${role} account cannot ${what}.` });
           const who = store.db.prepare('SELECT display_name FROM users WHERE clinic_id=? AND display_name<>\'\' LIMIT 1')
             .get(clinic.id) as { display_name: string } | undefined;
 
@@ -112,7 +119,9 @@ export function createPortalServer(options: Options) {
             if (!target) { json(response, 404, { error: 'That business is not on your list.' }); return; }
             json(response, 200, {
               business: target,
-              script: store.outreach.script(clinic.id, id),
+              // The script is what a rep says at the door. A practice owner has no business
+              // reading it, so it is left out of the payload rather than hidden on screen.
+              script: fieldWork ? store.outreach.script(clinic.id, id) : null,
               visits: store.outreach.visits(clinic.id, id),
             });
             return;
@@ -130,6 +139,7 @@ export function createPortalServer(options: Options) {
             json(response, 200, { visits: store.outreach.visits(clinic.id) }); return;
           }
           if (url.pathname === '/api/outreach/visit' && request.method === 'POST') {
+            if (!fieldWork) { refuse('record a visit'); return; }
             let input;
             try { input = recordVisitInput.safeParse(await body(request)); }
             catch { json(response, 400, { error: 'That visit could not be read.' }); return; }
@@ -142,6 +152,7 @@ export function createPortalServer(options: Options) {
             return;
           }
           if (url.pathname === '/api/outreach/visit' && request.method === 'PATCH') {
+            if (!fieldWork) { refuse('change a visit'); return; }
             let input;
             try { input = editVisitInput.safeParse(await body(request)); }
             catch { json(response, 400, { error: 'That change could not be read.' }); return; }
@@ -152,6 +163,7 @@ export function createPortalServer(options: Options) {
             return;
           }
           if (url.pathname === '/api/outreach/script' && request.method === 'POST') {
+            if (!fieldWork) { refuse('edit a visit script'); return; }
             let input;
             try { input = saveScriptInput.safeParse(await body(request)); }
             catch { json(response, 400, { error: 'That script could not be read.' }); return; }

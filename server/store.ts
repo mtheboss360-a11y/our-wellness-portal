@@ -52,6 +52,19 @@ export function openStore(filename: string, enableSample = true) {
   const userColumns = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>).map(c => c.name);
   if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
   if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
+  // WHAT THIS PERSON IS ALLOWED TO DO. Three roles, and the plan is not one of them: 'a' and
+  // 'b' say what a practice buys, which is a billing fact, and billing facts must never decide
+  // who may read a visit script.
+  //
+  //   admin  — the platform. Every internal tool.
+  //   owner  — the practice. Its own records and its own curated matches. No staff scripts.
+  //   staff  — the person who goes out. Their assigned work and the scripts for it.
+  //
+  // NULLABLE ON PURPOSE. Every account that existed before this column has no role, and the
+  // server treats those exactly as it did yesterday — anything else would lock a live client
+  // out of their own portal the moment this deploys. An unassigned account is reported as
+  // such by list-logins and is meant to be assigned, not left. A role, once set, is enforced.
+  if (!userColumns.includes('role')) db.exec('ALTER TABLE users ADD COLUMN role TEXT');
 
   // WHETHER A ROW IS ILLUSTRATIVE. Nullable with no default: an existing row reads NULL,
   // meaning nobody has said, and the activate-live command refuses to delete what nobody has
@@ -112,9 +125,39 @@ export function openStore(filename: string, enableSample = true) {
   function logins() {
     return db.prepare(`SELECT u.email AS username, u.display_name AS name, u.clinic_id AS clinic,
         c.name AS clinicName, c.demo AS demo,
+        u.role AS role,
         (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>?) AS activeSessions
       FROM users u JOIN clinics c ON c.id=u.clinic_id ORDER BY c.name, u.email`).all(Date.now()) as Array<{
-        username: string; name: string; clinic: string; clinicName: string; demo: number; activeSessions: number }>;
+        username: string; name: string; clinic: string; clinicName: string; demo: number;
+        role: string | null; activeSessions: number }>;
+  }
+
+  /**
+   * What this session may do. Asked by the API before it answers, never by the browser.
+   *
+   * An account with no role set keeps the access it had before roles existed. That is a
+   * migration state, not a permission: `unassigned` is reported so it can be fixed, and the
+   * two `may*` helpers below say plainly what it allows.
+   */
+  function roleOf(token: string | undefined): 'admin' | 'owner' | 'staff' | 'unassigned' | null {
+    const who = session(token);
+    if (!who) return null;
+    return who.role === 'admin' || who.role === 'owner' || who.role === 'staff' ? who.role : 'unassigned';
+  }
+
+  /** Scripts, recording a visit, the round: the work of going out. Never an owner's. */
+  const mayDoFieldWork = (role: ReturnType<typeof roleOf>) =>
+    role === 'staff' || role === 'admin' || role === 'unassigned';
+
+  /** The practice's own view of itself. Not a staff member's. */
+  const mayOwnPractice = (role: ReturnType<typeof roleOf>) =>
+    role === 'owner' || role === 'admin' || role === 'unassigned';
+
+  /** Set or clear a role. Clearing it returns the account to the legacy state. */
+  function setRole(username: string, role: 'admin' | 'owner' | 'staff' | null) {
+    const changed = db.prepare('UPDATE users SET role=? WHERE email=?')
+      .run(role, username.trim().toLowerCase());
+    if (!changed.changes) throw new Error(`No login called "${username.trim().toLowerCase()}".`);
   }
 
   /** Is this an illustrative account? Read from the clinic row, never from a request. */
@@ -161,7 +204,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email,u.display_name,u.staff_id FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string; display_name: string; staff_id: string | null} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string; display_name: string; staff_id: string | null; role: string | null} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -176,6 +219,7 @@ export function openStore(filename: string, enableSample = true) {
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
     return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 },
+      role: roleOf(token),
       user: { name: clinic.display_name || null, staffId: clinic.staff_id || null }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
@@ -200,5 +244,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, setPassword, logins, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, setPassword, setRole, logins, roleOf, mayDoFieldWork, mayOwnPractice, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
 }

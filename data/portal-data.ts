@@ -20,4 +20,7 @@ export type PublicPortal = ReturnType<typeof publicPortal>;
 export type Plan = 'a' | 'b';
 export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string; plan: Plan; demo: boolean } | null;
   /** Who is signed in, when the account belongs to a person rather than the practice. */
-  user?: { name: string | null; staffId: string | null }; campaigns: Campaign[]; today: string };
+  user?: { name: string | null; staffId: string | null };
+  /** What this session may do. Set by the server; the browser follows it, never decides it. */
+  role?: 'admin' | 'owner' | 'staff' | 'unassigned' | null;
+  campaigns: Campaign[]; today: string };
