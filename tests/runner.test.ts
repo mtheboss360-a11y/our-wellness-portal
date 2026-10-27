@@ -119,6 +119,35 @@ test('the server refuses a runner session on the office’s endpoints, and serve
   }
 });
 
+test('the planner’s endpoints belong to runners, not to owners', async () => {
+  const store = world();
+  const round = booked(store, ['Karve Pilates'], 'Alexis');
+  store.db.prepare("UPDATE users SET role='owner' WHERE email='hylinedental'").run();
+  const server = createPortalServer({ store, origin: 'http://portal.test', secure: false, root: process.cwd() });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const owner = store.signIn('hylinedental', 'office-pw', '127.0.0.1');
+    const cookie = `owo-local-session=${owner.token}`;
+    for (const path of ['/api/runner/routes', '/api/runner/history']) {
+      assert.equal((await fetch(base + path, { headers: { Cookie: cookie } })).status, 403, path);
+    }
+    // And an owner cannot reorder somebody's day by posting at it.
+    const push = await fetch(base + '/api/runner/order', {
+      method: 'POST', headers: { Cookie: cookie, Origin: 'http://portal.test', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roundId: round, order: [], revision: 0 }),
+    });
+    assert.equal(push.status, 403);
+    // The runner still reaches their own.
+    const runner = store.signIn('alexis', 'runner-pw', '127.0.0.1');
+    assert.equal((await fetch(base + '/api/runner/routes',
+      { headers: { Cookie: `owo-local-session=${runner.token}` } })).status, 200);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    store.close();
+  }
+});
+
 test('a runner sees the rounds assigned to them and nobody else’s', () => {
   const store = world();
   const mine = booked(store, ['Karve Pilates', 'Yoga Cave'], 'Alexis', '2026-10-27');

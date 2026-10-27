@@ -109,6 +109,13 @@ export function createPortalServer(options: Options) {
         // whether this round is theirs; a round id belonging to anybody else is simply not found.
         if (url.pathname.startsWith('/api/runner/')) {
           if (!signedIn) { json(response, 401, { error: 'Please sign in again to open your routes.' }); return; }
+          // A PRACTICE OWNER IS NOT A RUNNER. Their own rounds would come back empty anyway —
+          // nothing is assigned to them — but the planner's endpoints are not theirs to call,
+          // and saying so is better than an empty week that looks like a bug.
+          if (signedIn.role === 'owner') {
+            json(response, 403, { error: 'An owner account does not run routes. Your practice’s rounds are on your dashboard.' });
+            return;
+          }
           const clinic = signedIn;
           const who = { id: clinic.user_id, displayName: clinic.display_name ?? '' };
           const runner = store.runner;
