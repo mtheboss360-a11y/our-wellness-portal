@@ -1,8 +1,8 @@
 # Our Wellness Network — staff portal status
 
-**Written 2026-10-26. Repo: `mtheboss360-a11y/our-wellness-portal`, branch `main`, tip `3ef3b6d`.**
+**Written 2026-10-26. Repo: `mtheboss360-a11y/our-wellness-portal`, branch `main`, tip `e3ad56f`.**
 Live at **ournetworkportal.com** on Render (`our-wellness-portal`). Node 24, TypeScript, Vite,
-React 19, `node:sqlite` on a Render persistent disk. 155 tests, all passing.
+React 19, `node:sqlite` on a Render persistent disk. 162 tests, all passing.
 
 Read this before changing anything. The sections that matter most are **Known defects** and
 **Rules that are not negotiable**.
@@ -62,21 +62,21 @@ day outright.
 
 ## Known defects
 
-These are real and visible. Do not report the portal as finished without addressing them.
+Defects 1, 2 and 3 were **fixed in `e3ad56f`** and are kept here as history — the causes are
+worth knowing. Defects 4 and 5 are still open.
 
-### 1. The Dashboard and the Agenda disagree about the next round
+### 1. The Dashboard and the Agenda disagree about the next round — FIXED
 
 The Dashboard's "Next" panel reads the **imported field log** (`field_logs`), while Today's
 round reads the new `rounds` table. On `hyline-dental` the Dashboard says *"A round is booked
 for Wed, Oct 28"* while the Agenda says *Tue, Oct 27*. Both are "true" — they are different
 records.
 
-The original spec called this out: *"A round must have one authoritative schedule shared across
-all screens."* It is not done. `src/Dashboard.tsx` → `NextUp` and the four figure tiles still
-come from `dashboard-math.ts` over the field log. They need rewiring to `getRounds()` and
-`getVisits()`.
+Fixed: where a practice has released businesses the dashboard reads `src/lib/staff-dashboard.ts`
+and lays the round out with the agenda's own `planRound`. A clinic with no released businesses
+keeps the field-log dashboard.
 
-### 2. The five real businesses are not on the Referral Network orb
+### 2. The five real businesses are not on the Referral Network orb — FIXED
 
 `geocode-release` geocoded all five and wrote them through `saveDiscovery`, which is the same
 path a discovery refresh uses. But **a clinic flagged `demo` is served a fixed fictional set by
@@ -84,16 +84,17 @@ path a discovery refresh uses. But **a clinic flagged `demo` is served a fixed f
 Copperfield Yoga Loft, Ridgeline Strength and the rest — invented businesses — not Karve
 Pilates and the four others.
 
-I previously told Mustafa the five "now appear on the orb". On a demo-flagged clinic that is
-wrong. They will appear once the clinic is no longer flagged demo (after `activate-live`), or
-if the sample override is changed to merge rather than replace.
+Fixed: the fictional set now sits alongside the practice's real businesses instead of
+replacing them, and the real ones are rebuilt from the rows we hold rather than merely
+preserved — the earlier wipe had already removed them. Each rebuilt place keeps the expiry of
+the fetch it came from, so rewriting the cache cannot extend Google's retention window.
 
-### 3. `plan-round` creates a second round instead of replacing one
+### 3. `plan-round` creates a second round instead of replacing one — FIXED
 
 Running `plan-round` twice for the same clinic and date books **two rounds**, and both show in
-the Agenda's day picker. `hyline-dental` currently has two rounds for Tue Oct 27 — one with 5
-stops, one with 15. `planRound` only reuses a round when given an explicit `--id`, which the
-script never passes. It should match on `(clinic, date, staff)` and replace.
+the Agenda's day picker. Fixed: it matches on `(clinic, date, staff)` and replaces, saying so. `--another` books a
+genuine second round. **`hyline-dental` still has the two rounds booked before this fix** —
+re-run `plan-round` for Tue Oct 27 and it will collapse them to one.
 
 ### 4. No owner/staff separation
 
