@@ -56,7 +56,8 @@ export async function ensureDiscovery(store: PortalStore, clinicId: string, { fo
       if (held.some(place => place.placeId === business.placeId)) continue;
       store.saveDiscovery(clinicId, [{
         placeId: business.placeId!, name: business.name, address: business.address,
-        lat: business.lat, lng: business.lng, types: [], primaryType: null,
+        lat: business.lat, lng: business.lng,
+        types: business.types, primaryType: business.primaryType,
         businessStatus: 'OPERATIONAL', rating: null, reviewCount: null, googleMapsUri: null,
       }], Date.now(), business.geoAt! + window);
     }

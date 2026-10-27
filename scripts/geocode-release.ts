@@ -109,7 +109,10 @@ try {
 
     console.log(`  ✓ ${b.name} → ${found.address}`);
     if (!dryRun) {
-      store.outreach.setLocation(clinicId, b.id, { placeId: found.placeId, lat: found.lat, lng: found.lng });
+      store.outreach.setLocation(clinicId, b.id, {
+        placeId: found.placeId, lat: found.lat, lng: found.lng,
+        types: found.types, primaryType: found.primaryType,
+      });
       // The orb reads the network's own cache. Writing through the same function a discovery
       // refresh uses puts these on the map without touching the orb or its matching engine.
       store.saveDiscovery(clinicId, [found]);

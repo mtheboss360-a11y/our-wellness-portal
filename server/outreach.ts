@@ -53,6 +53,9 @@ export type Business = {
   placeId: string | null;
   /** When the coordinates were fetched, so a stale pair can be refused rather than used. */
   geoAt: number | null;
+  /** Google's types for this place, as the map's category rules expect them. */
+  types: string[];
+  primaryType: string | null;
   /** 1 illustrative, 0 real, null nobody has said. */
   demo: number | null;
 };
@@ -74,7 +77,7 @@ type BusinessRow = {
   id: string; name: string; category: string; address: string; phone: string; website: string;
   talking_point: string; stage: string; release_id: string; released_at: number;
   lat: number | null; lng: number | null; place_id: string | null;
-  geo_at: number | null; demo: number | null;
+  geo_at: number | null; demo: number | null; types: string | null;
 };
 
 type VisitRow = {
@@ -187,6 +190,11 @@ export function openOutreach(db: DatabaseSync) {
   add('businesses', 'place_id', 'TEXT');
   add('businesses', 'geo_at', 'INTEGER');
   add('businesses', 'demo', 'INTEGER');
+  // Google's own classification of the place, kept beside the coordinates and expiring with
+  // them. Without it the referral map cannot categorise a business, and an uncategorised one
+  // ranks below everything else — which is how five real businesses ended up off the bottom
+  // of a list they were already in.
+  add('businesses', 'types', 'TEXT');
   add('visits', 'demo', 'INTEGER');
 
   // Transactions are run as statements rather than through exec so the whole file keeps one way
@@ -195,13 +203,17 @@ export function openOutreach(db: DatabaseSync) {
   const commit = () => { db.prepare('COMMIT').run(); };
   const rollback = () => { db.prepare('ROLLBACK').run(); };
 
-  const BUSINESS_COLUMNS = `id,name,category,address,phone,website,talking_point,stage,release_id,released_at,lat,lng,place_id,geo_at,demo`;
+  const BUSINESS_COLUMNS = `id,name,category,address,phone,website,talking_point,stage,release_id,released_at,lat,lng,place_id,geo_at,demo,types`;
 
   const toBusiness = (r: BusinessRow): Business => ({
     id: r.id, name: r.name, category: r.category, address: r.address, phone: r.phone,
     website: r.website, talkingPoint: r.talking_point, stage: asStage(r.stage),
     releaseId: r.release_id, releasedAt: r.released_at, lat: r.lat, lng: r.lng,
     placeId: r.place_id, geoAt: r.geo_at, demo: r.demo,
+    ...(() => {
+      const parsed = r.types ? JSON.parse(r.types) as { types?: string[]; primaryType?: string | null } : null;
+      return { types: parsed?.types ?? [], primaryType: parsed?.primaryType ?? null };
+    })(),
   });
 
   const toVisit = (r: VisitRow): Visit => ({
@@ -378,9 +390,13 @@ export function openOutreach(db: DatabaseSync) {
    * Record where a business actually is. The place id is kept indefinitely, the coordinates
    * are stamped so they can be refused once they are older than Google allows us to hold them.
    */
-  function setLocation(clinicId: string, businessId: string, place: { placeId: string; lat: number; lng: number }, at = now()) {
-    const changed = db.prepare('UPDATE businesses SET place_id=?, lat=?, lng=?, geo_at=? WHERE id=? AND clinic_id=?')
-      .run(place.placeId, place.lat, place.lng, at, businessId, clinicId);
+  function setLocation(clinicId: string, businessId: string, place: {
+    placeId: string; lat: number; lng: number; types?: string[]; primaryType?: string | null;
+  }, at = now()) {
+    const changed = db.prepare('UPDATE businesses SET place_id=?, lat=?, lng=?, geo_at=?, types=? WHERE id=? AND clinic_id=?')
+      .run(place.placeId, place.lat, place.lng, at,
+        JSON.stringify({ types: place.types ?? [], primaryType: place.primaryType ?? null }),
+        businessId, clinicId);
     if (!changed.changes) throw new Error('That business is not on your list.');
     return business(clinicId, businessId)!;
   }
