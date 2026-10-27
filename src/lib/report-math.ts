@@ -41,7 +41,7 @@ export function measures(log: FieldLog | null, campaigns: Campaign[]): Measure[]
       note: 'Stops your team recorded as completed.',
     },
     {
-      key: 'materials', label: 'Materials left', value: materialsFromLog + materialsFromCampaigns,
+      key: 'materials', label: 'Materials dropped', value: materialsFromLog + materialsFromCampaigns,
       recorded: !!log || !!campaigns.length,
       note: 'As reported by the person who went.',
     },

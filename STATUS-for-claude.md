@@ -1,11 +1,10 @@
 # Our Wellness Network — staff portal status
 
-**Written 2026-10-26. Repo: `mtheboss360-a11y/our-wellness-portal`, branch `main`, tip `e3ad56f`.**
+**Updated 2026-10-27 from the owner-dashboard source package. Repo lineage: `mtheboss360-a11y/our-wellness-portal`.**
 Live at **ournetworkportal.com** on Render (`our-wellness-portal`). Node 24, TypeScript, Vite,
 React 19, `node:sqlite` on a Render persistent disk. 162 tests, all passing.
 
-Read this before changing anything. The sections that matter most are **Known defects** and
-**Rules that are not negotiable**.
+Read this before changing anything. Read the **Owner and staff access** section and **Rules that are not negotiable** before changing anything.
 
 ---
 
@@ -54,6 +53,8 @@ showed no progress.
 
 **Visit history, Performance, Assigned Businesses.** All read saved records only.
 
+**Owner dashboard** (`src/OwnerDashboard.tsx`, `src/ReferralBubbles.tsx`). Plan B owner logins open a practice dashboard with account-level activity, radius-filtered assigned businesses, route watchlist and full-screen route details. The bubble view reads only that practice's released businesses, lays them out as one broad ring or two staggered rings (up to 25), and keeps every partner bubble the same size. Owners do not receive visit scripts and cannot record or edit a field visit. QR/NFC values are not in the current data model, so route details honestly show “Not added.”
+
 **Opening hours** (`src/lib/agenda-math.ts`, `OPENS`). Mon/Tue/Fri 09:00, Wed/Thu 11:00,
 Sat/Sun closed. A round cannot start before the practice opens; `plan-round` refuses a closed
 day outright.
@@ -96,11 +97,13 @@ the Agenda's day picker. Fixed: it matches on `(clinic, date, staff)` and replac
 genuine second round. **`hyline-dental` still has the two rounds booked before this fix** —
 re-run `plan-round` for Tue Oct 27 and it will collapse them to one.
 
-### 4. No owner/staff separation
+### 4. Owner/staff separation — implemented in this source
 
-One login per clinic sees every screen. The spec asked for the practice owner and the field rep
-to have different views and permissions. Not built. Today `hylinedental` is Alexis's login and
-also, functionally, the owner's.
+For plan B, the portal opens `OwnerDashboard` for owner logins and `Overview` for staff. The
+server enforces the role on outreach requests: owners can read their practice records but do not
+receive staff scripts and cannot record or edit visits. Role assignment remains an operations
+step via `npm run set-role`; logins with no role keep legacy access until assigned. Check the
+production login roles before relying on a user's view.
 
 ### 5. Round creation is CLI-only
 

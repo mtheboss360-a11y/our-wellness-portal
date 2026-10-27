@@ -1,24 +1,19 @@
 // THE PRACTICE AND ITS REFERRAL CONNECTIONS, as bubbles.
 //
-// NOT THE REFERRAL NETWORK ORB. That component, its ranking and its matching engine are
-// untouched and share no code with this. This is a different drawing for a different reader:
-// the orb ranks businesses for a staff member choosing where to go, while this shows a
-// practice owner who is in their network, and nothing else.
+// This is the owner-facing picture of their curated network. It is separate from the staff
+// Referral Network orb: no ranking, discovery pool, or other practice's businesses appear here.
 //
-// BUBBLE SIZE CARRIES NO MEANING. Every partner is the same size, deliberately. A bubble
-// larger than its neighbour reads as "this one is worth more", and we do not publish a
-// per-business figure to an owner — so the drawing must not imply one. Only the practice at
-// the centre is bigger, because it is the practice.
-//
-// On opening, the partners gather at the centre and fan out to where they belong. Once per
-// opening, and not at all for a reader who has asked for less motion.
+// Partners have equal-size bubbles because the owner gets names, not a comparison of businesses.
+// The practice is the only larger bubble. On opening, partners gather at the practice and fan out
+// to their positions. The motion runs once when this graph mounts and respects reduced motion.
 import { useMemo } from 'react';
 
 export type Connection = { id: string; name: string; demo: boolean };
 
-const BOX = { w: 900, h: 460 };
+const BOX = { w: 1200, h: 800 };
 const HUB = 76;
-const NODE = 50;
+const NODE = 48;
+const MAX_NODES = 25;
 
 /** Two letters from a name, for the middle of a bubble. */
 const initials = (name: string) => name.split(/\s+/).filter(Boolean)
@@ -40,38 +35,35 @@ function twoLines(name: string, perLine = 13): [string, string | null] {
 export default function ReferralBubbles({ practice, connections }: {
   practice: string; connections: Connection[];
 }) {
-  // HOW MANY FIT. One ring reads well up to eight; past that the names collide and the point
-  // of the drawing — being able to read who is in the network — is lost. So it goes to two
-  // rings, and past sixteen it stops and says how many are not drawn rather than shrinking
-  // every bubble until none of them can be read.
-  const MOST = 16;
-  const shown = connections.slice(0, MOST);
+  // Give the full practice network room to breathe. Up to 18 accounts use one broad ring;
+  // larger networks use a staggered inner and outer ring. Every partner stays the same size.
+  const shown = useMemo(() => connections.slice(0, MAX_NODES), [connections]);
   const hidden = connections.length - shown.length;
-
   const placed = useMemo(() => {
     const n = shown.length;
     if (!n) return [];
-    // Two rings once there are more than eight, the inner one holding the first third.
-    const rings = n > 8
-      ? [{ take: Math.ceil(n / 3), rx: 196, ry: 96 }, { take: n, rx: 352, ry: 168 }]
-      : [{ take: n, rx: Math.min(330, 150 + n * 26), ry: Math.min(150, 74 + n * 14) }];
+
+    const innerCount = n > 18 ? Math.ceil(n / 3) : 0;
+    const rings = innerCount
+      ? [
+          { items: shown.slice(0, innerCount), rx: 255, ry: 172, offset: 0 },
+          { items: shown.slice(innerCount), rx: 468, ry: 302, offset: 1 },
+        ]
+      : [{ items: shown, rx: n <= 8 ? 360 : 468, ry: n <= 8 ? 230 : 302, offset: 0 }];
 
     const out: Array<{ connection: Connection; x: number; y: number; delay: number }> = [];
-    let from = 0;
     for (const ring of rings) {
-      const slice = shown.slice(from, ring.take);
-      slice.forEach((connection, i) => {
-        // Start at the top; offset the outer ring so it does not sit behind the inner one.
-        const angle = (-Math.PI / 2) + (i * 2 * Math.PI) / slice.length
-          + (from ? Math.PI / slice.length : 0);
+      ring.items.forEach((connection, i) => {
+        // Begin at the top. The outer ring is half a step out of phase with the inner ring.
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / ring.items.length
+          + (ring.offset ? Math.PI / ring.items.length : 0);
         out.push({
           connection,
           x: BOX.w / 2 + Math.cos(angle) * ring.rx,
           y: BOX.h / 2 + Math.sin(angle) * ring.ry,
-          delay: 0.26 + out.length * 0.05,
+          delay: 0.22 + out.length * 0.032,
         });
       });
-      from = ring.take;
     }
     return out;
   }, [shown]);
@@ -87,23 +79,25 @@ export default function ReferralBubbles({ practice, connections }: {
       <g aria-hidden="true">
         {placed.map(({ connection, x, y, delay }) => <line key={`l-${connection.id}`}
           className="bub-link" x1={BOX.w / 2} y1={BOX.h / 2} x2={x} y2={y}
-          style={{ animationDelay: `${delay}s` }}/>)}
+          style={{ animationDelay: `${delay}s` }}/>) }
       </g>
 
-      {placed.map(({ connection, x, y, delay }) => {
+      {placed.map(({ connection, x, y, delay }, index) => {
         const [one, two] = twoLines(connection.name);
-        return <g key={connection.id} className="bub-node" transform={`translate(${x} ${y})`}>
+        const tone = index % 5 === 2 ? ' tone-gold' : index % 5 === 4 ? ' tone-sage' : '';
+        return <g key={connection.id} className={`bub-node${tone}`} transform={`translate(${x} ${y})`}>
+          <title>{connection.name}</title>
           <g className="bub-fan">
-            {/* The gather-and-fan: starts at the practice, settles where it belongs. */}
+            {/* The gather-and-fan: starts at the practice and settles where it belongs. */}
             <animateTransform attributeName="transform" type="translate"
               from={`${BOX.w / 2 - x} ${BOX.h / 2 - y}`} to="0 0" dur="0.9s"
               begin={`${delay}s`} fill="freeze" calcMode="spline"
               keyTimes="0;1" keySplines=".16 1 .3 1"/>
             <circle r={NODE}/>
-            <g className="bub-copy" style={{ animationDelay: `${delay + 0.22}s` }}>
-              <text className="bub-initials" textAnchor="middle" y={two ? -14 : -8}>{initials(connection.name)}</text>
+            <g className="bub-copy" style={{ animationDelay: `${delay + 0.18}s` }}>
+              <text className="bub-initials" textAnchor="middle" y={two ? -13 : -7}>{initials(connection.name)}</text>
               <text className="bub-name" textAnchor="middle" y={two ? 6 : 12}>{one}</text>
-              {two && <text className="bub-name" textAnchor="middle" y={21}>{two}</text>}
+              {two && <text className="bub-name" textAnchor="middle" y={20}>{two}</text>}
             </g>
           </g>
         </g>;
@@ -115,11 +109,6 @@ export default function ReferralBubbles({ practice, connections }: {
         <text className="bub-hub-sub" textAnchor="middle" y={18}>Your practice</text>
       </g>
     </svg>
-
-    <p className="bub-note">
-      <span className="bub-key" aria-hidden="true"/>
-      Each bubble is a business in your referral network. Bubble size carries no figure.
-      {hidden > 0 && ` ${hidden} more ${hidden === 1 ? 'is' : 'are'} in the list below.`}
-    </p>
+    {hidden > 0 && <p className="bub-note">Showing {shown.length} of {connections.length} connections. See Your businesses for the full list.</p>}
   </div>;
 }
