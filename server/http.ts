@@ -157,11 +157,13 @@ export function createPortalServer(options: Options) {
             return;
           }
 
-          // One business, with its script and its history — only where it is on a route of theirs.
+          // One business, with its script and its history — only where it is on the round of
+          // theirs that the caller names.
           if (url.pathname === '/api/runner/business' && request.method === 'GET') {
             const id = url.searchParams.get('id') ?? '';
-            if (!runner.mayVisit(clinic.id, id, who)) {
-              json(response, 404, { error: 'That business is not on one of your routes.' }); return;
+            const on = url.searchParams.get('round') ?? '';
+            if (!runner.roundStopFor(clinic.id, on, id, who)) {
+              json(response, 404, { error: 'That business is not on that route of yours.' }); return;
             }
             json(response, 200, {
               business: store.outreach.business(clinic.id, id),
@@ -171,14 +173,15 @@ export function createPortalServer(options: Options) {
             return;
           }
 
-          // Their own work, newest first: the visits recorded against businesses on their routes.
+          // THEIR OWN WORK, newest first: the visits this login recorded. Not every visit at a
+          // business that happens to be on a route of theirs — those belong to the practice and
+          // are on the practice's own screens. A visit recorded before this was tracked has no
+          // author and appears for nobody rather than being credited to a guess.
           if (url.pathname === '/api/runner/history' && request.method === 'GET') {
-            const mine = new Set(runner.assignedRounds(clinic.id, who).flatMap(r => r.items
-              .filter(item => item.kind === 'business')
-              .map(item => item.kind === 'business' ? item.business.id : '')));
+            const mine = store.outreach.visitsRecordedBy(clinic.id, who.id);
             json(response, 200, {
-              visits: store.outreach.visits(clinic.id).filter(v => mine.has(v.businessId)),
-              materials: runner.visitMaterials(clinic.id),
+              visits: mine,
+              rounds: Object.fromEntries(runner.assignedRounds(clinic.id, who).map(r => [r.id, r.date])),
             });
             return;
           }
@@ -218,7 +221,8 @@ export function createPortalServer(options: Options) {
           if (url.pathname === '/api/runner/pickup/collected' && request.method === 'POST') {
             const input = pickupActionInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That pickup could not be read.' }); return; }
-            try { sendRoute(runner.collectPickup(clinic.id, input.data.roundId, input.data.pickupId, who, { revision: input.data.revision })); }
+            try { sendRoute(runner.collectPickup(clinic.id, input.data.roundId, input.data.pickupId, who,
+              { revision: input.data.revision, collected: input.data.collected })); }
             catch (error) { refuse(error, input.data.roundId); }
             return;
           }
@@ -243,12 +247,15 @@ export function createPortalServer(options: Options) {
             const input = runnerVisitInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That visit could not be saved. Please check it and try again.' }); return; }
             const draft = input.data;
-            if (!runner.mayVisit(clinic.id, draft.businessId, who)) {
-              json(response, 403, { error: 'That business is not on one of your routes.' }); return;
+            // The round is named by the screen that opened the visit, not searched for here: a
+            // business can sit on two rounds, and guessing which one would put the conversation,
+            // and the materials dropped at it, on whichever sorted first.
+            const round = runner.roundStopFor(clinic.id, draft.roundId, draft.businessId, who);
+            if (!round) {
+              json(response, 403, { error: 'That business is not on that route of yours.' }); return;
             }
-            const round = runner.roundForBusiness(clinic.id, draft.businessId, who);
             const total = SUPPLY_KEYS.reduce((sum, key) => sum + draft.dropped[key], 0);
-            if (round && total > 0) {
+            if (total > 0) {
               if (!round.supplies.packed) {
                 json(response, 400, { error: 'Confirm what you packed before recording materials dropped.' }); return;
               }
@@ -264,19 +271,18 @@ export function createPortalServer(options: Options) {
               }
             }
             try {
+              // One write: the visit, its breakdown, and the business's stage all move together
+              // or none of them do.
               const saved = store.outreach.recordVisit(clinic.id, {
                 businessId: draft.businessId, visitedOn: draft.visitedOn, spokeWith: draft.spokeWith,
                 contactRole: draft.contactRole, outcome: draft.outcome, materials: total,
                 note: draft.note, nextAction: draft.nextAction, followUpOn: draft.followUpOn,
                 clientRef: draft.clientRef, staff: clinic.display_name || '',
+                roundId: round.id, recordedBy: who.id, dropped: draft.dropped,
               });
-              // The breakdown is written after the visit. If this were to fail the visit still
-              // holds the correct total, which is what every other screen reads; the row is keyed
-              // on the visit id, so a retry rewrites it rather than adding to it.
-              const dropped = runner.saveVisitMaterials(clinic.id, saved.visit.id, round?.id ?? null, draft.dropped);
-              const current = round ? runner.round(clinic.id, round.id) : null;
+              const current = runner.round(clinic.id, round.id);
               json(response, 200, {
-                visit: saved.visit, business: saved.business, dropped,
+                visit: saved.visit, business: saved.business, dropped: saved.visit.dropped,
                 route: current ? shape(current) : null,
               });
             } catch (error) {

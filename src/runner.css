@@ -48,11 +48,13 @@
   backdrop-filter:blur(16px); border-bottom:1px solid rgba(248,245,234,.12) }
 .rr-topinner{ max-width:1500px; margin:auto; min-height:76px; padding:13px 27px;
   display:flex; gap:16px; align-items:center; justify-content:space-between }
-.rr-brand{ display:flex; align-items:center; gap:13px; min-width:0 }
-.rr-mark{ height:30px; width:auto }
-.rr-brand-copy{ display:flex; flex-direction:column; gap:2px }
-.rr-brand-name{ font:500 19px/1.12 Georgia,serif; color:#f3e5c7; white-space:nowrap }
-.rr-brand-sub{ font-size:10px; letter-spacing:.16em; font-weight:750; color:#a4b8a8 }
+.rr-brand{ display:flex; align-items:center; gap:12px; min-width:0 }
+/* The logo's own ground. The mark is dark ink and gold and needs a light one to read on. */
+.rr-plate{ display:inline-flex; align-items:center; background:var(--cream); border-radius:10px;
+  padding:7px 12px; flex:0 0 auto }
+.rr-mark{ height:26px; width:auto; display:block }
+.rr-brand-sub{ font-size:10px; letter-spacing:.17em; font-weight:750; color:#b7cabc;
+  text-transform:uppercase; white-space:nowrap }
 .rr-toptools{ display:flex; gap:8px; align-items:center }
 .rr-person{ border-left:1px solid #345548; padding-left:15px; display:flex; gap:9px; align-items:center }
 .rr .rr-avatar{ height:34px; width:34px; border-radius:50%; background:var(--gold-2); color:var(--forest);
@@ -318,16 +320,14 @@
 @media (max-width:620px){
   .rr-topinner{ gap:8px }
   .rr-brand{ gap:9px }
-  .rr-brand-name{ font-size:14px }
-  .rr-brand-sub{ font-size:9px }
-  .rr-mark{ height:24px }
+  .rr-brand-sub{ display:none }
+  .rr-plate{ padding:6px 9px }
+  .rr-mark{ height:21px }
   .rr-person-text{ display:none }
   .rr-person{ padding-left:8px }
   /* On a phone the bar is the brand and who you are. Signing out lives on Profile, a tap away,
      rather than crowding the name off the screen. */
   .rr-toptools .rr-btn{ display:none }
-  .rr-brand-copy{ min-width:0 }
-  .rr-brand-name{ overflow:hidden; text-overflow:ellipsis }
   .rr-avatar{ width:31px; height:31px }
   .rr-wrap{ padding:24px 13px 36px }
   .rr-title h1{ font-size:37px }
@@ -378,3 +378,12 @@
 .gv-pair.gv-triple{ grid-template-columns:repeat(3,minmax(0,1fr)) }
 .gv-pair.gv-triple small{ display:block; margin-top:5px; font-size:.72rem; color:var(--ink-3,#7C8878) }
 @media (max-width:520px){ .gv-pair.gv-triple{ grid-template-columns:1fr } }
+
+/* Two rounds booked on one day: both are offered rather than one silently chosen. */
+.rr-round-pick{ display:flex; gap:7px; padding:14px 24px 0; flex-wrap:wrap }
+.rr-round-pick button{ display:inline-flex; flex-direction:column; gap:2px; padding:8px 13px;
+  border-radius:11px; background:#eef2eb; color:#3f5a4a; font-size:12px; font-weight:700 }
+.rr-round-pick button small{ font-weight:450; color:#75897c }
+.rr .rr-round-pick button.is-current{ background:var(--forest); color:#fff }
+.rr .rr-round-pick button.is-current small{ color:#bed0c3 }
+@media (max-width:620px){ .rr-round-pick{ padding:12px 17px 0 } }
