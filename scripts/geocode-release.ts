@@ -43,13 +43,32 @@ const town = (address: string) => {
   return (index > 0 ? parts[index - 1] : parts.at(-2) ?? '').toLowerCase();
 };
 
-/** Does Google's answer describe the place we asked about? Both checks, or we do not take it. */
-function agrees(asked: string, got: string | null) {
+/** Words that identify nothing. Two businesses sharing only these share nothing. */
+const EMPTY = new Set(['the', 'and', 'of', 'at', 'studio', 'salon', 'spa', 'clinic', 'center',
+  'centre', 'co', 'inc', 'llc', 'ltd', 'naperville', 'il', 'chicago']);
+const words = (value: string) => value.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/)
+  .filter(word => word.length > 2 && !EMPTY.has(word));
+
+/**
+ * Does Google's answer describe the place we asked about? The address has to agree on street
+ * number and town — AND the name has to share a real word with ours.
+ *
+ * The name check is not fussiness. Without it, asking about a business at a real street
+ * address returns whatever actually trades there, and that answer passes an address-only test
+ * perfectly. Run over invented sample businesses placed on real streets, it quietly gave eight
+ * of them the place ID and coordinates of real, unrelated businesses.
+ */
+function agrees(askedName: string, asked: string, gotName: string | null, got: string | null) {
   if (!got) return false;
   const wantedNumber = streetNumber(asked);
   if (wantedNumber && streetNumber(got) !== wantedNumber) return false;
   const wantedTown = town(asked);
-  return !wantedTown || got.toLowerCase().includes(wantedTown);
+  if (wantedTown && !got.toLowerCase().includes(wantedTown)) return false;
+
+  const ours = words(askedName);
+  const theirs = words(gotName ?? '');
+  if (!ours.length) return true;
+  return ours.some(word => theirs.some(other => other === word || other.includes(word) || word.includes(other)));
 }
 
 const store = openStore(resolve(process.env.DATABASE_PATH ?? 'var/portal.sqlite'), false);
@@ -64,7 +83,8 @@ try {
   const wanted = values['clinic-address']?.trim();
   if (wanted) {
     const results = await nearby({ textQuery: wanted, maxResultCount: 3 }, TEXT_URL);
-    const found = results.map(normalizePlace).find(p => p && agrees(wanted, p.address)) ?? null;
+    // The practice's own address has no business name to check, so only the address is matched.
+    const found = results.map(normalizePlace).find(p => p && agrees('', wanted, '', p.address)) ?? null;
     if (!found || found.lat === null || found.lng === null) {
       throw new Error(`No result agreed with "${wanted}". The clinic pin was not set, and nothing else has been written.`);
     }
@@ -77,11 +97,31 @@ try {
     }
   }
 
-  const all = store.outreach.businesses(clinicId);
+  // ILLUSTRATIVE BUSINESSES ARE NEVER LOOKED UP. They are invented names, and placing them on
+  // real streets means a lookup returns whatever genuinely trades there — which is how eight
+  // sample records were handed the place ID of a real, unrelated business. Any geocode they
+  // have already been given is cleared here, because leaving it would send somebody to a
+  // stranger's door.
+  const everything = store.outreach.businesses(clinicId);
+  const invented = everything.filter(b => b.demo === 1 && b.placeId);
+  if (invented.length) {
+    for (const b of invented) {
+      store.db.prepare('UPDATE businesses SET place_id=NULL, geo_at=NULL, types=NULL WHERE id=? AND clinic_id=?')
+        .run(b.id, clinicId);
+      store.db.prepare('DELETE FROM map_places WHERE clinic_id=? AND place_id=?').run(clinicId, b.placeId);
+      store.db.prepare('DELETE FROM map_place_ids WHERE clinic_id=? AND place_id=?').run(clinicId, b.placeId);
+    }
+    console.log(`Cleared a real-world lookup from ${invented.length} illustrative ${invented.length === 1 ? 'business' : 'businesses'}: ${invented.map(b => b.name).join(', ')}.`);
+    console.log('Those are invented names. They keep their own made-up positions and are never looked up.\n');
+  }
+
+  const all = everything.filter(b => b.demo !== 1);
   const fresh = (b: typeof all[number]) => b.placeId && b.lat !== null && b.geoAt !== null && Date.now() - b.geoAt < window;
   const todo = values.force ? all : all.filter(b => !fresh(b));
 
-  console.log(`${clinic.name} (${clinicId}) — ${all.length} businesses, ${todo.length} to look up.`);
+  const skipped = everything.length - all.length;
+  console.log(`${clinic.name} (${clinicId}) — ${all.length} real ${all.length === 1 ? 'business' : 'businesses'}, ${todo.length} to look up.`);
+  if (skipped) console.log(`  ${skipped} illustrative ${skipped === 1 ? 'business is' : 'businesses are'} left alone.`);
   if (!all.length) { console.log('This account has no businesses yet. Release a batch first, then run this again.'); process.exit(0); }
   if (!todo.length) { console.log('Every one already has a current coordinate. Nothing to do.'); process.exit(0); }
   if (dryRun) console.log('DRY RUN: Google will be asked, but nothing will be written.\n');
@@ -93,7 +133,7 @@ try {
     let found;
     try {
       const results = await nearby({ textQuery: query, maxResultCount: 3 }, TEXT_URL);
-      found = results.map(normalizePlace).find(p => p && agrees(b.address, p.address)) ?? null;
+      found = results.map(normalizePlace).find(p => p && agrees(b.name, b.address, p.name, p.address)) ?? null;
     } catch (error) {
       console.log(`  ✗ ${b.name}: ${(error as Error).message}`);
       refused.push(b.name);
