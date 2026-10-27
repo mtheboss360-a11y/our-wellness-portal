@@ -49,7 +49,7 @@ function SignIn({ config }: { config: PublicPortal }) {
     try {
       const result = await login({ data: credentials });
       if (!result.ok) setError(result.message);
-      else await router.invalidate();
+      else { endSession(); await router.invalidate(); }
     } catch { setError('We couldn’t sign you in just now. Please try again.'); }
     finally { setBusy(false); }
   }
@@ -118,10 +118,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     return () => { document.removeEventListener('visibilitychange', refresh); window.clearInterval(interval); };
   }, [router]);
   async function leave() {
-    // The next sign-in starts at its own landing screen, not on this one's last page.
-    endSession();
     setSigningOut(true); setError('');
-    try { await logout(); router.clearCache(); await router.invalidate(); }
+    try { await logout(); endSession(); router.clearCache(); await router.invalidate(); }
     catch { setError('We couldn’t sign you out. Please try again.'); }
     finally { setSigningOut(false); }
   }
