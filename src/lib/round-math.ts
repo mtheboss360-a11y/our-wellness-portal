@@ -21,6 +21,9 @@ import {
 
 export { clockOf, durationLabel, WEEKDAY } from './agenda-math';
 
+/** Straight-line miles, for a radius filter. Not a driving distance and not sold as one. */
+export { milesBetween as milesFrom } from './agenda-math';
+
 export type RoundStatus = 'scheduled' | 'done' | 'draft';
 
 export type Round = {

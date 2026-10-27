@@ -102,7 +102,8 @@ export function createPortalServer(options: Options) {
           // network tab can read what it returns. So the server decides, every request.
           const role = store.roleOf(cookie);
           const fieldWork = store.mayDoFieldWork(role);
-          const refuse = (what: string) => json(response, 403, { error: `A ${role} account cannot ${what}.` });
+          const article = role === 'owner' || role === 'admin' || role === 'unassigned' ? 'An' : 'A';
+          const refuse = (what: string) => json(response, 403, { error: `${article} ${role} account cannot ${what}.` });
           const who = store.db.prepare('SELECT display_name FROM users WHERE clinic_id=? AND display_name<>\'\' LIMIT 1')
             .get(clinic.id) as { display_name: string } | undefined;
 

@@ -90,7 +90,7 @@ test('a practice owner cannot record a visit', async () => {
     businessId: p.businessId, visitedOn: '2026-10-27', outcome: 'interested',
   });
   assert.equal(res.status, 403);
-  assert.match((await res.json()).error, /owner account cannot record a visit/);
+  assert.match((await res.json()).error, /An owner account cannot record a visit/);
   assert.equal(p.store.outreach.visits('hyline').length, 0, 'and nothing was written');
   await p.close();
 });

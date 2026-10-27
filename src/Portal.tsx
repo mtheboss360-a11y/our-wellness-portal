@@ -8,6 +8,7 @@ import Drivers from './Drivers';
 import BakeryNetwork from './BakeryNetwork';
 import DashboardHome from './Dashboard';
 import Overview from './Overview';
+import OwnerDashboard from './OwnerDashboard';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
 import PageStage from './PageStage';
@@ -115,17 +116,17 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   }
   const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
     { id: 'home', label: 'Dashboard', icon: 'home' },
-    ...(plan === 'b' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'sunrise' as IconName }] : []),
+    ...(plan === 'b' && data.role !== 'owner' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'sunrise' as IconName }] : []),
     ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'shop' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
     ...(plan === 'b' ? [{ id: 'history' as typeof view, label: 'Visit history', icon: 'clock' as IconName }] : []),
     ...(plan === 'b' ? [{ id: 'performance' as typeof view, label: 'Performance', icon: 'trophy' as IconName }] : []),
-    ...(plan === 'b' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
+    ...(plan === 'b' && data.role !== 'owner' ? [{ id: 'notes' as typeof view, label: 'Route notes', icon: 'notebook' as IconName }] : []),
     { id: 'network', label: 'Referral network', icon: 'pin' },
     ...(plan === 'a' ? [{ id: 'bakeries' as typeof view, label: 'Bakery network', icon: 'cake' as IconName }] : []),
   ];
-  return <div className={`portal-page portal-shell ${plan === 'b' ? 'plan-b' : ''} ${plan === 'b' && view === 'home' ? 'is-overview' : ''}`}>
+  return <div className={`portal-page portal-shell ${plan === 'b' ? 'plan-b' : ''} ${plan === 'b' && view === 'home' && data.role !== 'owner' ? 'is-overview' : ''}`}>
     <a className="skip-link" href="#report">Skip to the page</a>
     {/* The rail. On a phone it lies down under the brand and scrolls sideways. */}
     <aside className="rail">
@@ -156,8 +157,11 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       : view === 'performance' ? <Performance today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'home' ? (plan === 'b'
-          ? <Overview clinicName={data.clinic?.name ?? data.config.name} today={data.today}
-              staffName={data.user?.name ?? null} onGo={setView}/>
+          ? (data.role === 'owner'
+              ? <OwnerDashboard clinicName={data.clinic?.name ?? data.config.name} today={data.today}
+                  ownerName={data.user?.name ?? null} onGo={setView}/>
+              : <Overview clinicName={data.clinic?.name ?? data.config.name} today={data.today}
+                  staffName={data.user?.name ?? null} onGo={setView}/>)
           : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>
