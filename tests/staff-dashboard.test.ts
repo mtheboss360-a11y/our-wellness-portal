@@ -1,0 +1,137 @@
+// THE FIRST SCREEN AGREEING WITH THE REST OF THE PORTAL.
+//
+// These tests exist because the dashboard and the agenda contradicted each other on a live
+// account: the dashboard announced a round on Wednesday while the agenda showed Tuesday, and
+// the two visit counts differed. Both were reading real data — different real data. So what
+// is tested here is agreement, not arithmetic.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { openStore } from '../server/store.ts';
+import type { Script } from '../server/outreach.ts';
+import { nextRound, staffMonth, owedACall, notYetVisited } from '../src/lib/staff-dashboard.ts';
+import { planRound } from '../src/lib/round-math.ts';
+
+const script = (): Script => ({
+  opening: 'o', introduction: 'i', value: 'v', ask: 'a',
+  objections: { busy: 'b', notInterested: 'n', alreadyPartnered: 'p' }, closing: 'c', followUp: 'f',
+});
+const at = (name: string, lat: number, lng: number) => ({
+  name, category: 'Studio', address: `${name} Street, Naperville, IL`, script: script(), lat, lng,
+});
+
+function world() {
+  const store = openStore(':memory:', false);
+  store.createClient('hyline', 'Hyline Dental', 'hyline', 'pw', 'b');
+  store.outreach.release('hyline', 'r1', 'Release 1', 't', [
+    at('Karve Pilates', 41.70, -88.16), at('Yoga Cave', 41.73, -88.19), at('Salon Fluxx', 41.76, -88.21),
+  ], false);
+  return store;
+}
+const ids = (store: ReturnType<typeof openStore>) =>
+  Object.fromEntries(store.outreach.businesses('hyline').map(b => [b.name, b.id]));
+
+test('the dashboard and the agenda pick the same round', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.planRound('hyline', { date: '2026-10-27', start: '09:00', staff: 'Alexis', businessIds: [id['Karve Pilates']] });
+  store.outreach.planRound('hyline', { date: '2026-11-03', start: '09:00', staff: 'Alexis', businessIds: [id['Yoga Cave']] });
+
+  const rounds = store.outreach.rounds('hyline');
+  const chosen = nextRound(rounds, '2026-10-26');
+  assert.equal(chosen!.date, '2026-10-27', 'the soonest round that has not passed');
+
+  // The agenda picks the same way: first scheduled round on or after today.
+  const agendaPick = [...rounds].filter(r => r.date >= '2026-10-26').sort((a, b) => a.date.localeCompare(b.date))[0];
+  assert.equal(chosen!.id, agendaPick.id);
+  store.close();
+});
+
+test('two rounds on one day: the fuller one is the one somebody meant', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.planRound('hyline', { date: '2026-10-27', start: '09:00', staff: 'Alexis', businessIds: [id['Karve Pilates']] });
+  store.outreach.planRound('hyline', { date: '2026-10-27', start: '09:00', staff: 'Alexis',
+    businessIds: [id['Karve Pilates'], id['Yoga Cave'], id['Salon Fluxx']] });
+
+  const chosen = nextRound(store.outreach.rounds('hyline'), '2026-10-26');
+  assert.equal(chosen!.stops.length, 3);
+  store.close();
+});
+
+test('with every round in the past it shows the most recent rather than nothing', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.planRound('hyline', { date: '2026-09-01', start: '09:00', staff: 'Alexis', businessIds: [id['Karve Pilates']] });
+  store.outreach.planRound('hyline', { date: '2026-10-01', start: '09:00', staff: 'Alexis', businessIds: [id['Yoga Cave']] });
+  assert.equal(nextRound(store.outreach.rounds('hyline'), '2026-10-26')!.date, '2026-10-01');
+  assert.equal(nextRound([], '2026-10-26'), null);
+  store.close();
+});
+
+test('the dashboard month and the round both count the same recorded visits', () => {
+  const store = world();
+  const id = ids(store);
+  const round = store.outreach.planRound('hyline', {
+    date: '2026-10-27', start: '09:00', staff: 'Alexis',
+    businessIds: [id['Karve Pilates'], id['Yoga Cave']],
+  });
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'interested', materials: 20, note: '', nextAction: '', followUpOn: '2026-11-10',
+  });
+
+  const visits = store.outreach.visits('hyline');
+  const month = staffMonth(visits, store.outreach.businesses('hyline'), '2026-10-27');
+  const plan = planRound({ lat: 41.68, lng: -88.15 }, round, visits, { today: '2026-10-27' });
+
+  assert.equal(month.visits, 1);
+  assert.equal(month.materials, 20);
+  assert.equal(plan.completed, 1, 'the agenda agrees one stop is done');
+  assert.equal(month.notContacted, 2, 'the two nobody has been to');
+  store.close();
+});
+
+test('a follow-up stops being due once somebody goes back', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-01', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'follow-up', materials: 5, note: '', nextAction: '', followUpOn: '2026-10-15',
+  });
+
+  let visits = store.outreach.visits('hyline');
+  assert.equal(staffMonth(visits, [], '2026-10-26').followUpsDue, 1);
+  assert.equal(owedACall(visits, '2026-10-26')[0].businessName, 'Karve Pilates');
+
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-20', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'partner', materials: 10, note: '', nextAction: '', followUpOn: null,
+  });
+  visits = store.outreach.visits('hyline');
+  assert.equal(staffMonth(visits, [], '2026-10-26').followUpsDue, 0, 'somebody went back');
+  assert.deepEqual(owedACall(visits, '2026-10-26'), []);
+  store.close();
+});
+
+test('a follow-up dated in the future is not due yet', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-26', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'interested', materials: 5, note: '', nextAction: '', followUpOn: '2026-11-09',
+  });
+  assert.equal(staffMonth(store.outreach.visits('hyline'), [], '2026-10-26').followUpsDue, 0);
+  store.close();
+});
+
+test('the not-contacted list only holds businesses nobody has visited', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-26', spokeWith: '',
+    contactRole: '', outcome: 'materials', materials: 8, note: '', nextAction: '', followUpOn: null,
+  });
+  const left = notYetVisited(store.outreach.businesses('hyline'));
+  assert.deepEqual(left.map(b => b.name).sort(), ['Salon Fluxx', 'Yoga Cave']);
+  store.close();
+});

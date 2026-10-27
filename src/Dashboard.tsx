@@ -5,18 +5,20 @@
 // Google Places is not configured, the tile says so plainly instead of showing a zero — a zero
 // reads as "nothing happened", and "nothing recorded" is a different statement.
 import { useEffect, useState } from 'react';
-import { getField, getNetworkMap } from './lib/api';
+import { getField, getNetworkMap, getRounds, getBusinesses, type Business, type Visit } from './lib/api';
 import type { FieldLog } from '../data/field-data';
 import type { NetworkMapPayload } from './lib/network-math';
 import { mapsPlaceUrl } from './lib/network-math';
 import { dayLabel, driverOf, timeLabel, CATEGORY_LABEL } from './lib/field-math';
 import { Icon, type IconName } from './Icons';
-import { agenda, durationLabel } from './lib/agenda-math';
+import { agenda, clockOf, durationLabel } from './lib/agenda-math';
+import { planRound as layOutRound, type Round } from './lib/round-math';
+import { nextRound, staffMonth, owedACall, notYetVisited } from './lib/staff-dashboard';
 import {
   followUps, monthLabel, nextAction, opportunities, participating, thisMonth, type NextAction,
 } from './lib/dashboard-math';
 
-type View = 'home' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries';
+type View = 'home' | 'agenda' | 'businesses' | 'history' | 'performance' | 'report' | 'drivers' | 'notes' | 'network' | 'bakeries';
 type Props = { clinicName: string; today: string; plan: 'a' | 'b'; userName?: string | null; onGo: (view: View) => void };
 
 function Tile({ title, note, children, action }: { title: string; note?: string; children: React.ReactNode; action?: React.ReactNode }) {
@@ -60,21 +62,33 @@ function Figure({ value, label, note, unknown, go, goLabel, icon, lead }: {
 export default function Dashboard({ clinicName, today, plan, userName, onGo }: Props) {
   const [log, setLog] = useState<FieldLog | null>(null);
   const [map, setMap] = useState<NetworkMapPayload | null>(null);
+  // The released businesses, the rounds booked from them and the visits recorded against them.
+  // Where a practice has these, they are what the dashboard counts — the same records the
+  // agenda, the history and the performance pages read.
+  const [work, setWork] = useState<{ rounds: Round[]; visits: Visit[]; businesses: Business[]; clinic: { lat: number; lng: number } | null } | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     let live = true;
     // Both are optional: a clinic can have a field log and no map, or a map and no log. One
     // failing must not blank the other, so each settles on its own.
-    void Promise.allSettled([getField(), getNetworkMap()]).then(([field, network]) => {
+    void Promise.allSettled([getField(), getNetworkMap(), getRounds(), getBusinesses()])
+      .then(([field, network, rounds, businesses]) => {
       if (!live) return;
       if (field.status === 'fulfilled') setLog(field.value.field);
       if (network.status === 'fulfilled') setMap(network.value);
-      setState(field.status === 'rejected' && network.status === 'rejected' ? 'error' : 'ready');
+      if (rounds.status === 'fulfilled' && businesses.status === 'fulfilled') {
+        setWork({ rounds: rounds.value.rounds, visits: rounds.value.visits,
+          businesses: businesses.value.businesses, clinic: rounds.value.clinic });
+      }
+      setState(field.status === 'rejected' && network.status === 'rejected' && rounds.status === 'rejected' ? 'error' : 'ready');
     });
     return () => { live = false; };
   }, []);
 
+  const onOutreach = (work?.businesses.length ?? 0) > 0;
+  const staff6 = work ? staffMonth(work.visits, work.businesses, today) : null;
+  const booked = work ? nextRound(work.rounds, today) : null;
   const month = thisMonth(log, today);
   const due = followUps(log);
   const partners = participating(log);
@@ -133,29 +147,57 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
       </nav>
     </header>}
 
-    <NextUp action={action} log={log} plan={plan} onGo={onGo}/>
+    {onOutreach && booked
+      ? <BookedRound round={booked} visits={work!.visits} clinic={work!.clinic} today={today} onGo={onGo}/>
+      : <NextUp action={action} log={log} plan={plan} onGo={onGo}/>}
     </div>
 
-    <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-      <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} icon="clinic" lead
-        unknown={!picks.length && placesOff} go={() => onGo('network')} goLabel="See them on the map"/>
-      <Figure value={month.visits} label="Visits recorded" note="Completed stops" icon="check"
-        unknown={!month.hasLog} go={() => onGo('drivers')} goLabel="See the rounds"/>
-      <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" icon="calendar"
-        unknown={!month.hasLog} go={() => onGo(plan === 'b' ? 'notes' : 'drivers')} goLabel="See who is owed a call"/>
-      <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} icon="sparkle"
-        unknown={!month.hasLog} go={() => onGo('report')} goLabel="See the report"/>
-    </dl>
+    {onOutreach && staff6
+      ? <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
+          <Figure value={staff6.notContacted} label="Not contacted" note={`of ${staff6.assigned} assigned`} icon="clinic" lead
+            go={() => onGo('businesses')} goLabel="See them"/>
+          <Figure value={staff6.visits} label="Visits recorded" note="This month" icon="check"
+            go={() => onGo('history')} goLabel="See the history"/>
+          <Figure value={staff6.followUpsDue} label="Follow-ups due" note="Nobody has been back" icon="calendar"
+            go={() => onGo('history')} goLabel="See who is owed a call"/>
+          <Figure value={staff6.materials} label="Materials dropped" note="This month" icon="sparkle"
+            go={() => onGo('performance')} goLabel="See performance"/>
+        </dl>
+      : <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
+          <Figure value={picks.length} label="New businesses" note={picks.length ? 'Worth approaching' : undefined} icon="clinic" lead
+            unknown={!picks.length && placesOff} go={() => onGo('network')} goLabel="See them on the map"/>
+          <Figure value={month.visits} label="Visits recorded" note="Completed stops" icon="check"
+            unknown={!month.hasLog} go={() => onGo('drivers')} goLabel="See the rounds"/>
+          <Figure value={month.followUpsDue} label="Follow-ups due" note="Asked for another call" icon="calendar"
+            unknown={!month.hasLog} go={() => onGo(plan === 'b' ? 'notes' : 'drivers')} goLabel="See who is owed a call"/>
+          <Figure value={month.signups} label="Tap sign-ups" note={month.booked ? `${month.booked} booked by your desk` : 'Responses, not appointments'} icon="sparkle"
+            unknown={!month.hasLog} go={() => onGo('report')} goLabel="See the report"/>
+        </dl>}
 
     <div className="dash-grid">
       <Tile
-        title="New businesses"
-        note="Recommended by the portal. None of these has agreed to anything yet."
-        action={<button className="dash-link" onClick={() => onGo('network')}>Open the map</button>}>
+        title={onOutreach ? 'Not contacted yet' : 'New businesses'}
+        note={onOutreach
+          ? 'Assigned to you, and nobody has been yet.'
+          : 'Recommended by the portal. None of these has agreed to anything yet.'}
+        action={<button className="dash-link" onClick={() => onGo(onOutreach ? 'businesses' : 'network')}>
+          {onOutreach ? 'See them all' : 'Open the map'}</button>}>
         {/* What the tile has comes first. A demo account is served a fixed fictional map, so it
             has businesses to show even where Google Places is not configured; asking about the
             key before looking at the list told it there was nothing when there was. */}
-        {picks.length
+        {onOutreach
+          ? (notYetVisited(work!.businesses).length
+              ? <ul className="dash-list">{notYetVisited(work!.businesses).map(business => <li key={business.id}>
+                  <div className="dash-row">
+                    <div className="dash-row-main">
+                      <strong>{business.name}</strong>
+                      <span>{business.category} · {business.address}</span>
+                    </div>
+                    <Pill tone="neutral">Not contacted</Pill>
+                  </div>
+                </li>)}</ul>
+              : <p className="dash-empty">Every business assigned to you has been visited at least once.</p>)
+          : picks.length
           ? <ul className="dash-list">{picks.map(business => <li key={business.placeId}>
                   <div className="dash-row">
                     <div className="dash-row-main">
@@ -179,8 +221,21 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
       <Tile
         title="Follow-ups due"
         note="Visits that ended with a reason to come back."
-        action={due.length ? <button className="dash-link" onClick={() => onGo('drivers')}>Plan a round</button> : undefined}>
-        {!month.hasLog
+        action={<button className="dash-link" onClick={() => onGo(onOutreach ? 'history' : 'drivers')}>
+          {onOutreach ? 'See the history' : 'Plan a round'}</button>}>
+        {onOutreach
+          ? (owedACall(work!.visits, today).length
+              ? <ul className="dash-list">{owedACall(work!.visits, today).map(visit => <li key={visit.id}>
+                  <div className="dash-row">
+                    <div className="dash-row-main">
+                      <strong>{visit.businessName}</strong>
+                      <span>Due {dayLabel(visit.followUpOn!)}{visit.spokeWith ? ` · ask for ${visit.spokeWith}` : ''}</span>
+                    </div>
+                    <Pill tone="warn">Follow-up due</Pill>
+                  </div>
+                </li>)}</ul>
+              : <p className="dash-empty">Nothing is owed a second call right now.</p>)
+          : !month.hasLog
           ? <p className="dash-empty">No field log yet.</p>
           : !due.length
             ? <p className="dash-empty">Nothing owed a second call right now.</p>
@@ -215,6 +270,38 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
       </Tile>
     </div>
   </div>;
+}
+
+/**
+ * The round that is actually booked. Laid out by the same function the agenda uses, so the
+ * two screens cannot report different days, different stop counts or different durations.
+ */
+function BookedRound({ round, visits, clinic, today, onGo }: {
+  round: Round; visits: Visit[]; clinic: { lat: number; lng: number } | null;
+  today: string; onGo: (view: View) => void;
+}) {
+  const plan = layOutRound(clinic, round, visits, { today });
+  const left = plan.stops.length - plan.completed;
+  return <section className="dash-next" aria-labelledby="next-title">
+    <div>
+      <p className="dash-eyebrow">{round.date === today ? 'Today' : 'Next'}</p>
+      <h3 id="next-title">
+        {plan.completed === plan.stops.length && plan.stops.length > 0
+          ? `${dayLabel(round.date)} is done — all ${plan.stops.length} stops recorded.`
+          : `A round is booked for ${dayLabel(round.date)}.`}
+      </h3>
+      <p className="dash-next-note">{[
+        `${plan.stops.length} ${plan.stops.length === 1 ? 'stop' : 'stops'}`,
+        round.staff,
+        `from ${clockOf(plan.startsAt)}`,
+        `about ${durationLabel(plan.totalMinutes)}`,
+        plan.completed ? `${plan.completed} done, ${left} to go` : null,
+      ].filter(Boolean).join(' · ')}</p>
+    </div>
+    <button className="dash-btn dash-btn-solid" onClick={() => onGo('agenda')}>
+      {plan.completed ? 'Open the round' : 'Open the agenda'}
+    </button>
+  </section>;
 }
 
 /** The one panel that tells a client what to do, pointing at a screen that exists. */

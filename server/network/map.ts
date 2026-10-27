@@ -11,7 +11,7 @@
 import type { PortalStore } from '../store';
 import { discoverNearby, configured, PlacesError } from './places';
 import { isSampleClinic, sampleMap, sampleMapAt } from './sample';
-import { DEFAULT_RADIUS_MILES } from './config';
+import { GOOGLE_RETENTION_DAYS, DEFAULT_RADIUS_MILES } from './config';
 
 export const autoDiscoverEnabled = () => process.env.NETWORK_MAP_AUTO_DISCOVER !== 'false';
 
@@ -36,13 +36,44 @@ export async function ensureDiscovery(store: PortalStore, clinicId: string, { fo
     if (!keepAddress && (!here || here.lat !== sample.clinic.lat || here.lng !== sample.clinic.lng))
       store.setClinicLocation({ clinicId, label: sample.clinic.label, lat: sample.clinic.lat, lng: sample.clinic.lng, radiusMiles: DEFAULT_RADIUS_MILES, placeId: null, competitorCategories: [] });
     const places = keepAddress ? sampleMapAt(here) : sample.places;
+
+    // A demo account's fictional set sits AROUND the practice's real released businesses; it
+    // does not replace them. This used to wipe the cache whenever it saw anything without a
+    // "sample-" prefix, which is exactly what a geocoded real business looks like — so the
+    // five verified Naperville businesses disappeared from the orb every time it ran.
+    // The practice's own released businesses, rebuilt as map places from the rows we hold.
+    // An earlier version of this function wiped them, so preserving what is cached is not
+    // enough — they have to be put back. Each keeps the expiry of the fetch it came from, so
+    // rewriting the cache cannot extend how long a Google coordinate is held.
+    const window = GOOGLE_RETENTION_DAYS * 86_400_000;
+    const mine = store.outreach.businesses(clinicId).filter(business =>
+      business.demo !== 1 && business.placeId && business.lat !== null && business.lng !== null &&
+      business.geoAt !== null && Date.now() - business.geoAt < window);
+    const real = new Set(mine.map(business => business.placeId!));
+
     const held = store.cachedDiscovery(clinicId);
-    if (held.length !== places.length || held.some(place => !place.placeId.startsWith('sample-'))) {
-      store.clearDiscovery(clinicId);
-      store.saveDiscovery(clinicId, places);
-      store.markRefresh(clinicId, 'ok', '', places.length);
+    for (const business of mine) {
+      if (held.some(place => place.placeId === business.placeId)) continue;
+      store.saveDiscovery(clinicId, [{
+        placeId: business.placeId!, name: business.name, address: business.address,
+        lat: business.lat, lng: business.lng, types: [], primaryType: null,
+        businessStatus: 'OPERATIONAL', rating: null, reviewCount: null, googleMapsUri: null,
+      }], Date.now(), business.geoAt! + window);
     }
-    return { ran: false, status: 'skipped', detail: '', found: places.length };
+
+    const keep = new Set([...places.map(place => place.placeId), ...real]);
+
+    // Only what belongs to neither set goes. Re-saving a real place would restart its 30-day
+    // retention clock, and that clock is Google's, not ours to reset.
+    const strays = held.filter(place => !keep.has(place.placeId)).map(place => place.placeId);
+    if (strays.length) store.forgetPlaces(clinicId, strays);
+
+    const missing = places.filter(place => !held.some(cached => cached.placeId === place.placeId));
+    if (missing.length) store.saveDiscovery(clinicId, missing);
+
+    const total = places.length + mine.length;
+    if (strays.length || missing.length) store.markRefresh(clinicId, 'ok', '', total);
+    return { ran: false, status: 'skipped', detail: '', found: total };
   }
   const location = store.clinicLocation(clinicId);
   if (!location) return { ran: false, status: 'skipped', detail: 'This clinic has no saved map location yet.', found: 0 };

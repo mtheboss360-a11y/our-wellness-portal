@@ -88,8 +88,14 @@ export function openNetwork(db: DatabaseSync) {
       .map(row => ({ id: row.id, kind: row.kind as RecordKind, ownerClinicId: row.owner_clinic_id, placeId: row.place_id, nameKey: row.name_key, addressKey: row.address_key, note: row.note }));
   }
 
-  function saveDiscovery(clinicId: string, places: DiscoveredPlace[], now = Date.now()) {
-    const expires = now + GOOGLE_RETENTION_DAYS * DAY;
+  /**
+   * @param expiresAt when this content must be gone by. Defaults to the full window from now,
+   *   which is right for something just fetched. A caller re-seeding the cache from a
+   *   coordinate it already held passes the ORIGINAL fetch time's expiry instead — rewriting a
+   *   row is not a new fetch, and must not restart Google's retention clock.
+   */
+  function saveDiscovery(clinicId: string, places: DiscoveredPlace[], now = Date.now(), expiresAt?: number) {
+    const expires = expiresAt ?? now + GOOGLE_RETENTION_DAYS * DAY;
     db.exec('BEGIN IMMEDIATE');
     try {
       for (const place of places) {
@@ -104,6 +110,20 @@ export function openNetwork(db: DatabaseSync) {
 
   /** Drop every cached business for a clinic (the sample clinic, before its fixed set is loaded). */
   function clearDiscovery(clinicId: string) { db.prepare('DELETE FROM map_places WHERE clinic_id=?').run(clinicId); }
+
+  /**
+   * Forget particular cached places, leaving the rest alone.
+   *
+   * Refreshing a demo map used to clear the whole cache and write the fictional set back. That
+   * also threw away the practice's real geocoded businesses, and re-saving them would have
+   * restarted their 30-day retention clock — which is not ours to restart. This removes only
+   * what is actually stale.
+   */
+  function forgetPlaces(clinicId: string, placeIds: string[]) {
+    if (!placeIds.length) return;
+    const statement = db.prepare('DELETE FROM map_places WHERE clinic_id=? AND place_id=?');
+    for (const placeId of placeIds) statement.run(clinicId, placeId);
+  }
 
   function cachedDiscovery(clinicId: string, now = Date.now()): DiscoveredPlace[] {
     purgeExpired(now);
@@ -266,7 +286,7 @@ export function openNetwork(db: DatabaseSync) {
     };
   }
 
-  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, clearDiscovery, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
+  return { setClinicLocation, clinicLocation, saveNetworkRecords, networkRecords, saveDiscovery, clearDiscovery, forgetPlaces, cachedDiscovery, markRefresh, lastRefresh, refreshDue, businesses, selection, saveSelection, routeRequests, createRouteRequest, allRouteRequests, decideRouteRequest, networkMap, purgeExpired };
 }
 
 export type NetworkStore = ReturnType<typeof openNetwork>;

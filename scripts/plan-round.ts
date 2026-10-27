@@ -20,7 +20,7 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 const { values } = parseArgs({ options: {
   clinic: { type: 'string' }, date: { type: 'string' }, start: { type: 'string' },
   staff: { type: 'string' }, only: { type: 'string' }, note: { type: 'string' },
-  demo: { type: 'boolean' }, 'include-visited': { type: 'boolean' },
+  demo: { type: 'boolean' }, 'include-visited': { type: 'boolean' }, another: { type: 'boolean' },
 } });
 
 const clinicId = values.clinic ?? '';
@@ -60,7 +60,13 @@ try {
   const where = store.clinicLocation(clinicId);
   if (where) chosen = suggestOrder({ lat: where.lat, lng: where.lng }, chosen);
 
+  // Re-planning the same person's round on the same day replaces it. Booking a second one for
+  // the same date left both in the portal's day picker with no way to tell them apart.
+  const already = store.outreach.rounds(clinicId).find(r => r.date === date && r.staff === staff);
+  if (already && !values.another) console.log(`Replacing the round already booked for ${staff} on ${date}.`);
+
   const round = store.outreach.planRound(clinicId, {
+    id: already && !values.another ? already.id : undefined,
     date, start, staff, businessIds: chosen.map(b => b.id), note: values.note ?? '', demo: values.demo === true,
   });
 
