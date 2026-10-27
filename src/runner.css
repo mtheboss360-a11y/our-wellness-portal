@@ -40,11 +40,9 @@
   border-bottom:1px solid rgba(255,255,255,.12);
 }
 @media (min-width:640px){ .rr-top{ padding:0 24px } }
-.rr-wordmark{ display:flex; align-items:center; gap:9px; min-width:0; flex-shrink:0 }
-.rr-plate{ display:inline-flex; align-items:center; background:var(--ivory); border-radius:8px; padding:5px 9px }
-.rr-plate img{ height:18px; width:auto; display:block }
-.rr-wordmark b{ font-size:11px; font-weight:750; letter-spacing:.14em; text-transform:uppercase; color:var(--sage); white-space:nowrap }
-@media (max-width:520px){ .rr-wordmark b{ display:none } }
+.rr-wordmark{ display:flex; align-items:center; min-width:0; flex-shrink:0 }
+.rr-mark{ height:26px; width:auto; display:block }
+@media (max-width:520px){ .rr-mark{ height:22px } }
 
 .rr-nav{ display:flex; align-items:center; gap:2px; margin-left:6px; min-width:0; overflow-x:auto; scrollbar-width:none }
 .rr-nav::-webkit-scrollbar{ display:none }

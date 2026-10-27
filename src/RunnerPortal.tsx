@@ -77,11 +77,11 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
   return <div className="rr">
     <a className="rr-sr" href="#rr-main">Skip to the page</a>
     <header className="rr-top">
+      {/* The mark alone, in white and gold: it reads on the forest bar without a plate behind
+          it, and the name is on the sign-in screen rather than said again on every page. */}
       <div className="rr-wordmark">
-        <span className="rr-plate">
-          <img src="/assets/owo-logo.png" alt="Our Wellness Network" width="1579" height="574"/>
-        </span>
-        <b>Route runner</b>
+        <img className="rr-mark" src="/assets/owo-mark-light.png" alt="Our Wellness Network"
+          width="1156" height="303"/>
       </div>
 
       <nav className="rr-nav" aria-label="Your account">
