@@ -13,6 +13,7 @@ import { getRounds, type Business, type Round, type Visit } from './lib/api';
 import { planRound, clockOf, durationLabel, WEEKDAY, type RoundPlan, type PlannedStop } from './lib/round-math';
 import { Icon } from './Icons';
 import GuidedVisit from './GuidedVisit';
+import RoutePlot from './RoutePlot';
 
 const dayLabel = (iso: string) => new Date(`${iso}T12:00:00Z`)
   .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -110,23 +111,29 @@ function Plan({ plan, rounds, current, onPick, onOpen }: {
       </button>)}
     </div>}
 
+    {/* One band: the day, how far through it, and the way in. Everything a rep checks before
+        setting off, without scrolling past three cards to find it. */}
     <header className="ra-head">
-      <div>
+      <div className="ra-head-main">
         <p className="dash-eyebrow">{round.status === 'done' ? 'Round' : 'Next round'}</p>
         <h2>{dayLabel(round.date)}</h2>
-        <p className="ra-sub">{round.staff ? `${round.staff} · ` : ''}{total} {total === 1 ? 'stop' : 'stops'} · from {clockOf(plan.startsAt)}</p>
+        <ul className="ra-facts">
+          <li>{round.staff || 'Unassigned'}</li>
+          <li>{total} {total === 1 ? 'stop' : 'stops'}</li>
+          <li>{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</li>
+          <li>{durationLabel(plan.totalMinutes)}</li>
+        </ul>
       </div>
       {next && <button className="gv-go" onClick={() => onOpen(next.business.id)}>
         {completed ? 'Next stop' : 'Start the round'}<Icon name="arrow" size={17}/>
       </button>}
     </header>
 
-    {/* How far through, counted from visits actually recorded — not from anything this screen holds. */}
     <div className="ra-progress">
       <div className="ra-bar" role="img" aria-label={`${completed} of ${total} stops completed`}>
         <span style={{ width: `${through}%` }}/>
       </div>
-      <p>{completed} of {total} stops completed{completed === total && total > 0 ? ' — the round is done.' : ''}</p>
+      <p>{completed} of {total} completed{completed === total && total > 0 ? ' — the round is done.' : ''}</p>
     </div>
 
     <p className={`agenda-hours ${opening.closed ? 'is-shut' : ''}`}>
@@ -138,41 +145,57 @@ function Plan({ plan, rounds, current, onPick, onOpen }: {
           : `${WEEKDAY[opening.weekday]}. The round starts at ${clockOf(plan.startsAt)}.`}
     </p>
 
-    <dl className="agenda-totals">
-      <div><dt>Expected</dt><dd>{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</dd></div>
-      <div><dt>Total</dt><dd>{durationLabel(plan.totalMinutes)}</dd></div>
-      <div><dt>At stops</dt><dd>{durationLabel(plan.visitingMinutes)}</dd></div>
-      <div><dt>Driving</dt><dd>{durationLabel(plan.drivingMinutes)}</dd></div>
-    </dl>
+    <div className="ra-layout">
+      {/* The timeline. Times run down the gutter so the day can be read at a glance without
+          looking inside a single card. */}
+      <ol className="ra-stops">
+        <li className="ra-origin">
+          <span className="ra-time">{clockOf(plan.startsAt)}</span>
+          <span className="ra-node ra-node-home"/>
+          <div className="ra-body"><strong>Leave the practice</strong></div>
+        </li>
+        {stops.map(stop => <Stop key={stop.business.id} stop={stop} onOpen={() => onOpen(stop.business.id)}/>)}
+      </ol>
 
-    <p className="agenda-basis">
-      <strong>Times are estimates.</strong>{' '}
-      A stop is allowed {stops[0]?.visitLength ?? 20} minutes. Drive times come from the distance
-      between stops, not from a routed journey, so treat them as a way to plan a morning rather
-      than a promise.
-      {plan.unlocated.length > 0 && <>{' '}
-        <strong>{plan.unlocated.join(', ')}</strong> {plan.unlocated.length === 1 ? 'has' : 'have'} no
-        map position, so no drive time could be worked out for {plan.unlocated.length === 1 ? 'it' : 'them'}.
-      </>}
-    </p>
+      <aside className="ra-side">
+        <section className="ra-card">
+          <h3>The shape of the round</h3>
+          <RoutePlot stops={stops} clinic={plan.clinic} onPick={onOpen}/>
+        </section>
 
-    <ol className="ra-stops">
-      <li className="agenda-origin">
-        <span className="agenda-n">—</span>
-        <div><strong>Leave the practice</strong><span>{clockOf(plan.startsAt)}</span></div>
-      </li>
-      {stops.map(stop => <Stop key={stop.business.id} stop={stop} onOpen={() => onOpen(stop.business.id)}/>)}
-    </ol>
+        <section className="ra-card">
+          <h3>Round details</h3>
+          <dl className="ra-details">
+            <div><dt>Date</dt><dd>{dayLabel(round.date)}</dd></div>
+            <div><dt>Start</dt><dd>{clockOf(plan.startsAt)}</dd></div>
+            <div><dt>Total</dt><dd>{durationLabel(plan.totalMinutes)} <small>est.</small></dd></div>
+            <div><dt>Driving</dt><dd>{durationLabel(plan.drivingMinutes)} <small>est.</small></dd></div>
+            <div><dt>At stops</dt><dd>{durationLabel(plan.visitingMinutes)} <small>est.</small></dd></div>
+            <div><dt>Stops</dt><dd>{total}</dd></div>
+            <div><dt>Assigned to</dt><dd>{round.staff || '—'}</dd></div>
+          </dl>
+          <p className="ra-basis">
+            A stop is allowed {stops[0]?.visitLength ?? 20} minutes. Drive times come from the
+            distance between stops, not a routed journey.
+            {plan.unlocated.length > 0 && ` ${plan.unlocated.join(', ')} ${plan.unlocated.length === 1 ? 'has' : 'have'} no map position, so no drive time was worked out.`}
+          </p>
+        </section>
+      </aside>
+    </div>
   </div>;
 }
 
 function Stop({ stop, onOpen }: { stop: PlannedStop; onOpen: () => void }) {
   const { business, visit } = stop;
   return <li className={`ra-stop is-${stop.status}`}>
-    <span className="agenda-n">{stop.done ? <Icon name="check" size={15}/> : stop.index + 1}</span>
+    <span className="ra-time">{stop.located ? clockOf(stop.arriveAt) : '—'}</span>
+    <span className={`ra-node ${stop.done ? 'is-done' : ''}`}>
+      {stop.done ? <Icon name="check" size={13}/> : stop.index + 1}
+    </span>
+
     <div className="ra-body">
       <div className="ra-top">
-        <strong>{business.name}</strong>
+        <strong>{business.name}{business.demo === 1 && <span className="sample-tag">Sample</span>}</strong>
         <span className={`dash-pill dash-pill-${stop.done ? 'good' : stop.status === 'in-progress' ? 'warn' : 'neutral'}`}>
           {stop.done ? visit!.outcomeLabel : stop.status === 'in-progress' ? 'You should be here' : 'Upcoming'}
         </span>
@@ -183,22 +206,20 @@ function Stop({ stop, onOpen }: { stop: PlannedStop; onOpen: () => void }) {
         {stop.done
           ? <>Recorded{visit!.spokeWith ? ` · spoke with ${visit!.spokeWith}` : ''}{visit!.materials ? ` · ${visit!.materials} materials dropped` : ''}</>
           : <>
-              <b>{stop.located ? clockOf(stop.arriveAt) : '—'}</b>
-              <span>{stop.located ? 'planned arrival' : 'no map position, so no arrival time'}</span>
-              <i aria-hidden="true">·</i>
               <span>{durationLabel(stop.visitLength)} at the stop</span>
               {stop.driveFromPrevious !== null && <>
                 <i aria-hidden="true">·</i><span>{durationLabel(stop.driveFromPrevious)} drive</span>
               </>}
+              {!stop.located && <><i aria-hidden="true">·</i><span>no map position</span></>}
             </>}
       </p>
 
-      <div className="agenda-actions">
+      <div className="ra-actions">
         <a className="dash-btn" href={directionsTo(business)} target="_blank" rel="noreferrer noopener">
-          <Icon name="map" size={15}/>Directions
+          <Icon name="map" size={14}/>Directions
         </a>
         <button className={stop.done ? 'dash-btn' : 'gv-go gv-go-small'} onClick={onOpen}>
-          {stop.done ? 'Open the visit' : 'Start visit'}{!stop.done && <Icon name="arrow" size={15}/>}
+          {stop.done ? 'Open the visit' : 'Start visit'}{!stop.done && <Icon name="arrow" size={14}/>}
         </button>
       </div>
     </div>

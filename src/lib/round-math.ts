@@ -56,6 +56,8 @@ export type RoundPlan = {
   /** The first stop with no visit recorded: where the person should be going now. */
   next: PlannedStop | null;
   opening: { weekday: number; opens: string | null; closed: boolean; heldBack: boolean };
+  /** Where the round starts from, so a screen can draw it without fetching again. */
+  clinic: { lat: number; lng: number } | null;
   /** Stops with no coordinate, named so the screen can say which times it could not work out. */
   unlocated: string[];
 };
@@ -143,6 +145,7 @@ export function planRound(
     drivingMinutes: driving,
     visitingMinutes: visiting,
     completed: stops.filter(s => s.done).length,
+    clinic,
     next: stops.find(s => !s.done) ?? null,
     opening,
     unlocated,
