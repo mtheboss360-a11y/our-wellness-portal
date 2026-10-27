@@ -4,7 +4,8 @@
 import type { ReactElement } from 'react';
 export type IconName = 'dumbbell' | 'lotus' | 'scissors' | 'hand' | 'spine' | 'basket' | 'sparkle'
   | 'clinic' | 'search' | 'plus' | 'check' | 'minus' | 'up' | 'down' | 'calendar' | 'route' | 'map' | 'refresh' | 'back' | 'arrow' | 'pin' | 'clock' | 'info'
-  | 'people' | 'cake' | 'trophy' | 'close' | 'lock' | 'home' | 'chart' | 'notebook' | 'exit' | 'sunrise' | 'shop';
+  | 'people' | 'cake' | 'trophy' | 'close' | 'lock' | 'home' | 'chart' | 'notebook' | 'exit' | 'sunrise' | 'shop'
+  | 'grip' | 'truck' | 'box' | 'warn';
 
 const PATHS: Record<IconName, ReactElement> = {
   dumbbell: <><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></>,
@@ -41,6 +42,10 @@ const PATHS: Record<IconName, ReactElement> = {
   exit: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10"/></>,
   sunrise: <><path d="M12 3v4M5.6 8.6 8 11M18.4 8.6 16 11M3 18h3M18 18h3M8 18a4 4 0 0 1 8 0M2 22h20"/></>,
   shop: <><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5V20h16V9.5M9 20v-6h6v6M8 9.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></>,
+  grip: <><circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/></>,
+  truck: <><path d="M3 6h11v10H3zM14 9h4l3 4v3h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></>,
+  box: <><path d="M3 7.5 12 3.5l9 4v9l-9 4-9-4v-9ZM3 7.5l9 4 9-4M12 11.5v9"/></>,
+  warn: <><path d="M12 3.5 2.5 20.5h19L12 3.5ZM12 9.5v5M12 17.5v.4"/></>,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {

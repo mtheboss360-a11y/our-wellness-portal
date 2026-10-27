@@ -8,7 +8,14 @@ import type { FieldLog } from '../data/field-data';
 import { openNetwork } from './network/db';
 import { openBakeries } from './network/bakeries';
 import { openOutreach } from './outreach';
+import { openRunner } from './runner';
 export type PortalStore = ReturnType<typeof openStore>;
+/**
+ * WHAT A LOGIN IS FOR. A role is set by the team and read from the account row; it is never
+ * taken from a request. An account with no role keeps the access it had before roles existed.
+ */
+export const ROLES = ['admin', 'owner', 'staff', 'route_runner'] as const;
+export type Role = (typeof ROLES)[number];
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
 export function passwordHash(password: string, salt: string) { return scryptSync(password, salt, 64).toString('hex'); }
@@ -52,13 +59,15 @@ export function openStore(filename: string, enableSample = true) {
   const userColumns = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>).map(c => c.name);
   if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
   if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
-  // WHAT THIS PERSON IS ALLOWED TO DO. Three roles, and the plan is not one of them: 'a' and
+  // WHAT THIS PERSON IS ALLOWED TO DO. Four roles, and the plan is not one of them: 'a' and
   // 'b' say what a practice buys, which is a billing fact, and billing facts must never decide
   // who may read a visit script.
   //
   //   admin  — the platform. Every internal tool.
   //   owner  — the practice. Its own records and its own curated matches. No staff scripts.
-  //   staff  — the person who goes out. Their assigned work and the scripts for it.
+  //   staff  — the person who goes out for a practice. Their assigned work and its scripts.
+  //   route_runner — a field rep on the weekly planner. Their own routes and nothing else;
+  //            see RUNNER_ENDPOINTS in server/http.ts for what that means in practice.
   //
   // NULLABLE ON PURPOSE. Every account that existed before this column has no role, and the
   // server treats those exactly as it did yesterday — anything else would lock a live client
@@ -78,10 +87,12 @@ export function openStore(filename: string, enableSample = true) {
   const bakeries = openBakeries(db);
   // The released businesses, their scripts and the visits recorded against them.
   const outreach = openOutreach(db);
+  // Assignments, pickups, supplies and the order a runner drives their round in.
+  const runner = openRunner(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
-  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false, user: { displayName?: string; staffId?: string } = {}) {
+  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false, user: { displayName?: string; staffId?: string; role?: Role } = {}) {
     if (!username.trim()) throw new Error('A username is required.');
     if (!password) throw new Error('A password is required.');
     const salt = randomBytes(24).toString('hex');
@@ -90,9 +101,10 @@ export function openStore(filename: string, enableSample = true) {
       db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan,demo) VALUES (?,?,?,?)').run(clinicId, name, plan, demo ? 1 : 0);
       // A second account on an existing clinic must not quietly change what that clinic buys.
       db.prepare('UPDATE clinics SET plan=? WHERE id=? AND plan IS NULL').run(plan, clinicId);
-      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id) VALUES (?,?,?,?,?,?,?)')
+      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id,role) VALUES (?,?,?,?,?,?,?,?)')
         .run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt,
-             (user.displayName ?? '').trim(), user.staffId?.trim() || null);
+             (user.displayName ?? '').trim(), user.staffId?.trim() || null,
+             (ROLES as readonly string[]).includes(user.role ?? '') ? user.role! : null);
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
@@ -139,22 +151,22 @@ export function openStore(filename: string, enableSample = true) {
    * migration state, not a permission: `unassigned` is reported so it can be fixed, and the
    * two `may*` helpers below say plainly what it allows.
    */
-  function roleOf(token: string | undefined): 'admin' | 'owner' | 'staff' | 'unassigned' | null {
+  function roleOf(token: string | undefined): Role | 'unassigned' | null {
     const who = session(token);
     if (!who) return null;
-    return who.role === 'admin' || who.role === 'owner' || who.role === 'staff' ? who.role : 'unassigned';
+    return (ROLES as readonly string[]).includes(who.role ?? '') ? who.role as Role : 'unassigned';
   }
 
   /** Scripts, recording a visit, the round: the work of going out. Never an owner's. */
   const mayDoFieldWork = (role: ReturnType<typeof roleOf>) =>
-    role === 'staff' || role === 'admin' || role === 'unassigned';
+    role === 'staff' || role === 'route_runner' || role === 'admin' || role === 'unassigned';
 
   /** The practice's own view of itself. Not a staff member's. */
   const mayOwnPractice = (role: ReturnType<typeof roleOf>) =>
     role === 'owner' || role === 'admin' || role === 'unassigned';
 
   /** Set or clear a role. Clearing it returns the account to the legacy state. */
-  function setRole(username: string, role: 'admin' | 'owner' | 'staff' | null) {
+  function setRole(username: string, role: Role | null) {
     const changed = db.prepare('UPDATE users SET role=? WHERE email=?')
       .run(role, username.trim().toLowerCase());
     if (!changed.changes) throw new Error(`No login called "${username.trim().toLowerCase()}".`);
@@ -204,7 +216,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string; display_name: string; staff_id: string | null; role: string | null} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.id AS user_id,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; user_id: string; email: string; display_name: string; staff_id: string | null; role: string | null} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -244,5 +256,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, setPassword, setRole, logins, roleOf, mayDoFieldWork, mayOwnPractice, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, setPassword, setRole, logins, roleOf, mayDoFieldWork, mayOwnPractice, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, runner, close: () => db.close() };
 }

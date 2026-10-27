@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE ROUTE RUNNER'S PLANNER.
+
+   Everything here lives under `.rr` and every class is prefixed `rr-`, so the
+   planner cannot reach into the practice's portal and the portal's own design
+   system cannot reach into the planner. The two share the brand and nothing
+   else: this screen is held in one hand, outdoors, between two doors.
+
+   Forest green ground, ivory panels, gold used once per view. The values come
+   from the standalone planner this was built from, kept rather than redrawn.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.rr{
+  --forest:#09291f; --forest-2:#103a2b; --green:#1d6148;
+  --cream:#f7f5ee; --paper:#fffdfa; --gold:#caa658; --gold-2:#eedbb1;
+  --ink:#152b23; --muted:#6c7b72; --line:#e6e8df;
+  --danger:#a34c40; --r:17px;
+  --lift:0 18px 42px rgba(2,25,15,.12);
+  min-height:100dvh;
+  font-family:var(--font,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif);
+  font-size:14px;
+  color:var(--cream);
+  background:
+    radial-gradient(ellipse at 80% -20%,rgba(54,111,75,.3),transparent 42%),
+    linear-gradient(160deg,#08251c,#10392a 80%);
+  -webkit-font-smoothing:antialiased;
+}
+.rr *{ box-sizing:border-box }
+.rr button,.rr input,.rr select,.rr textarea{ font:inherit }
+.rr button{ border:none; cursor:pointer; color:inherit }
+/* A bare button has no ground of its own; the ones that do declare it below. */
+.rr-nav button,.rr-person,.rr-day{ background:transparent }
+.rr button:disabled{ opacity:.5; cursor:not-allowed }
+.rr a{ color:inherit; text-decoration:none }
+.rr svg{ width:18px; height:18px; flex:0 0 auto }
+.rr button svg{ pointer-events:none }
+.rr :focus-visible{ outline:3px solid var(--gold); outline-offset:2px }
+.rr-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap }
+/* The portal's own stylesheet colours every heading and button for an ivory page. Inside the
+   planner each surface sets its own colour, so headings take that rather than the page's. */
+.rr h1,.rr h2,.rr h3,.rr h4{ color:inherit; margin:0 }
+.rr p{ margin:0 }
+.rr time{ color:inherit }
+.rr ol,.rr ul{ margin:0; padding:0; list-style:none }
+
+/* ── The bar, and who is signed in ─────────────────────────────────────── */
+.rr-top{ position:sticky; top:0; z-index:20; background:rgba(7,34,25,.94);
+  backdrop-filter:blur(16px); border-bottom:1px solid rgba(248,245,234,.12) }
+.rr-topinner{ max-width:1500px; margin:auto; min-height:76px; padding:13px 27px;
+  display:flex; gap:16px; align-items:center; justify-content:space-between }
+.rr-brand{ display:flex; align-items:center; gap:13px; min-width:0 }
+.rr-mark{ height:30px; width:auto }
+.rr-brand-copy{ display:flex; flex-direction:column; gap:2px }
+.rr-brand-name{ font:500 19px/1.12 Georgia,serif; color:#f3e5c7; white-space:nowrap }
+.rr-brand-sub{ font-size:10px; letter-spacing:.16em; font-weight:750; color:#a4b8a8 }
+.rr-toptools{ display:flex; gap:8px; align-items:center }
+.rr-person{ border-left:1px solid #345548; padding-left:15px; display:flex; gap:9px; align-items:center }
+.rr .rr-avatar{ height:34px; width:34px; border-radius:50%; background:var(--gold-2); color:var(--forest);
+  display:grid; place-items:center; font-weight:800 }
+.rr-person-text{ display:flex; flex-direction:column; gap:2px; font-size:12px; text-align:left }
+.rr-person-text small{ color:#b4c9bc }
+.rr-pill{ display:inline-flex; align-items:center; gap:6px; border:1px solid #496d58;
+  padding:7px 9px; border-radius:99px; font-size:11px; color:#c9d9cd }
+.rr-pill i{ width:6px; height:6px; background:var(--gold); border-radius:50% }
+
+/* ── The four places a runner can be ───────────────────────────────────── */
+.rr-nav{ max-width:1500px; margin:auto; padding:0 27px; display:flex; gap:4px; overflow-x:auto }
+.rr .rr-nav button{ display:inline-flex; align-items:center; gap:7px; padding:12px 14px;
+  font-size:13px; font-weight:650; color:#bed0c3; border-bottom:2px solid transparent; white-space:nowrap }
+.rr .rr-nav button:hover{ color:#fff }
+.rr-nav button.is-here{ color:#f6e9c9; border-bottom-color:var(--gold) }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.rr-btn{ background:transparent; border-radius:11px; padding:10px 14px; display:inline-flex; gap:7px; align-items:center;
+  justify-content:center; font-weight:650; white-space:nowrap;
+  transition:background var(--m-fast,140ms),transform var(--m-fast,140ms),border var(--m-fast,140ms) }
+.rr-btn:hover:not(:disabled){ transform:translateY(-1px) }
+.rr-btn:active{ transform:translateY(0) }
+.rr .rr-btn-primary{ background:var(--gold-2); color:var(--forest) }
+.rr .rr-btn-primary:hover:not(:disabled){ background:#f5e4c1 }
+.rr .rr-btn-outline{ border:1px solid rgba(255,255,255,.22) }
+.rr .rr-btn-outline:hover:not(:disabled){ background:rgba(255,255,255,.08) }
+.rr .rr-btn-subtle{ background:#eef2eb; color:var(--forest) }
+.rr .rr-btn-white{ background:var(--paper); color:var(--ink); border:1px solid var(--line) }
+.rr .rr-btn-dark{ background:var(--forest); color:#fff }
+.rr-btn-sm{ padding:7px 10px; font-size:12px; border-radius:9px }
+.rr-btn-icon{ width:36px; height:36px; padding:0 }
+
+/* ── The page ──────────────────────────────────────────────────────────── */
+.rr-wrap{ max-width:1500px; margin:auto; padding:33px 27px 56px }
+.rr-eyebrow{ color:#c1d1c5; font-size:11px; letter-spacing:.18em; font-weight:750; text-transform:uppercase }
+.rr-title{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:10px 0 23px }
+.rr-title h1{ font-size:clamp(32px,4vw,56px); letter-spacing:-.065em; line-height:1; margin:0; font-weight:680 }
+.rr-title h1 span{ color:var(--gold) }
+.rr-title p{ font-size:14px; color:#b3c8b9; margin:12px 0 0; max-width:62ch; line-height:1.55 }
+.rr-title-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
+.rr-title-actions .rr-btn{ font-size:12px }
+
+.rr-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:27px }
+.rr-chip{ background:rgba(255,255,255,.075); border:1px solid rgba(244,240,223,.12); border-radius:13px;
+  padding:14px 17px; display:flex; gap:12px; align-items:center; min-width:0 }
+.rr-chip-icon{ width:34px; height:34px; background:rgba(234,208,143,.14); color:var(--gold-2);
+  border-radius:10px; display:grid; place-items:center; flex:0 0 auto }
+.rr-chip span{ display:block; color:#bcd0c2; font-size:11px; margin-bottom:3px }
+.rr-chip strong{ font-size:16px; font-weight:700; letter-spacing:-.025em; white-space:nowrap }
+
+/* ── The week ──────────────────────────────────────────────────────────── */
+.rr-week{ margin-bottom:22px }
+.rr-week-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px }
+.rr-week-head h2{ font-size:23px; letter-spacing:-.035em; margin:0 }
+.rr-week-head p{ margin:4px 0 0; color:#c7d5ca; font-size:12px }
+.rr-week-nav{ display:flex; gap:5px; align-items:center }
+.rr-week-nav .rr-btn{ padding:8px 11px }
+.rr-week-grid{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px }
+.rr-day{ background:rgba(245,246,238,.105); border:1px solid rgba(252,251,240,.17); border-radius:16px;
+  padding:11px; min-height:170px; text-align:left; color:#fff; display:flex; flex-direction:column; gap:10px;
+  transition:background var(--m-base,160ms),border var(--m-base,160ms) }
+.rr-day:hover{ background:rgba(245,246,238,.19) }
+.rr-day.is-current{ background:var(--cream); color:var(--ink); border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(225,196,125,.14) }
+.rr-day-top{ display:flex; align-items:center; justify-content:space-between }
+.rr-day-top strong{ font-size:13px }
+.rr-day-top b{ display:inline-grid; place-items:center; border-radius:100px;
+  background:rgba(255,255,255,.15); font-size:10px; width:25px; height:25px }
+.rr-day.is-current .rr-day-top b{ background:#eadab3 }
+.rr-day-list{ display:flex; flex-direction:column; gap:6px; flex:1 }
+.rr-day-item{ font-size:11px; line-height:1.3; border-radius:8px; background:rgba(254,254,249,.1);
+  padding:7px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.rr-day.is-current .rr-day-item{ background:#e7eae0 }
+.rr-day-item.is-pickup{ border-left:3px solid var(--gold) }
+.rr-day-more{ font-size:11px; opacity:.7 }
+.rr-day-empty{ font-size:12px; color:#bdd1c1; margin:auto 0 }
+.rr-day.is-current .rr-day-empty{ color:#7c8e81 }
+.rr-day-foot{ padding-top:10px; border-top:1px solid rgba(255,255,255,.13); font-size:11px;
+  color:#c8dacd; display:flex; justify-content:space-between; gap:2px }
+.rr-day.is-current .rr-day-foot{ color:#527263; border-color:#d9ded4 }
+
+/* ── The itinerary and the side panels ─────────────────────────────────── */
+.rr-work{ display:grid; grid-template-columns:minmax(0,1.65fr) minmax(325px,.85fr); gap:18px; align-items:start }
+.rr-panel{ background:var(--paper); color:var(--ink); border:1px solid #f0efea; border-radius:var(--r);
+  box-shadow:var(--lift); overflow:hidden }
+.rr-panel-head{ padding:22px 24px 17px; display:flex; align-items:flex-start; justify-content:space-between;
+  gap:16px; border-bottom:1px solid var(--line) }
+.rr-panel h2{ margin:0; font-size:24px; letter-spacing:-.05em }
+.rr-panel h3{ margin:0; font-size:16px; letter-spacing:-.025em }
+.rr-sub{ color:var(--muted); font-size:12px; margin:6px 0 0; line-height:1.5 }
+.rr-tag{ display:inline-flex; align-items:center; gap:6px; border-radius:100px; background:#edf0e9;
+  color:#446354; padding:5px 9px; font-size:10px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.055em; white-space:nowrap }
+.rr-tag-gold{ background:#f9efda; color:#927032 }
+.rr-tag-green{ background:#e4f2e9; color:#256448 }
+.rr-tag-gray{ background:#eff1ef; color:#64756a }
+.rr-tag-red{ background:#fbece8; color:#a24838 }
+
+.rr-headline{ padding:21px 24px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.rr-facts{ display:flex; gap:15px; flex-wrap:wrap; font-size:12px; color:#566b5e; margin:0; padding:0; list-style:none }
+.rr-facts li{ display:flex; gap:6px; align-items:center }
+.rr-actions{ display:flex; gap:7px; flex-wrap:wrap }
+.rr-progress-wrap{ padding:0 24px 18px }
+.rr-progress{ width:100%; background:#e5eade; height:7px; border-radius:8px; overflow:hidden }
+.rr-progress i{ display:block; background:var(--green); height:100%; border-radius:8px; transition:width var(--m-base,180ms) }
+.rr-progress-foot{ display:flex; justify-content:space-between; color:#66796a; font-size:11px; margin-top:8px }
+
+.rr-stops{ padding:0 15px 16px; display:flex; flex-direction:column; gap:9px; margin:0; list-style:none }
+.rr-stop{ position:relative; display:flex; gap:11px; align-items:flex-start; background:#fff;
+  border:1px solid #e7eae3; border-radius:13px; padding:13px; box-shadow:0 2px 8px rgba(2,38,19,.035); min-width:0 }
+.rr-stop.is-pickup{ background:#fffbf2; border-color:#eddbb4 }
+.rr-stop.is-done{ background:#f2f7f1 }
+.rr-stop.is-origin{ background:#f3f6f1 }
+.rr-stop.is-dragging{ opacity:.55; border-style:dashed }
+.rr-stop.is-target{ box-shadow:0 -4px 0 var(--gold); border-color:var(--gold) }
+.rr .rr-grip{ width:30px; min-width:30px; height:40px; background:#f2f4ee; color:#7b9181; border-radius:8px;
+  display:grid; place-items:center; touch-action:none; cursor:grab }
+.rr-grip:active{ cursor:grabbing }
+.rr-grip:disabled{ cursor:not-allowed }
+.rr .rr-index{ height:30px; width:30px; min-width:30px; background:#deeadf; color:var(--forest);
+  border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:12px }
+.rr-stop.is-pickup .rr-index{ background:#efd9a1 }
+.rr-stop-body{ flex:1; min-width:0 }
+.rr-stop-top{ display:flex; gap:10px; align-items:baseline; justify-content:space-between }
+.rr-stop-top strong{ font-size:14px; font-weight:750 }
+.rr .rr-time{ font-size:12px; color:var(--green); font-weight:800; white-space:nowrap }
+.rr-where{ font-size:12px; color:#77857b; line-height:1.5; margin:4px 0 0 }
+.rr-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:9px }
+.rr-tiny{ font-size:11px; color:#77877a }
+.rr-stop-actions{ display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap }
+.rr-move{ display:flex; flex-direction:column; gap:5px; align-self:center }
+.rr .rr-move button{ background:#f6f6f2; border:1px solid #e2e8df; border-radius:7px; width:26px; height:26px;
+  padding:0; color:#566b5a; display:grid; place-items:center }
+.rr-empty{ padding:38px 25px 46px; text-align:center; color:#6c8073 }
+.rr-empty svg{ width:35px; height:35px; color:var(--green); margin-bottom:12px }
+.rr-empty h3{ margin:5px 0 }
+.rr-empty p{ margin:6px auto 0; max-width:46ch; line-height:1.6 }
+.rr-footnote{ padding:12px 22px; font-size:11px; color:#687d70; background:#f3f5ef;
+  border-top:1px solid var(--line); line-height:1.5 }
+
+.rr-side{ display:flex; flex-direction:column; gap:17px }
+.rr-supplies{ padding:12px 21px }
+.rr-supply{ display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px;
+  padding:12px 0; border-bottom:1px solid var(--line) }
+.rr-supply:last-child{ border-bottom:0 }
+.rr-supply-name{ font-weight:700; font-size:13px }
+.rr-supply-name small{ display:block; color:#809084; font-weight:450; margin-top:3px; font-size:11px }
+.rr-supply-value{ font-weight:850; font-size:19px }
+.rr-supply-left{ text-align:right; font-size:11px; color:#65806e; min-width:55px }
+.rr-supply-left strong{ display:block; color:#245d42; font-size:15px }
+.rr-note-inline{ margin:5px 21px 17px; padding:11px 12px; border-radius:10px; background:#f7f1e4;
+  color:#786037; font-size:11px; line-height:1.5 }
+.rr-panel-actions{ display:flex; gap:8px; padding:0 20px 20px; flex-wrap:wrap }
+.rr-panel-actions .rr-btn{ font-size:12px }
+.rr-summary{ padding:10px 21px 17px }
+.rr-summary-line{ display:flex; justify-content:space-between; gap:13px; padding:10px 0;
+  border-bottom:1px solid var(--line); font-size:12px }
+.rr-summary-line:last-child{ border:0 }
+.rr-summary-line span{ color:#748579 }
+.rr-summary-line b{ font-weight:720; text-align:right }
+.rr-warning{ margin:0 20px 15px; padding:11px; border-radius:9px; background:#fff1e8; color:#8f4535;
+  font-size:12px; line-height:1.5; display:flex; gap:8px; align-items:flex-start }
+.rr-tools{ display:flex; gap:8px; flex-wrap:wrap; margin:25px 0 0 }
+.rr-tools .rr-btn{ border:1px solid #476b56; color:#dbe9dc }
+.rr-page-note{ font-size:11px; color:#a7c0ae; margin-top:19px; line-height:1.7; max-width:92ch }
+
+/* ── The drawer ────────────────────────────────────────────────────────── */
+.rr-backdrop{ position:fixed; inset:0; background:rgba(0,18,12,.68); z-index:40;
+  opacity:0; pointer-events:none; transition:opacity var(--m-base,200ms) }
+.rr-backdrop.is-open{ opacity:1; pointer-events:auto }
+.rr-drawer{ position:fixed; z-index:45; right:0; top:0; bottom:0; width:min(100%,520px);
+  background:#fffdf9; color:var(--ink); box-shadow:-20px 0 60px rgba(0,0,0,.25);
+  transform:translateX(105%); transition:transform var(--m-slow,260ms); display:flex; flex-direction:column }
+.rr-drawer.is-open{ transform:translateX(0) }
+.rr-drawer-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:15px;
+  padding:24px 25px 19px; border-bottom:1px solid var(--line) }
+.rr-drawer-head h2{ font-size:25px; margin:3px 0 4px; letter-spacing:-.05em }
+.rr-drawer-head small{ color:#7c8f80 }
+.rr-drawer-scroll{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:23px 25px 40px }
+.rr-drawer-foot{ padding:14px 25px; padding-bottom:max(14px,env(safe-area-inset-bottom));
+  border-top:1px solid var(--line); background:#fff; display:flex; justify-content:space-between; gap:12px }
+.rr-drawer-foot .rr-btn-primary{ background:var(--forest); color:#fff }
+.rr-grid{ display:grid; grid-template-columns:1fr 1fr; gap:13px }
+.rr-field{ display:flex; flex-direction:column; gap:7px; margin-bottom:15px }
+.rr-field label,.rr-field>span{ font-size:12px; font-weight:760; color:#445e4e }
+.rr-field input,.rr-field select,.rr-field textarea{ border:1px solid #dce3d9; border-radius:10px;
+  padding:11px 12px; background:#fff; color:#193629; width:100%; min-width:0 }
+.rr-field textarea{ resize:vertical; min-height:95px }
+.rr-hint{ color:#79897d; font-size:11px; line-height:1.5 }
+.rr-section-title{ font-size:12px; text-transform:uppercase; letter-spacing:.1em; font-weight:800;
+  color:#68806f; margin:12px 0 13px }
+.rr-card{ border:1px solid var(--line); border-radius:12px; padding:15px; margin-bottom:15px }
+.rr-card h3{ font-size:14px; margin:0 0 8px }
+.rr-card p{ color:#647668; line-height:1.6; margin:0; font-size:13px }
+.rr-error{ color:var(--danger); font-size:12px; margin:8px 0 }
+.rr-notice{ border-radius:11px; background:#eef5ed; color:#325944; padding:13px; font-size:12px;
+  line-height:1.6; margin-bottom:17px }
+.rr-notice.is-warn{ background:#fff5e7; color:#76532e }
+.rr-toast{ position:fixed; bottom:22px; left:50%; transform:translate(-50%,15px); background:#f6e9c9;
+  color:var(--forest); z-index:60; border-radius:12px; box-shadow:var(--lift); padding:12px 18px;
+  font-size:13px; font-weight:750; opacity:0; transition:opacity var(--m-fast,160ms),transform var(--m-fast,160ms);
+  pointer-events:none; max-width:min(92vw,520px); text-align:center }
+.rr-toast.is-open{ opacity:1; transform:translate(-50%,0) }
+.rr-modal-backdrop{ position:fixed; inset:0; background:rgba(0,15,8,.72); z-index:70;
+  display:grid; place-items:center; padding:20px }
+.rr-modal{ max-width:400px; width:100%; background:var(--paper); border-radius:16px; padding:26px; color:var(--ink) }
+.rr-modal h2{ margin:0 0 10px }
+.rr-modal p{ line-height:1.6; color:#647b6a }
+.rr-modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:17px }
+
+/* ── Help, profile and history ─────────────────────────────────────────── */
+.rr-read{ background:var(--paper); color:var(--ink); border-radius:var(--r); padding:26px 28px;
+  box-shadow:var(--lift); max-width:72ch }
+.rr-read h2{ margin:0 0 4px; font-size:22px; letter-spacing:-.04em }
+.rr-read h3{ margin:22px 0 6px; font-size:15px }
+.rr-read p,.rr-read li{ color:#5d6f63; line-height:1.7; font-size:13px }
+.rr-read a{ color:#1d6148; font-weight:700; text-decoration:underline }
+.rr-read dl{ display:grid; grid-template-columns:auto 1fr; gap:8px 18px; margin:14px 0 0; font-size:13px }
+.rr-read dt{ color:#748579 }
+.rr-read dd{ margin:0; font-weight:700 }
+.rr-history{ display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none }
+.rr-history li{ background:var(--paper); color:var(--ink); border-radius:13px; padding:15px 17px;
+  box-shadow:0 2px 8px rgba(2,38,19,.05) }
+.rr-history-top{ display:flex; justify-content:space-between; gap:12px; align-items:baseline }
+.rr-history-top strong{ font-size:14px }
+.rr-history-top time{ font-size:12px; color:var(--muted) }
+.rr-history li p{ margin:6px 0 0; font-size:12px; color:#6b7c70; line-height:1.55 }
+.rr-state{ background:rgba(255,255,255,.07); border:1px solid rgba(244,240,223,.14);
+  border-radius:var(--r); padding:30px 26px; max-width:62ch }
+.rr-state h2{ margin:0 0 8px; font-size:20px; letter-spacing:-.03em }
+.rr-state p{ color:#bdd1c3; line-height:1.65; margin:0 0 14px }
+.rr-skel{ background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.14),rgba(255,255,255,.07));
+  border-radius:12px; height:18px; margin-bottom:12px; animation:rr-pulse 1.4s ease-in-out infinite }
+.rr-skel-big{ height:120px }
+@keyframes rr-pulse{ 0%,100%{ opacity:.6 } 50%{ opacity:1 } }
+
+/* ── The guided visit, on the planner's ground ─────────────────────────── */
+.rr-visit{ background:var(--paper); color:var(--ink); border-radius:var(--r); box-shadow:var(--lift);
+  padding:4px 20px 26px; max-width:860px }
+
+/* ── Smaller screens. This is a phone screen first ─────────────────────── */
+@media (min-width:1100px){ .rr-topinner{ padding-left:32px; padding-right:32px } }
+@media (max-width:1150px){
+  .rr-week-grid{ grid-auto-flow:column; grid-auto-columns:minmax(185px,26%); grid-template-columns:none;
+    overflow-x:auto; padding-bottom:10px; scroll-snap-type:x mandatory }
+  .rr-day{ scroll-snap-align:start }
+  .rr-work{ grid-template-columns:minmax(0,1fr) 320px }
+  .rr-time{ white-space:normal }
+}
+@media (max-width:850px){
+  .rr-wrap{ padding:26px 17px 38px }
+  .rr-topinner{ padding:10px 17px; min-height:65px }
+  .rr-nav{ padding:0 17px }
+  .rr-strip{ grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .rr-work{ grid-template-columns:1fr }
+  .rr-side{ display:grid; grid-template-columns:1fr 1fr }
+  .rr-week-grid{ grid-auto-columns:minmax(185px,42%) }
+  .rr-pill{ display:none }
+  .rr-title{ align-items:flex-start; flex-direction:column }
+  .rr-title p{ margin-top:8px }
+}
+@media (max-width:620px){
+  .rr-topinner{ gap:8px }
+  .rr-brand{ gap:9px }
+  .rr-brand-name{ font-size:14px }
+  .rr-brand-sub{ font-size:9px }
+  .rr-mark{ height:24px }
+  .rr-person-text{ display:none }
+  .rr-person{ padding-left:8px }
+  /* On a phone the bar is the brand and who you are. Signing out lives on Profile, a tap away,
+     rather than crowding the name off the screen. */
+  .rr-toptools .rr-btn{ display:none }
+  .rr-brand-copy{ min-width:0 }
+  .rr-brand-name{ overflow:hidden; text-overflow:ellipsis }
+  .rr-avatar{ width:31px; height:31px }
+  .rr-wrap{ padding:24px 13px 36px }
+  .rr-title h1{ font-size:37px }
+  .rr-title-actions{ width:100%; justify-content:flex-start }
+  .rr-title-actions .rr-btn{ padding:9px 12px }
+  .rr-strip{ gap:8px }
+  .rr-chip{ padding:10px 11px; gap:8px }
+  .rr-chip-icon{ width:29px; height:29px }
+  .rr-chip strong{ font-size:14px }
+  .rr-week-grid{ grid-auto-columns:minmax(185px,72%); gap:9px }
+  .rr-week-head h2{ font-size:20px }
+  .rr-week-nav .rr-btn{ padding:8px }
+  .rr-panel-head{ padding:17px }
+  .rr-panel h2{ font-size:22px }
+  .rr-headline{ padding:17px; gap:12px }
+  .rr-progress-wrap{ padding:0 17px 16px }
+  .rr-stops{ padding:0 9px 10px }
+  .rr-stop{ padding:10px; gap:8px }
+  .rr-grip{ width:26px; min-width:26px }
+  .rr-index{ height:26px; min-width:26px; width:26px }
+  .rr-stop-top{ flex-direction:column; gap:4px }
+  .rr-stop-actions .rr-btn{ padding:8px 10px }
+  .rr-side{ display:flex }
+  .rr-drawer-head{ padding:18px }
+  .rr-drawer-scroll{ padding:17px }
+  .rr-drawer-foot{ padding:13px 17px }
+  .rr-grid{ grid-template-columns:1fr }
+  .rr-tools{ margin-top:19px }
+  .rr-visit{ padding:4px 14px 22px }
+}
+@media (prefers-reduced-motion:reduce){
+  .rr *,.rr *::before,.rr *::after{ transition:none !important; animation:none !important }
+}
+@media print{
+  .rr{ background:#fff; color:#000 }
+  .rr-top,.rr-nav,.rr-title-actions,.rr-week,.rr-side,.rr-tools,.rr-drawer,.rr-backdrop,
+  .rr-toast,.rr-modal-backdrop,.rr-move,.rr-grip,.rr-stop-actions,.rr-actions,.rr-pill{ display:none !important }
+  .rr-work{ display:block }
+  .rr-panel{ box-shadow:none; border:1px solid #aaa }
+  .rr-stop{ break-inside:avoid }
+  .rr-wrap{ padding:0 }
+  .rr-title h1,.rr-chip strong,.rr-chip span{ color:#000 }
+  .rr-strip{ display:flex }
+  .rr-chip{ border:1px solid #ddd }
+}
+
+/* The three materials counts, on the guided visit's own panel. */
+.gv-pair.gv-triple{ grid-template-columns:repeat(3,minmax(0,1fr)) }
+.gv-pair.gv-triple small{ display:block; margin-top:5px; font-size:.72rem; color:var(--ink-3,#7C8878) }
+@media (max-width:520px){ .gv-pair.gv-triple{ grid-template-columns:1fr } }

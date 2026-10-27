@@ -1,6 +1,6 @@
 // WHAT A LOGIN IS ALLOWED TO DO.
 //
-//   npm run set-role -- --username <name> --role owner|staff|admin
+//   npm run set-role -- --username <name> --role owner|staff|route_runner|admin
 //   npm run set-role -- --username <name> --clear
 //
 // The role decides what the API answers, not what the portal draws. A practice owner asking
@@ -24,9 +24,9 @@ const username = (values.username ?? '').trim().toLowerCase();
 const role = values.role?.trim().toLowerCase();
 
 if (!username) throw new Error('Provide --username.');
-if (!values.clear && !role) throw new Error('Provide --role owner|staff|admin, or --clear.');
-if (role && !['owner', 'staff', 'admin'].includes(role)) {
-  throw new Error(`"${role}" is not a role. Use owner, staff or admin.`);
+if (!values.clear && !role) throw new Error('Provide --role owner|staff|route_runner|admin, or --clear.');
+if (role && !['owner', 'staff', 'route_runner', 'admin'].includes(role)) {
+  throw new Error(`"${role}" is not a role. Use owner, staff, route_runner or admin.`);
 }
 
 const store = openStore(resolve(process.env.DATABASE_PATH ?? 'var/portal.sqlite'), false);
@@ -34,7 +34,7 @@ try {
   const before = store.logins().find(l => l.username === username);
   if (!before) throw new Error(`No login called "${username}".`);
 
-  store.setRole(username, values.clear ? null : role as 'owner' | 'staff' | 'admin');
+  store.setRole(username, values.clear ? null : role as 'owner' | 'staff' | 'route_runner' | 'admin');
 
   console.log(`\n${username} at ${before.clinicName} (${before.clinic})`);
   console.log(`  was: ${before.role ?? 'no role — legacy access'}`);
@@ -44,6 +44,11 @@ try {
     console.log(`\n  An owner sees their practice's own records and its curated matches.`);
     console.log(`  Visit scripts are left out of what the API returns to them, and they`);
     console.log(`  cannot record or change a visit.`);
+  }
+  if (role === 'route_runner') {
+    console.log(`\n  A route runner signs in to the weekly planner: the routes assigned to them,`);
+    console.log(`  their pickups, their supplies and the guided visit at each stop. Nothing else.`);
+    console.log(`  Assign their rounds with:  npm run assign-round -- --clinic <id> --date <date> --username ${username}`);
   }
   if (role === 'staff') {
     console.log(`\n  Staff see their assigned work and the scripts for it.`);

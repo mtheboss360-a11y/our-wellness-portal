@@ -17,6 +17,7 @@ import AssignedBusinesses from './AssignedBusinesses';
 import RoundAgenda from './RoundAgenda';
 import VisitHistory from './VisitHistory';
 import Performance from './Performance';
+import RunnerPortal from './RunnerPortal';
 
 
 
@@ -29,7 +30,11 @@ function Brand({ name, centered = false, onHome }: { name: string; centered?: bo
 }
 export default function Portal() {
   const data = useSession().data!;
-  return data.clinic ? <Dashboard key={data.clinic.id} data={data}/> : <SignIn config={data.config}/>;
+  if (!data.clinic) return <SignIn config={data.config}/>;
+  // A ROUTE RUNNER LANDS ON THEIR WEEK, not on a dashboard. The role is on the account and the
+  // server puts it in the snapshot; an account with no role keeps every screen it had.
+  if (data.role === 'route_runner') return <RunnerPortal key={data.clinic.id} data={data}/>;
+  return <Dashboard key={data.clinic.id} data={data}/>;
 }
 function SignIn({ config }: { config: PublicPortal }) {
   const router = useRouter();

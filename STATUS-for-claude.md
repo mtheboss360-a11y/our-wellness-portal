@@ -96,17 +96,73 @@ the Agenda's day picker. Fixed: it matches on `(clinic, date, staff)` and replac
 genuine second round. **`hyline-dental` still has the two rounds booked before this fix** —
 re-run `plan-round` for Tue Oct 27 and it will collapse them to one.
 
-### 4. No owner/staff separation
+### 4. No owner/staff separation — PART BUILT
 
-One login per clinic sees every screen. The spec asked for the practice owner and the field rep
-to have different views and permissions. Not built. Today `hylinedental` is Alexis's login and
-also, functionally, the owner's.
+One login per clinic saw every screen. The spec asked for the practice owner and the field rep to
+have different views and permissions.
+
+**Built: the route runner.** `users.role = 'route_runner'` gives a field rep their own account —
+the weekly planner (`src/MyRoutes.tsx`), their own routes, their own visits, and nothing else.
+The restriction is an allowlist on the server (`RUNNER_ENDPOINTS` in `server/http.ts`), so a
+runner's session cannot reach the practice's screens, the referral network or another person's
+round whatever the browser sends. See **Route runners** below.
+
+**Still open: the practice owner.** An existing login keeps exactly what it had — every screen,
+no role. Nothing has been taken away from anybody, and no existing login was made an
+administrator. Splitting the owner's view from the office's remains to do.
 
 ### 5. Round creation is CLI-only
 
 There is no admin UI. Rounds are booked from the Render Shell with `plan-round`.
 
 ---
+
+## Route runners
+
+**Added 2026-10-27.** The weekly planner a field rep lives in, built from the standalone file
+kept at `samples/route-runner-planner-reference.html`.
+
+`route_runner` is the fourth value in the role column the owner dashboard added, beside
+`admin`, `owner` and `staff`. It is not the same as `staff`: `staff` is a practice's own
+person on the existing portal screens (plan b, where the practice does its own visits);
+`route_runner` is one of ours on the planner. An account with no role keeps what it had.
+
+| Piece | Where |
+|---|---|
+| Assignments, pickups, supplies, route order, audit | `server/runner.ts` |
+| The allowlist a runner's session is held to | `RUNNER_ENDPOINTS`, `server/http.ts` |
+| The account: four screens, nothing else | `src/RunnerPortal.tsx` |
+| The planner itself | `src/MyRoutes.tsx`, `src/lib/route-math.ts`, `src/runner.css` |
+| Tests | `tests/runner.test.ts`, `tests/route.test.ts` |
+
+```
+INITIAL_PASSWORD='…' npm run add-runner-login -- --clinic <id> --username <name> --name "Alexis"
+npm run assign-round -- --clinic <id> --date YYYY-MM-DD --username <name> [--flyers N --treats N --cards N]
+npm run assign-round -- --clinic <id> --date YYYY-MM-DD --lock "Karve Pilates"   # fixed in place
+npm run assign-round -- --round r_… --unassign
+```
+
+Things worth knowing before changing any of it:
+
+- **Assignment is the permission.** `rounds.runner_id` is the assignment. A round that has never
+  been assigned falls back to matching `rounds.staff` against the login's display name, because
+  that is how every round in the database today was handed out. The fallback only matches a
+  non-empty name, so a login with no name on it inherits nothing.
+- **A pickup is not a business.** `round_pickups` belongs to one round. It never enters
+  `businesses`, the directory or the referral map, and the office's own screens do not show it.
+- **Three supply numbers, never two.** `round_supplies.planned` is the office's allocation and a
+  runner cannot write it; `packed` is their own count; `visit_materials` is what was dropped.
+  `visits.materials` stays the authoritative total and is written as the sum of the breakdown.
+- **`rounds.revision`** is bumped by every write. A change sent against an older revision is
+  refused with 409 and the current route, never merged.
+- **Reordering** keeps a locked stop at its exact position and keeps finished stops in the order
+  they happened in. The screen offers only the moves the server would accept
+  (`moveItem` in `src/lib/route-math.ts` mirrors `reorder` in `server/runner.ts`).
+- **Times are arithmetic.** A leg between two known coordinates is estimated from the distance;
+  everything else gets a flat 8-minute allowance. There is still no routing provider, so nothing
+  here may be presented as navigation.
+- **The start time is the office's.** The standalone file let a runner change it; the portal does
+  not. The Route timing drawer explains the arithmetic instead.
 
 ## Rules that are not negotiable
 

@@ -34,7 +34,7 @@ try {
   if (unassigned.length) {
     console.log(`\n${unassigned.length} ${unassigned.length === 1 ? 'login has' : 'logins have'} no role and keep full access:`);
     console.log(`  ${unassigned.map(r => r.username).join(', ')}`);
-    console.log(`  Set one with:  npm run set-role -- --username <name> --role owner|staff`);
+    console.log(`  Set one with:  npm run set-role -- --username <name> --role owner|staff|route_runner`);
   }
 
   // Several logins on one practice is how an account nobody remembers keeps working.

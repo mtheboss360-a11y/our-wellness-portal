@@ -15,8 +15,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   getBusiness, recordVisit, type Business, type Script, type Visit, type Outcome, type VisitDraft,
+  type Supplies,
 } from './lib/api';
 import { Icon } from './Icons';
+
+/**
+ * A visit as it leaves this screen. `dropped` is the breakdown behind the materials total, sent
+ * only by the route runner's planner, where supplies are counted by kind. Everywhere else the
+ * total is the only figure there is, and this screen behaves exactly as it did.
+ */
+export type VisitSubmission = VisitDraft & { dropped?: Supplies };
+
+/** What the planner knows about the car: what is left, and whether the load was confirmed. */
+export type MaterialsOnHand = { remaining: Supplies; confirmed: boolean };
+const SUPPLY_FIELDS = [
+  { key: 'flyers' as const, label: 'Flyers' },
+  { key: 'treats' as const, label: 'Treats' },
+  { key: 'cards' as const, label: 'Referral cards' },
+];
 
 /** Mirrors the server's list. The server is the authority; this is only what to call them. */
 const OUTCOMES: Array<{ id: Outcome; label: string; hint: string }> = [
@@ -38,7 +54,8 @@ const dayLabel = (iso: string) => new Date(`${iso}T12:00:00Z`)
 
 type Step = 'brief' | 'script' | 'record' | 'done';
 
-export default function GuidedVisit({ businessId, today, staffName, onClose, onNext, nextLabel }: {
+export default function GuidedVisit({ businessId, today, staffName, onClose, onNext, nextLabel,
+  load, save, materials }: {
   businessId: string;
   today: string;
   staffName?: string | null;
@@ -46,6 +63,13 @@ export default function GuidedVisit({ businessId, today, staffName, onClose, onN
   /** Where "Continue route" goes. Absent when this business was opened on its own. */
   onNext?: () => void;
   nextLabel?: string;
+  /** How to read the business. The route runner's planner reads it through its own endpoint,
+      which serves only businesses on a route assigned to them. */
+  load?: (id: string) => Promise<{ business: Business; script: { script: Script; edited: boolean } | null; visits: Visit[] }>;
+  /** How to save the visit. Both paths write one record through the same server function. */
+  save?: (draft: VisitSubmission) => Promise<{ visit: Visit; business: Business }>;
+  /** Present on the planner only: materials are counted by kind there, against the car. */
+  materials?: MaterialsOnHand;
 }) {
   const [data, setData] = useState<{ business: Business; script: Script | null; visits: Visit[] } | null>(null);
   const [error, setError] = useState('');
@@ -55,10 +79,11 @@ export default function GuidedVisit({ businessId, today, staffName, onClose, onN
   useEffect(() => {
     let live = true;
     setData(null); setError(''); setStep('brief'); setSaved(null);
-    void getBusiness(businessId)
+    void (load ?? getBusiness)(businessId)
       .then(r => { if (live) setData({ business: r.business, script: r.script?.script ?? null, visits: r.visits }); })
       .catch(e => { if (live) setError(e instanceof Error ? e.message : 'We couldn’t open this business.'); });
     return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
   // Each step starts at its own top. On a phone the steps are long enough that landing halfway
@@ -106,6 +131,7 @@ export default function GuidedVisit({ businessId, today, staffName, onClose, onN
     {step === 'brief' && <Brief business={business} visits={visits} onNext={() => setStep('script')}/>}
     {step === 'script' && <ScriptView script={script} visits={visits} onBack={() => setStep('brief')} onNext={() => setStep('record')}/>}
     {step === 'record' && <Record business={business} today={today} staffName={staffName}
+      save={save} materials={materials}
       onBack={() => setStep('script')}
       onSaved={(visit, moved) => {
         setSaved(visit);
@@ -274,14 +300,17 @@ function ScriptView({ script, visits, onBack, onNext }: {
 }
 
 /** STEP 3. The whole record, on one screen, with one button at the bottom. */
-function Record({ business, today, staffName, onBack, onSaved }: {
+function Record({ business, today, staffName, save, materials, onBack, onSaved }: {
   business: Business; today: string; staffName?: string | null;
+  save?: (draft: VisitSubmission) => Promise<{ visit: Visit; business: Business }>;
+  materials?: MaterialsOnHand;
   onBack: () => void; onSaved: (visit: Visit, business: Business) => void;
 }) {
   const [spokeWith, setSpokeWith] = useState('');
   const [contactRole, setContactRole] = useState('');
   const [outcome, setOutcome] = useState<Outcome | ''>('');
-  const [materials, setMaterials] = useState('');
+  const [dropped, setDropped] = useState<Record<keyof Supplies, string>>({ flyers: '', treats: '', cards: '' });
+  const [total, setTotal] = useState('');
   const [note, setNote] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [followUpOn, setFollowUpOn] = useState('');
@@ -305,14 +334,21 @@ function Record({ business, today, staffName, onBack, onSaved }: {
   async function submit() {
     if (!outcome || busy) return;
     setBusy(true); setFailed('');
-    const draft: VisitDraft = {
+    // On the planner the three counts are the record and the total is their sum, so the two
+    // can never disagree. Everywhere else the total is the only figure there is.
+    const byKind = materials
+      ? { flyers: Number(dropped.flyers) || 0, treats: Number(dropped.treats) || 0, cards: Number(dropped.cards) || 0 }
+      : null;
+    const draft: VisitSubmission = {
       businessId: business.id, visitedOn: today, spokeWith: spokeWith.trim(),
-      contactRole: contactRole.trim(), outcome, materials: Number(materials) || 0,
+      contactRole: contactRole.trim(), outcome,
+      materials: byKind ? byKind.flyers + byKind.treats + byKind.cards : Number(total) || 0,
       note: note.trim(), nextAction: nextAction.trim(),
       followUpOn: wantsFollowUp && followUpOn ? followUpOn : null,
       clientRef: ref.current,
+      ...(byKind ? { dropped: byKind } : {}),
     };
-    try { const done = await recordVisit(draft); onSaved(done.visit, done.business); }
+    try { const done = await (save ?? recordVisit)(draft); onSaved(done.visit, done.business); }
     catch (e) {
       // Nothing typed is thrown away. The form stays exactly as it was, and the same clientRef
       // goes with the retry, so a save that actually landed cannot become two visits.
@@ -344,11 +380,27 @@ function Record({ business, today, staffName, onBack, onSaved }: {
 
     <div className="gv-panel">
       <h3>Materials dropped</h3>
-      <label className="gv-count">How many
-        <input type="number" inputMode="numeric" min={0} max={5000} value={materials}
-          onChange={e => setMaterials(e.target.value)} placeholder="0"/>
-      </label>
-      <p className="gv-meta">Leave it at zero if you left nothing.</p>
+      {materials ? <>
+        {!materials.confirmed && <p className="gv-meta">
+          Confirm what you packed on your route before recording anything dropped.
+        </p>}
+        <div className="gv-pair gv-triple">
+          {SUPPLY_FIELDS.map(field => <label key={field.key}>{field.label}
+            <input type="number" inputMode="numeric" min={0} max={materials.remaining[field.key]}
+              value={dropped[field.key]} disabled={!materials.confirmed}
+              onChange={e => setDropped(current => ({ ...current, [field.key]: e.target.value }))}
+              placeholder="0"/>
+            <small>{Math.max(0, materials.remaining[field.key])} left</small>
+          </label>)}
+        </div>
+        <p className="gv-meta">Leave a count at zero if you left none of it.</p>
+      </> : <>
+        <label className="gv-count">How many
+          <input type="number" inputMode="numeric" min={0} max={5000} value={total}
+            onChange={e => setTotal(e.target.value)} placeholder="0"/>
+        </label>
+        <p className="gv-meta">Leave it at zero if you left nothing.</p>
+      </>}
     </div>
 
     <div className="gv-panel">
