@@ -92,7 +92,7 @@ export default function GuidedVisit({ businessId, today, staffName, onClose, onN
     </div>
 
     <header className="gv-who">
-      <h2 id="gv-title">{business.name}</h2>
+      <h2 id="gv-title">{business.name}{business.demo === 1 && <span className="sample-tag">Sample</span>}</h2>
       <p>{business.category} · {business.address}</p>
       <div className="gv-who-actions">
         <a className="dash-btn" href={directionsTo(business)} target="_blank" rel="noreferrer noopener">
@@ -125,6 +125,11 @@ const STAGE_LABEL: Record<Business['stage'], string> = {
 function Brief({ business, visits, onNext }: { business: Business; visits: Visit[]; onNext: () => void }) {
   const last = visits[0];
   return <>
+    {business.demo === 1 && <p className="gv-returning">
+      This is an illustrative business. The name is invented and nobody is expecting you —
+      it is here to show how a visit is recorded.
+    </p>}
+
     <div className="gv-panel">
       <h3>Why this business</h3>
       <p className="gv-prose">{business.talkingPoint || 'No reason has been recorded for this business yet.'}</p>

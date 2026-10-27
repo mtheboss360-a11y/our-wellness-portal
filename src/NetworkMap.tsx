@@ -19,6 +19,21 @@ import { bestFifteen, dateInputValue, milesLabel, townOf, type MapBusiness, type
 import NetworkOrb from './NetworkOrb';
 
 
+/** What the list is showing. Display only — nothing here reaches the ranking. */
+type Lens = 'all' | 'verified' | 'sample';
+const LENSES: Array<{ id: Lens; label: string }> = [
+  { id: 'all', label: 'All businesses' },
+  { id: 'verified', label: 'Verified' },
+  { id: 'sample', label: 'Sample' },
+];
+
+/**
+ * An illustrative business. The "sample-" prefix is written by the fixture that supplies a
+ * demo account's map and by nothing else, so it cannot be mistaken for a Google result — which
+ * is exactly why it was chosen as the marker in the first place.
+ */
+const isSample = (business: { placeId: string }) => business.placeId.startsWith('sample-');
+
 export default function NetworkMap({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<NetworkMapPayload | null>(null);
   const [error, setError] = useState('');
@@ -37,9 +52,26 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
 
   const businesses = data?.businesses ?? [];
   const location = data?.clinic.location ?? null;
-  // The best fifteen, as three fives: the top 5, top 10 and top 15. All of them go on the orb, and the list
-  // shows only these: no search, no filters, no browsing every business nearby.
-  const groups = useMemo(() => bestFifteen(businesses), [businesses]);
+
+  // WHICH BUSINESSES ARE SHOWN — never how they are scored. The filter narrows what goes into
+  // bestFifteen; the ranking inside it, the orb and the Top 5 / 10 / 15 tiers are untouched.
+  //
+  // An illustrative business carries a "sample-" place id, which is given by the fixture that
+  // supplies a demo account's map and can only come from there. Verified means everything
+  // else: the businesses actually released to this practice and geocoded from their own
+  // address. On a demo account the fictional ones outnumber the real five and crowd them out
+  // of the fifteen, which is the whole reason this filter exists.
+  const [lens, setLens] = useState<Lens>('all');
+  const counts = useMemo(() => ({
+    all: businesses.length,
+    verified: businesses.filter(business => !isSample(business)).length,
+    sample: businesses.filter(isSample).length,
+  }), [businesses]);
+  const shown = useMemo(() => businesses.filter(business =>
+    lens === 'all' || (lens === 'verified' ? !isSample(business) : isSample(business))), [businesses, lens]);
+
+  // The best fifteen, as three fives: the top 5, top 10 and top 15. All of them go on the orb.
+  const groups = useMemo(() => bestFifteen(shown), [shown]);
   const selected = useMemo(() => (data?.selection ?? []).map(id => businesses.find(row => row.placeId === id)).filter(Boolean) as MapBusiness[], [data?.selection, businesses]);
 
   async function commit(placeIds: string[]) {
@@ -82,6 +114,20 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
 
       <div className="network-side">
       <section className="network-list-panel" aria-label="Your best fifteen">
+        <div className="network-lens" role="group" aria-label="Which businesses to show">
+          {LENSES.map(option => <button key={option.id} type="button"
+            className={lens === option.id ? 'is-picked' : ''} aria-pressed={lens === option.id}
+            onClick={() => setLens(option.id)}>
+            {option.label}<span>{counts[option.id]}</span>
+          </button>)}
+        </div>
+        {lens === 'sample' && <p className="network-lens-note">
+          Illustrative businesses. Invented names used to show the portal working — nobody has
+          been to any of them.
+        </p>}
+        {lens === 'verified' && counts.verified === 0 && <p className="network-lens-note">
+          No verified businesses have been released to this practice yet.
+        </p>}
         {!groups.length
           ? <EmptyMap data={data} busy={busy} onRefresh={refresh}/>
           : groups.map((group, g) => <div key={group.town} className="network-tier">
@@ -92,6 +138,7 @@ export default function NetworkMap({ onClose }: { onClose: () => void }) {
                   <span className="network-row-body">
                     <span className="network-row-head"><strong>{business.name ?? 'Unnamed business'}</strong><span className="network-row-distance">{milesLabel(business.distanceMiles)}</span></span>
                     <span className="network-row-meta">{business.category?.label ?? 'Business'}{townOf(business.address) ? ` · ${townOf(business.address)}` : ''}</span>
+                    {isSample(business) && <span className="sample-tag">Sample</span>}
                   </span>
                 </div>
                 <button type="button" className={`network-row-add ${chosen ? 'is-on' : ''}`} disabled={busy || (!chosen && atCapacity)}

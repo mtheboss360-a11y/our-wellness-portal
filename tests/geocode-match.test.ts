@@ -76,3 +76,58 @@ test('the practice own address is matched on address alone', () => {
   assert.equal(agrees('', '1301 S Route 59, Unit 107, Naperville, IL 60564',
     '', '1301 S Rte 59 Unit 107, Naperville, IL 60564, USA'), true);
 });
+
+// ── WHICH BUSINESSES THE REFERRAL LIST SHOWS ────────────────────────────────
+// The filter must change the set that is ranked, never the ranking itself. These assert that
+// the same scoring produces the same order within whichever set is chosen.
+import { bestFifteen } from '../src/lib/network-math.ts';
+
+type Row = Parameters<typeof bestFifteen>[0][number];
+const biz = (placeId: string, name: string, miles: number): Row => ({
+  placeId, name, address: `${name}, Naperville, IL`, lat: 41.7, lng: -88.15,
+  distanceMiles: miles, routable: true, rating: null, reviewCount: null,
+  category: { id: 'gym', label: 'Gym', icon: 'dumbbell', color: '#000', competitor: false },
+  fit: 0, googleMapsUri: null, matched: [],
+} as unknown as Row);
+
+const isSample = (b: { placeId: string }) => b.placeId.startsWith('sample-');
+const flat = (groups: ReturnType<typeof bestFifteen>) => groups.flatMap(g => g.businesses.map(b => b.name));
+
+test('the verified filter shows every real business, however the fictional ones rank', () => {
+  // Twenty invented businesses sitting closer than the real ones: exactly the demo account.
+  const sample = Array.from({ length: 20 }, (_, i) => biz(`sample-${i}`, `Invented ${i}`, 0.5 + i * 0.01));
+  const real = [
+    biz('ChIJreal1', 'Karve Pilates', 3.1), biz('ChIJreal2', 'Yoga Cave', 1.4),
+    biz('ChIJreal3', 'Salon Fluxx', 3.8), biz('ChIJreal4', 'KidSnips Naperville', 2.2),
+    biz('ChIJreal5', 'Upscale Male', 2.9),
+  ];
+  const everything = [...sample, ...real];
+
+  const all = flat(bestFifteen(everything));
+  assert.equal(all.length, 15, 'the fifteen limit still holds');
+  assert.ok(real.some(r => !all.includes(r.name)), 'crowded out, which is why the filter exists');
+
+  const verified = flat(bestFifteen(everything.filter(b => !isSample(b))));
+  assert.equal(verified.length, 5);
+  for (const r of real) assert.ok(verified.includes(r.name), `${r.name} is shown`);
+});
+
+test('filtering changes the set, not the order within it', () => {
+  const everything = [
+    biz('sample-a', 'Invented A', 0.5), biz('ChIJb', 'Real B', 1.0),
+    biz('sample-c', 'Invented C', 1.5), biz('ChIJd', 'Real D', 2.0),
+  ];
+  const all = flat(bestFifteen(everything));
+  const verified = flat(bestFifteen(everything.filter(b => !isSample(b))));
+  const sampleOnly = flat(bestFifteen(everything.filter(isSample)));
+
+  // Each filtered list is the full list with the other kind removed — same relative order.
+  assert.deepEqual(verified, all.filter(name => name.startsWith('Real')));
+  assert.deepEqual(sampleOnly, all.filter(name => name.startsWith('Invented')));
+});
+
+test('the sample marker cannot be mistaken for a Google place id', () => {
+  assert.equal(isSample({ placeId: 'sample-0012' }), true);
+  assert.equal(isSample({ placeId: 'ChIJN1t_tDeuEmsRUsoyG83frY4' }), false);
+  assert.equal(isSample({ placeId: 'preview-abc' }), false);
+});

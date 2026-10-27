@@ -106,6 +106,11 @@ export default function AssignedBusinesses({ today, staffName, onClose }: {
         </div>
       </div>
 
+      {list.some(b => b.demo === 1) && <p className="ab-sample-note">
+        Businesses marked <span className="sample-tag">Sample</span> are illustrative — invented
+        names used to show the portal working. Everything else is a real business released to
+        this practice.
+      </p>}
       <p className="ab-count" role="status">
         {matching.length === list.length
           ? `${list.length} ${list.length === 1 ? 'business' : 'businesses'}`
@@ -119,7 +124,7 @@ export default function AssignedBusinesses({ today, staffName, onClose }: {
               {matching.slice(0, shown).map(b => <li key={b.id}>
                 <div className="ab-row">
                   <div className="ab-main">
-                    <strong>{b.name}</strong>
+                    <strong>{b.name}{b.demo === 1 && <span className="sample-tag">Sample</span>}</strong>
                     <span>{b.category} · {b.address}</span>
                     {b.talkingPoint && <p className="ab-why">{b.talkingPoint}</p>}
                   </div>

@@ -1536,3 +1536,23 @@ a.dash-primary{text-decoration:none}
   border-radius:13px;background:var(--stone);font-size:.84rem;line-height:1.6;color:var(--ink-2);max-width:88ch}
 .pf-basis svg{flex:none;margin-top:3px;color:var(--ink-3)}
 @media(max-width:860px){.pf-figures{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* A business that is not real says so, in the same mark wherever it appears. */
+.sample-tag{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:5px;
+  background:#EFEAF4;color:#5B4A78;font:650 .62rem/1.5 var(--nums);letter-spacing:.07em;
+  text-transform:uppercase;vertical-align:1px}
+.network-row-meta .sample-tag{margin-left:7px;vertical-align:0}
+.ab-sample-note{font-size:.8rem;line-height:1.55;color:var(--ink-3);max-width:76ch}
+.ab-sample-note .sample-tag{margin:0 2px}
+
+/* Which businesses the referral list is showing. Display only; the ranking is untouched. */
+.network-lens{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.network-lens button{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;
+  border:1px solid var(--border);border-radius:999px;background:#FFF;
+  font:600 .8rem/1 var(--nums);color:var(--quiet)}
+.network-lens button span{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+.network-lens button:hover{border-color:#92A797}
+.network-lens button.is-picked{background:var(--ink);border-color:var(--ink);color:#FFF}
+.network-lens button.is-picked span{color:rgba(255,255,255,.72)}
+.network-lens-note{margin:-6px 0 16px;font-size:.8rem;line-height:1.55;color:var(--muted);max-width:68ch}
+@media(max-width:620px){.network-lens button{flex:1 1 auto;justify-content:center}}
