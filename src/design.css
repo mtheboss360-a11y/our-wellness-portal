@@ -1229,6 +1229,9 @@
   .ov-kpi,.ov-bar i,.ov-bar-col i{ transition:none; }
   .ov-kpi:hover{ transform:none; }
   .ov-skel{ animation:none; }
+  /* The panel still changes; it just stops moving to do it. */
+  .own-metric{ transition:none; }
+  .own-swap-body{ animation:none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1255,17 +1258,48 @@
   white-space:nowrap; box-shadow:var(--e-1); }
 
 .own-metrics{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
-.own-metric{ min-height:112px; padding:var(--s-4) var(--s-5); background:var(--n-0);
-  border:1px solid var(--n-200); border-radius:var(--r-md); box-shadow:var(--e-1); }
+/* The card is a button now: it opens the panel below. Appearance is reset so that being a
+   control changes nothing about how it looks until it is the selected one. */
+.own-metric{ display:flex; flex-direction:column; align-items:stretch; width:100%;
+  min-height:112px; padding:var(--s-4) var(--s-5); background:var(--n-0); text-align:left;
+  font:inherit; color:inherit; cursor:pointer; appearance:none;
+  border:1px solid var(--n-200); border-radius:var(--r-md); box-shadow:var(--e-1);
+  transition:border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+.own-metric:hover{ border-color:var(--n-300); box-shadow:var(--e-2); }
+.own-metric[aria-selected="true"]{ border-color:var(--forest-2); background:var(--good-fill);
+  box-shadow:inset 0 0 0 1px var(--forest-2), var(--e-2); }
+.own-metric[aria-selected="true"] .own-metric-label{ color:var(--forest-3); }
 .own-metric-top{ display:flex; align-items:center; justify-content:space-between; gap:var(--s-2); }
 .own-metric-label{ font:600 var(--t-sub)/1.3 var(--font); color:var(--n-500); }
 .own-metric-icon{ display:grid; place-items:center; width:28px; height:28px; border-radius:9px;
   background:var(--good-fill); color:var(--good-ink); flex:none; }
 .own-metric-icon.gold{ background:var(--gold-fill); color:var(--gold-ink); }
 .own-metric-icon.blue{ background:#EAF1F8; color:#456681; }
-.own-metric-value{ margin-top:var(--s-3); font:700 1.75rem/1 var(--font); letter-spacing:-.04em;
+.own-metric-value{ display:block; margin-top:var(--s-3); font:700 1.75rem/1 var(--font);
+  letter-spacing:-.04em; color:var(--n-900); font-variant-numeric:tabular-nums; }
+.own-metric-note{ display:block; margin-top:var(--s-2); font:450 var(--t-tiny)/1.5 var(--font);
+  color:var(--n-500); }
+
+/* ── The panel the cards open ────────────────────────────────────────────── */
+.own-swap-body{ padding:var(--s-4) var(--s-5) var(--s-5); animation:own-swap-in .16s ease-out both; }
+@keyframes own-swap-in{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
+.own-swap-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--s-4); }
+.own-swap-stat dt{ font:600 var(--t-sub)/1.3 var(--font); color:var(--n-500); }
+.own-swap-stat dd{ margin-top:6px; font:700 1.3rem/1.1 var(--font); letter-spacing:-.03em;
   color:var(--n-900); font-variant-numeric:tabular-nums; }
-.own-metric-note{ margin-top:var(--s-2); font:450 var(--t-tiny)/1.5 var(--font); color:var(--n-500); }
+.own-swap-stat p{ margin-top:4px; font:450 var(--t-tiny)/1.45 var(--font); color:var(--n-500); }
+.own-swap-weeks{ display:flex; flex-wrap:wrap; gap:var(--s-2); margin-top:var(--s-4);
+  padding-top:var(--s-4); border-top:1px solid var(--n-100); list-style:none; }
+.own-swap-weeks li{ display:flex; align-items:baseline; gap:6px; padding:5px 10px;
+  background:var(--n-50); border-radius:999px; }
+.own-swap-weeks span{ font:500 var(--t-tiny)/1 var(--font); color:var(--n-500); }
+.own-swap-weeks strong{ font:700 var(--t-sub)/1 var(--font); color:var(--n-900);
+  font-variant-numeric:tabular-nums; }
+.own-swap-list{ margin-top:var(--s-4); padding-top:var(--s-2); list-style:none; }
+.own-swap-list li{ display:flex; align-items:baseline; justify-content:space-between;
+  gap:var(--s-4); padding:9px 0; border-top:1px solid var(--n-100); }
+.own-swap-when{ font:500 var(--t-tiny)/1 var(--font); color:var(--n-500); white-space:nowrap; }
+.own-swap-late{ font:600 var(--t-tiny)/1 var(--font); color:var(--warn-ink); white-space:nowrap; }
 
 .own-panel{ background:var(--n-0); border:1px solid var(--n-200); border-radius:var(--r-lg);
   box-shadow:var(--e-1); overflow:hidden; }
@@ -1388,6 +1422,7 @@
 
 @media (max-width:1050px){
   .own-metrics{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .own-swap-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .own-two{ grid-template-columns:minmax(0,1fr); }
   .own-summary{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
@@ -1397,6 +1432,9 @@
   .own-metrics{ gap:10px; }
   .own-metric{ min-height:100px; padding:var(--s-3) var(--s-4); }
   .own-metric-value{ font-size:1.5rem; }
+  .own-swap-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--s-3); }
+  .own-swap-stat dd{ font-size:1.15rem; }
+  .own-swap-list li{ flex-direction:column; gap:2px; }
   .own-panel-head{ flex-direction:column; gap:var(--s-3); }
   .own-stop-grid{ grid-template-columns:1fr; margin-left:0; }
   .own-stop-note{ margin-left:0; }
