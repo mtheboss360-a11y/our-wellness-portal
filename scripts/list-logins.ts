@@ -19,11 +19,22 @@ try {
   const user = wide(r => r.username, 'USERNAME');
   const clinic = wide(r => r.clinic, 'CLINIC ID');
   const person = wide(r => r.name || '—', 'PERSON');
+  const roleCol = wide(r => r.role ?? 'unassigned', 'ROLE');
 
-  console.log('USERNAME'.padEnd(user) + 'CLINIC ID'.padEnd(clinic) + 'PERSON'.padEnd(person) + 'ACCOUNT'.padEnd(9) + 'SESSIONS');
+  console.log('USERNAME'.padEnd(user) + 'CLINIC ID'.padEnd(clinic) + 'PERSON'.padEnd(person) +
+    'ROLE'.padEnd(roleCol) + 'ACCOUNT'.padEnd(9) + 'SESSIONS');
   for (const r of rows) {
     console.log(r.username.padEnd(user) + r.clinic.padEnd(clinic) +
-      (r.name || '—').padEnd(person) + (r.demo === 1 ? 'demo' : 'LIVE').padEnd(9) + String(r.activeSessions));
+      (r.name || '—').padEnd(person) + (r.role ?? 'unassigned').padEnd(roleCol) +
+      (r.demo === 1 ? 'demo' : 'LIVE').padEnd(9) + String(r.activeSessions));
+  }
+
+  // An unassigned account keeps pre-role access. Worth saying out loud, every time.
+  const unassigned = rows.filter(r => !r.role);
+  if (unassigned.length) {
+    console.log(`\n${unassigned.length} ${unassigned.length === 1 ? 'login has' : 'logins have'} no role and keep full access:`);
+    console.log(`  ${unassigned.map(r => r.username).join(', ')}`);
+    console.log(`  Set one with:  npm run set-role -- --username <name> --role owner|staff|route_runner`);
   }
 
   // Several logins on one practice is how an account nobody remembers keeps working.

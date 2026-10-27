@@ -120,7 +120,9 @@ Each campaign needs `id`, `name`, `period`, `locations`, and `leads`. Import val
 
 ## Route runner accounts
 
-A **route runner** is a field rep. They sign in and land on their weekly planner — the routes
+A **route runner** is the fourth role beside `admin`, `owner` and `staff` — one of ours in the
+field, where `staff` is a practice's own person on the existing portal screens. They sign in and
+land on their weekly planner — the routes
 assigned to them, what to bring, their pickups, and the guided visit at each business — and
 nothing else. The practice's own login is untouched and keeps every screen it had.
 

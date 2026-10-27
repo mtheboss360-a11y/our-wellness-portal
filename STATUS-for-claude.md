@@ -122,6 +122,11 @@ There is no admin UI. Rounds are booked from the Render Shell with `plan-round`.
 **Added 2026-10-27.** The weekly planner a field rep lives in, built from the standalone file
 kept at `samples/route-runner-planner-reference.html`.
 
+`route_runner` is the fourth value in the role column the owner dashboard added, beside
+`admin`, `owner` and `staff`. It is not the same as `staff`: `staff` is a practice's own
+person on the existing portal screens (plan b, where the practice does its own visits);
+`route_runner` is one of ours on the planner. An account with no role keeps what it had.
+
 | Piece | Where |
 |---|---|
 | Assignments, pickups, supplies, route order, audit | `server/runner.ts` |

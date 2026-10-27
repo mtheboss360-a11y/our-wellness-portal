@@ -11,11 +11,10 @@ import { openOutreach } from './outreach';
 import { openRunner } from './runner';
 export type PortalStore = ReturnType<typeof openStore>;
 /**
- * WHAT A LOGIN IS FOR. '' is every account that existed before this column: the practice's own
- * login, which keeps exactly the screens it had. 'route_runner' is a field rep — the weekly
- * planner, their own routes, and nothing else. A role is never read from a request.
+ * WHAT A LOGIN IS FOR. A role is set by the team and read from the account row; it is never
+ * taken from a request. An account with no role keeps the access it had before roles existed.
  */
-export const ROLES = ['', 'route_runner'] as const;
+export const ROLES = ['admin', 'owner', 'staff', 'route_runner'] as const;
 export type Role = (typeof ROLES)[number];
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
@@ -60,11 +59,21 @@ export function openStore(filename: string, enableSample = true) {
   const userColumns = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>).map(c => c.name);
   if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
   if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
-  // WHAT THIS LOGIN IS FOR. Empty is what every existing account reads as, and an empty role
-  // changes nothing about what it can see: the practice's login keeps the portal it had. A
-  // 'route_runner' is restricted to its own routes, and that restriction is enforced in
-  // server/http.ts rather than by hiding navigation.
-  if (!userColumns.includes('role')) db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT ''");
+  // WHAT THIS PERSON IS ALLOWED TO DO. Four roles, and the plan is not one of them: 'a' and
+  // 'b' say what a practice buys, which is a billing fact, and billing facts must never decide
+  // who may read a visit script.
+  //
+  //   admin  — the platform. Every internal tool.
+  //   owner  — the practice. Its own records and its own curated matches. No staff scripts.
+  //   staff  — the person who goes out for a practice. Their assigned work and its scripts.
+  //   route_runner — a field rep on the weekly planner. Their own routes and nothing else;
+  //            see RUNNER_ENDPOINTS in server/http.ts for what that means in practice.
+  //
+  // NULLABLE ON PURPOSE. Every account that existed before this column has no role, and the
+  // server treats those exactly as it did yesterday — anything else would lock a live client
+  // out of their own portal the moment this deploys. An unassigned account is reported as
+  // such by list-logins and is meant to be assigned, not left. A role, once set, is enforced.
+  if (!userColumns.includes('role')) db.exec('ALTER TABLE users ADD COLUMN role TEXT');
 
   // WHETHER A ROW IS ILLUSTRATIVE. Nullable with no default: an existing row reads NULL,
   // meaning nobody has said, and the activate-live command refuses to delete what nobody has
@@ -95,7 +104,7 @@ export function openStore(filename: string, enableSample = true) {
       db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id,role) VALUES (?,?,?,?,?,?,?,?)')
         .run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt,
              (user.displayName ?? '').trim(), user.staffId?.trim() || null,
-             ROLES.includes(user.role as Role) ? user.role ?? '' : '');
+             (ROLES as readonly string[]).includes(user.role ?? '') ? user.role! : null);
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
@@ -127,10 +136,40 @@ export function openStore(filename: string, enableSample = true) {
   /** Who can sign in, for an audit. Never returns a hash, a salt or anything derived from one. */
   function logins() {
     return db.prepare(`SELECT u.email AS username, u.display_name AS name, u.clinic_id AS clinic,
-        c.name AS clinicName, c.demo AS demo, u.role AS role,
+        c.name AS clinicName, c.demo AS demo,
+        u.role AS role,
         (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>?) AS activeSessions
       FROM users u JOIN clinics c ON c.id=u.clinic_id ORDER BY c.name, u.email`).all(Date.now()) as Array<{
-        username: string; name: string; clinic: string; clinicName: string; demo: number; role: string; activeSessions: number }>;
+        username: string; name: string; clinic: string; clinicName: string; demo: number;
+        role: string | null; activeSessions: number }>;
+  }
+
+  /**
+   * What this session may do. Asked by the API before it answers, never by the browser.
+   *
+   * An account with no role set keeps the access it had before roles existed. That is a
+   * migration state, not a permission: `unassigned` is reported so it can be fixed, and the
+   * two `may*` helpers below say plainly what it allows.
+   */
+  function roleOf(token: string | undefined): Role | 'unassigned' | null {
+    const who = session(token);
+    if (!who) return null;
+    return (ROLES as readonly string[]).includes(who.role ?? '') ? who.role as Role : 'unassigned';
+  }
+
+  /** Scripts, recording a visit, the round: the work of going out. Never an owner's. */
+  const mayDoFieldWork = (role: ReturnType<typeof roleOf>) =>
+    role === 'staff' || role === 'route_runner' || role === 'admin' || role === 'unassigned';
+
+  /** The practice's own view of itself. Not a staff member's. */
+  const mayOwnPractice = (role: ReturnType<typeof roleOf>) =>
+    role === 'owner' || role === 'admin' || role === 'unassigned';
+
+  /** Set or clear a role. Clearing it returns the account to the legacy state. */
+  function setRole(username: string, role: Role | null) {
+    const changed = db.prepare('UPDATE users SET role=? WHERE email=?')
+      .run(role, username.trim().toLowerCase());
+    if (!changed.changes) throw new Error(`No login called "${username.trim().toLowerCase()}".`);
   }
 
   /** Is this an illustrative account? Read from the clinic row, never from a request. */
@@ -177,7 +216,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.id AS user_id,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; user_id: string; email: string; display_name: string; staff_id: string | null; role: string} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.id AS user_id,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; user_id: string; email: string; display_name: string; staff_id: string | null; role: string | null} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -192,8 +231,8 @@ export function openStore(filename: string, enableSample = true) {
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
     return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 },
-      user: { name: clinic.display_name || null, staffId: clinic.staff_id || null,
-        role: clinic.role === 'route_runner' ? 'route_runner' : '' }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
+      role: roleOf(token),
+      user: { name: clinic.display_name || null, staffId: clinic.staff_id || null }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
     const now = Date.now();
@@ -217,5 +256,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, setPassword, logins, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, runner, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, setPassword, setRole, logins, roleOf, mayDoFieldWork, mayOwnPractice, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, runner, close: () => db.close() };
 }
