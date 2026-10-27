@@ -64,10 +64,8 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
   }, [router]);
 
   async function leave() {
-    // The next sign-in starts at its own landing screen, not on this one's last page.
-    endSession();
     setSigningOut(true);
-    try { await logout(); router.clearCache(); await router.invalidate(); }
+    try { await logout(); endSession(); router.clearCache(); await router.invalidate(); }
     finally { setSigningOut(false); }
   }
 

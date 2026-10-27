@@ -31,9 +31,9 @@ function usePrefersReducedMotion() {
 
 export type Connection = { id: string; name: string; demo: boolean };
 
-const BOX = { w: 1200, h: 800 };
-const HUB = 76;
-const NODE = 48;
+const BOX = { w: 1280, h: 960 };
+const HUB = 84;
+const NODE = 62;
 const MAX_NODES = 25;
 
 /** Two letters from a name, for the middle of a bubble. */
@@ -43,8 +43,10 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean)
 /** A name too long for its bubble is split across two lines rather than clipped. */
 function twoLines(name: string, perLine = 13): [string, string | null] {
   if (name.length <= perLine) return [name, null];
+  // A name with no spaces cannot be split on one, so it is cut at the same width as any other
+  // second line — without this it ran wider than the circle it sits in.
   const words = name.split(/\s+/);
-  if (words.length === 1) return [name.slice(0, perLine), name.slice(perLine)];
+  if (words.length === 1) return [name.slice(0, perLine), cap(name.slice(perLine), perLine)];
   let first = '';
   for (const word of words) {
     if (first && (`${first} ${word}`).length > perLine) break;
@@ -52,30 +54,35 @@ function twoLines(name: string, perLine = 13): [string, string | null] {
   }
   const rest = name.slice(first.length).trim();
   if (!rest) return [first, null];
-  // A second line longer than the bubble is wider than the circle it sits in. The whole name
-  // is in the connections list underneath, so the bubble shows as much as fits and stops.
-  return [first, rest.length > perLine + 5 ? `${rest.slice(0, perLine + 4).trimEnd()}…` : rest];
+  return [first, cap(rest, perLine)];
 }
+
+/** A second line wider than the bubble is cut; the whole name is in the list underneath. */
+const cap = (line: string, perLine: number) =>
+  line.length > perLine + 5 ? `${line.slice(0, perLine + 4).trimEnd()}…` : line;
 
 export default function ReferralBubbles({ practice, connections }: {
   practice: string; connections: Connection[];
 }) {
   const stillness = usePrefersReducedMotion();
-  // Give the full practice network room to breathe. Up to 18 accounts use one broad ring;
-  // larger networks use a staggered inner and outer ring. Every partner stays the same size.
+  // Keep the nodes large enough to read at normal dashboard width. Larger networks use a
+  // second, staggered ring rather than shrinking every bubble to fit. The ring radii and the
+  // height of the box are the ones measured to keep every count from 1 to 25 clear of its
+  // neighbours, of the hub and of the edge of the box — at 25 the margin is thinnest, and the
+  // live practice is at 25.
   const shown = useMemo(() => connections.slice(0, MAX_NODES), [connections]);
   const hidden = connections.length - shown.length;
   const placed = useMemo(() => {
     const n = shown.length;
     if (!n) return [];
 
-    const innerCount = n > 18 ? Math.ceil(n / 3) : 0;
+    const innerCount = n > 14 ? Math.ceil(n / 3) : 0;
     const rings = innerCount
       ? [
-          { items: shown.slice(0, innerCount), rx: 255, ry: 172, offset: 0 },
-          { items: shown.slice(innerCount), rx: 468, ry: 302, offset: 1 },
+          { items: shown.slice(0, innerCount), rx: 310, ry: 215, offset: 0 },
+          { items: shown.slice(innerCount), rx: 566, ry: 400, offset: 1 },
         ]
-      : [{ items: shown, rx: n <= 8 ? 360 : 468, ry: n <= 8 ? 230 : 302, offset: 0 }];
+      : [{ items: shown, rx: n <= 8 ? 390 : 566, ry: n <= 8 ? 225 : 400, offset: 0 }];
 
     const out: Array<{ connection: Connection; x: number; y: number; delay: number }> = [];
     for (const ring of rings) {
@@ -110,8 +117,8 @@ export default function ReferralBubbles({ practice, connections }: {
 
       {placed.map(({ connection, x, y, delay }, index) => {
         const [one, two] = twoLines(connection.name);
-        const tone = index % 5 === 2 ? ' tone-gold' : index % 5 === 4 ? ' tone-sage' : '';
-        return <g key={connection.id} className={`bub-node${tone}`} transform={`translate(${x} ${y})`}>
+        const tone = ['tone-blue', '', 'tone-gold', 'tone-peach', 'tone-sage'][index % 5];
+        return <g key={connection.id} className={`bub-node ${tone}`} transform={`translate(${x} ${y})`}>
           <title>{connection.name}</title>
           <g className="bub-fan">
             {/* The gather-and-fan: starts at the practice and settles where it belongs. */}
@@ -123,9 +130,9 @@ export default function ReferralBubbles({ practice, connections }: {
             )}
             <circle r={NODE}/>
             <g className="bub-copy" style={{ animationDelay: `${delay + 0.18}s` }}>
-              <text className="bub-initials" textAnchor="middle" y={two ? -13 : -7}>{initials(connection.name)}</text>
-              <text className="bub-name" textAnchor="middle" y={two ? 6 : 12}>{one}</text>
-              {two && <text className="bub-name" textAnchor="middle" y={20}>{two}</text>}
+              <text className="bub-initials" textAnchor="middle" y={two ? -16 : -8}>{initials(connection.name)}</text>
+              <text className="bub-name" textAnchor="middle" y={two ? 8 : 15}>{one}</text>
+              {two && <text className="bub-name" textAnchor="middle" y={25}>{two}</text>}
             </g>
           </g>
         </g>;
@@ -133,8 +140,9 @@ export default function ReferralBubbles({ practice, connections }: {
 
       <g className="bub-node is-hub" transform={`translate(${BOX.w / 2} ${BOX.h / 2})`}>
         <circle r={HUB}/>
-        <text className="bub-hub-name" textAnchor="middle" y={-2}>{twoLines(practice, 15)[0]}</text>
-        <text className="bub-hub-sub" textAnchor="middle" y={18}>Your practice</text>
+        <text className="bub-hub-name" textAnchor="middle" y={-10}>{twoLines(practice, 15)[0]}</text>
+        {twoLines(practice, 15)[1] && <text className="bub-hub-name" textAnchor="middle" y={9}>{twoLines(practice, 15)[1]}</text>}
+        <text className="bub-hub-sub" textAnchor="middle" y={34}>Your practice</text>
       </g>
     </svg>
     {hidden > 0 && <p className="bub-note">Showing {shown.length} of {connections.length} connections. See Your businesses for the full list.</p>}

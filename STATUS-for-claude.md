@@ -53,7 +53,7 @@ showed no progress.
 
 **Visit history, Performance, Assigned Businesses.** All read saved records only.
 
-**Owner dashboard** (`src/OwnerDashboard.tsx`, `src/ReferralBubbles.tsx`). Plan B owner logins open a practice dashboard with account-level activity, radius-filtered assigned businesses, route watchlist and full-screen route details. The bubble view reads only that practice's released businesses, lays them out as one broad ring or two staggered rings (up to 25), and keeps every partner bubble the same size. Owners do not receive visit scripts and cannot record or edit a field visit. QR/NFC values are not in the current data model, so route details honestly show “Not added.”
+**Owner dashboard** (`src/OwnerDashboard.tsx`, `src/ReferralBubbles.tsx`). Plan B owner logins open a practice dashboard with account-level activity, radius-filtered assigned businesses, route watchlist and full-screen route details. The bubble view reads only that practice's released businesses, uses larger readable nodes in one broad ring or two staggered rings (up to 25), and keeps every partner bubble the same size. Owners do not receive visit scripts and cannot record or edit a field visit. QR/NFC values are not in the current data model, so route details honestly show “Not added.” Fresh sign-ins open the role's landing screen; in-session Back and Forward navigation remains available.
 
 **Opening hours** (`src/lib/agenda-math.ts`, `OPENS`). Mon/Tue/Fri 09:00, Wed/Thu 11:00,
 Sat/Sun closed. A round cannot start before the practice opens; `plan-round` refuses a closed
