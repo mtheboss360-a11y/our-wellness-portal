@@ -271,3 +271,16 @@ test('a removed round takes its stops and nothing else', () => {
   assert.throws(() => store.outreach.removeRound('other', round.id), /not yours/);
   store.close();
 });
+
+test('a verified category stands in only where Google classified nothing', async () => {
+  const { typeFromVerifiedCategory } = await import('../server/network/verified-category.ts');
+  // Karve Pilates came back from Google as health/point_of_interest/establishment.
+  assert.equal(typeFromVerifiedCategory('Pilates studio'), 'yoga_studio');
+  assert.equal(typeFromVerifiedCategory('Yoga studio'), 'yoga_studio');
+  assert.equal(typeFromVerifiedCategory("Children's hair salon"), 'hair_salon');
+  assert.equal(typeFromVerifiedCategory("Men's grooming salon"), 'barber_shop');
+  assert.equal(typeFromVerifiedCategory('Physical therapy'), 'physiotherapist');
+  // Wording we do not recognise stays uncategorised rather than being forced into a bucket.
+  assert.equal(typeFromVerifiedCategory('Bookshop'), null);
+  assert.equal(typeFromVerifiedCategory(''), null);
+});

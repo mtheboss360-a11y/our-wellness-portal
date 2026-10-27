@@ -11,7 +11,8 @@
 import type { PortalStore } from '../store';
 import { discoverNearby, configured, PlacesError } from './places';
 import { isSampleClinic, sampleMap, sampleMapAt } from './sample';
-import { GOOGLE_RETENTION_DAYS, DEFAULT_RADIUS_MILES } from './config';
+import { GOOGLE_RETENTION_DAYS, DEFAULT_RADIUS_MILES, categoryForTypes } from './config';
+import { typeFromVerifiedCategory } from './verified-category';
 
 export const autoDiscoverEnabled = () => process.env.NETWORK_MAP_AUTO_DISCOVER !== 'false';
 
@@ -54,10 +55,15 @@ export async function ensureDiscovery(store: PortalStore, clinicId: string, { fo
     const held = store.cachedDiscovery(clinicId);
     for (const business of mine) {
       if (held.some(place => place.placeId === business.placeId)) continue;
+      // Where Google's own types classify this place as nothing, fall back to the category
+      // somebody verified when the business was released. "health" is not a classification.
+      const classified = categoryForTypes(business.types, business.primaryType) !== null;
+      const standIn = classified ? null : typeFromVerifiedCategory(business.category);
       store.saveDiscovery(clinicId, [{
         placeId: business.placeId!, name: business.name, address: business.address,
         lat: business.lat, lng: business.lng,
-        types: business.types, primaryType: business.primaryType,
+        types: standIn ? [...business.types, standIn] : business.types,
+        primaryType: business.primaryType,
         businessStatus: 'OPERATIONAL', rating: null, reviewCount: null, googleMapsUri: null,
       }], Date.now(), business.geoAt! + window);
     }
