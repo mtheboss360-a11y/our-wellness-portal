@@ -70,6 +70,14 @@ server/network/map.ts     When a Places call may be spent, and when the cache is
 src/NetworkMap.tsx        The Network Map screen
 src/lib/network-math.ts   Clustering, filtering and the Google Maps route link
 tests/network.test.ts     Tenancy, conflict rules, route limits, caching and retention
+server/runner.ts          Route runner assignments, pickups, supplies, route order, audit
+src/RunnerPortal.tsx      The route runner's account: four screens and no more
+src/MyRoutes.tsx          The weekly planner — the stops, the pickups, the drawers
+src/lib/route-math.ts     The planner's arithmetic: arrival times, windows, allowed moves
+src/runner.css            The planner's own styling, scoped under .rr
+tests/runner.test.ts      Who may see and change a route, and what a runner may never do
+tests/route.test.ts       Estimates, pickup windows and the moves the screen offers
+samples/route-runner-planner-reference.html  The standalone planner this was built from
 public/assets/           Original logo and favicon files from your website
 BRAND-SOURCES.md          Exact asset URLs and palette sources
 QA.md                    Test results, review, and remaining hosting work
@@ -109,6 +117,39 @@ npm run import-campaigns -- --clinic clinic-slug --file /path/to/campaigns.json
 ```
 
 Each campaign needs `id`, `name`, `period`, `locations`, and `leads`. Import validation checks date format, unique identifiers, positive/zero flyer counts, valid email/phone shapes, and lead-to-location links. Existing campaign IDs for that clinic are updated; omitted campaigns are retained, not deleted. Accounts cannot choose another clinic via a request parameter: clinic identity always comes from the authenticated server session.
+
+## Route runner accounts
+
+A **route runner** is the fourth role beside `admin`, `owner` and `staff` — one of ours in the
+field, where `staff` is a practice's own person on the existing portal screens. They sign in and
+land on their weekly planner — the routes
+assigned to them, what to bring, their pickups, and the guided visit at each business — and
+nothing else. The practice's own login is untouched and keeps every screen it had.
+
+```sh
+INITIAL_PASSWORD='the-password' npm run add-runner-login -- \
+  --clinic hyline-dental --username alexis --name "Alexis"
+
+npm run plan-round -- --clinic hyline-dental --date 2026-10-27 --start 09:00 --staff "Alexis"
+npm run assign-round -- --clinic hyline-dental --date 2026-10-27 --username alexis \
+  --flyers 100 --treats 50 --cards 25
+npm run assign-round -- --clinic hyline-dental --date 2026-10-27 --lock "Karve Pilates"
+```
+
+What a runner may change: the **order** of the stops on a route of theirs, the **pickups** they
+add among them, what they **confirm** carrying, and the **visits** they record. What they may
+not: add or remove an assigned business, move one to another date, change the start time or the
+allocation, or touch anybody else's route. Those are refused by the server
+(`RUNNER_ENDPOINTS` in `server/http.ts`), not merely absent from the navigation.
+
+Supplies are three different numbers and stay three: `planned` is the office's allocation,
+`packed` is the runner's own count of what is in the car, and `visit_materials` is what they
+recorded dropping. What is left is the confirmed load, plus collected pickups, less what was
+dropped.
+
+Every write carries the `revision` the runner's screen was showing. A change sent against an
+older one comes back 409 with the current route, so two phones cannot silently overwrite each
+other.
 
 ## The Network Map
 

@@ -60,3 +60,63 @@ export type { Round };
 export const getRounds = () => request<{
   rounds: Round[]; visits: Visit[]; clinic: { lat: number; lng: number; label: string } | null;
 }>('/api/outreach/rounds');
+
+// THE ROUTE RUNNER'S PLANNER. Every call goes to /api/runner/*, where the server decides which
+// routes are this person's; the browser never sends a clinic, a user or an allocation.
+//
+// `revision` is what the screen was showing when the runner acted. A 409 means somebody else
+// changed the route first — the response carries the current route, so the screen reloads from
+// the server rather than keeping an order that was never saved.
+import type { ItemRef, PickupDraft, RunnerRound, Supplies } from '../../server/runner';
+export type { ItemRef, PickupDraft, RunnerItem, RunnerRound, Pickup, PickupKind, Supplies } from '../../server/runner';
+
+/** A route as the planner reads it: the round, plus what is in the car. */
+export type RunnerRoute = RunnerRound & { collected: Supplies; dropped: Supplies; remaining: Supplies };
+export type RunnerPayload = {
+  routes: RunnerRoute[]; visits: Visit[]; materials: Record<string, Supplies>;
+  clinic: { lat: number; lng: number; label: string } | null;
+  practice: string; runner: { name: string | null };
+};
+
+/** A failed write that carries the route as it now stands, so the screen can roll back onto it. */
+export class RouteChanged extends Error {
+  constructor(message: string, readonly route: RunnerRoute | null) { super(message); this.name = 'RouteChanged'; }
+}
+
+async function runnerWrite(path: string, body: unknown): Promise<{ route: RunnerRoute }> {
+  const response = await fetch(path, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => null) as { error?: string; route?: RunnerRoute } | null;
+  if (response.status === 409) throw new RouteChanged(payload?.error ?? 'This route changed somewhere else.', payload?.route ?? null);
+  if (!response.ok) throw new Error(payload?.error || 'That change could not be saved.');
+  return payload as { route: RunnerRoute };
+}
+
+export const getRunnerRoutes = () => request<RunnerPayload>('/api/runner/routes');
+export const getRunnerBusiness = (id: string) =>
+  request<{ business: Business; script: { script: Script; edited: boolean } | null; visits: Visit[] }>(
+    `/api/runner/business?id=${encodeURIComponent(id)}`);
+export const getRunnerHistory = () =>
+  request<{ visits: Visit[]; materials: Record<string, Supplies> }>('/api/runner/history');
+export const reorderRoute = (roundId: string, order: ItemRef[], revision: number) =>
+  runnerWrite('/api/runner/order', { roundId, order, revision });
+export const savePickup = (roundId: string, revision: number, draft: PickupDraft & { pickupId?: string }) =>
+  runnerWrite('/api/runner/pickup', { roundId, revision, ...draft });
+export const removePickup = (roundId: string, pickupId: string, revision: number) =>
+  runnerWrite('/api/runner/pickup/remove', { roundId, pickupId, revision });
+export const collectPickup = (roundId: string, pickupId: string, revision: number) =>
+  runnerWrite('/api/runner/pickup/collected', { roundId, pickupId, revision });
+export const confirmPacked = (roundId: string, supplies: Supplies, revision: number) =>
+  runnerWrite('/api/runner/packed', { roundId, supplies, revision });
+
+/** A visit recorded from the planner: the same record, with the breakdown of what was dropped. */
+export type RunnerVisitDraft = {
+  businessId: string; visitedOn: string; spokeWith: string; contactRole: string;
+  outcome: Outcome; dropped: Supplies; note: string; nextAction: string;
+  followUpOn: string | null; clientRef?: string;
+};
+export const recordRunnerVisit = (input: RunnerVisitDraft) =>
+  request<{ visit: Visit; business: Business; dropped: Supplies; route: RunnerRoute | null }>(
+    '/api/runner/visit', 'POST', input);

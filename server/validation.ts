@@ -133,3 +133,73 @@ export const saveScriptInput = z.object({
     closing: z.string().max(2000), followUp: z.string().max(2000),
   }).strict(),
 }).strict();
+
+// ── THE ROUTE RUNNER'S OWN WRITES ───────────────────────────────────────────
+//
+// A runner may change the ORDER of their day, the pickups they put into it, what they confirm
+// they are carrying and what they recorded dropping. Nothing here accepts a clinic, a user, a
+// business name, an address for a business, a date or an allocation: the round comes from the
+// session's own assigned rounds, and the quantities the office allocated are not in any of
+// these shapes, so a runner cannot raise their own allocation by posting a bigger number.
+//
+// `revision` is what the runner's screen was showing when they acted. The server refuses a
+// write against an older revision rather than letting the second phone win silently.
+const supplyCount = z.number().int().min(0).max(10000);
+export const supplyInput = z.object({
+  flyers: supplyCount.default(0), treats: supplyCount.default(0), cards: supplyCount.default(0),
+}).strict();
+const roundId = z.string().min(1).max(80);
+const revision = z.number().int().min(0).max(1_000_000_000);
+
+export const reorderRouteInput = z.object({
+  roundId,
+  order: z.array(z.object({
+    kind: z.enum(['business', 'pickup']), id: z.string().min(1).max(80),
+  }).strict()).min(1).max(100),
+  revision,
+}).strict();
+
+export const pickupInput = z.object({
+  roundId,
+  /** Absent when this is a new pickup. */
+  pickupId: z.string().min(1).max(80).optional(),
+  kind: z.enum(['treats', 'materials', 'other']),
+  title: z.string().trim().min(1, 'Give the pickup a location name.').max(100),
+  address: z.string().trim().min(8, 'Give the pickup a full street address.').max(250),
+  windowStart: clock,
+  windowEnd: clock,
+  minutes: z.number().int().min(1).max(120),
+  items: z.string().trim().max(400).default(''),
+  reference: z.string().trim().max(120).default(''),
+  note: z.string().trim().max(900).default(''),
+  supplies: supplyInput.default({ flyers: 0, treats: 0, cards: 0 }),
+  revision,
+}).strict().refine(value => value.windowEnd > value.windowStart, {
+  message: 'The pickup window has to open before it closes.', path: ['windowEnd'],
+});
+
+export const pickupActionInput = z.object({
+  roundId, pickupId: z.string().min(1).max(80), revision,
+}).strict();
+
+export const packedInput = z.object({
+  roundId, supplies: supplyInput, revision,
+}).strict();
+
+/**
+ * A visit recorded from the planner. The same shape the portal already records, plus the
+ * breakdown of what was dropped. The TOTAL is not taken from the browser: the server adds the
+ * three counts up, so `visits.materials` and the breakdown behind it cannot disagree.
+ */
+export const runnerVisitInput = z.object({
+  businessId: z.string().min(1).max(80),
+  visitedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  spokeWith: z.string().trim().max(120).default(''),
+  contactRole: z.string().trim().max(120).default(''),
+  outcome: z.enum(['interested', 'partner', 'follow-up', 'declined', 'unavailable', 'closed', 'materials']),
+  dropped: supplyInput.default({ flyers: 0, treats: 0, cards: 0 }),
+  note: z.string().trim().max(4000).default(''),
+  nextAction: z.string().trim().max(400).default(''),
+  followUpOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  clientRef: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
+}).strict();

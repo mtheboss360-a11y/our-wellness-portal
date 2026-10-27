@@ -32,6 +32,8 @@
     "name-login": "tsx scripts/name-login.ts",
     "remove-login": "tsx scripts/remove-login.ts",
     "remove-round": "tsx scripts/remove-round.ts",
+    "add-runner-login": "tsx scripts/add-runner-login.ts",
+    "assign-round": "tsx scripts/assign-round.ts",
     "set-role": "tsx scripts/set-role.ts"
   },
   "dependencies": {
