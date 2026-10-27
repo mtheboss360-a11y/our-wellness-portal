@@ -19,5 +19,8 @@ export type PublicPortal = ReturnType<typeof publicPortal>;
     where the practice's own staff visit. It is read from the account, never from the browser. */
 export type Plan = 'a' | 'b';
 export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name: string; plan: Plan; demo: boolean } | null;
-  /** Who is signed in, when the account belongs to a person rather than the practice. */
-  user?: { name: string | null; staffId: string | null }; campaigns: Campaign[]; today: string };
+  /** Who is signed in, when the account belongs to a person rather than the practice. `role`
+      is '' for the practice's own login and 'route_runner' for a field rep, who sees the
+      weekly planner instead of the portal. It is read from the account, never from the browser. */
+  user?: { name: string | null; staffId: string | null; role?: '' | 'route_runner' };
+  campaigns: Campaign[]; today: string };

@@ -3,6 +3,8 @@ import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
 import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput, recordVisitInput, editVisitInput, saveScriptInput } from './validation';
+import { packedInput, pickupActionInput, pickupInput, reorderRouteInput, runnerVisitInput } from './validation';
+import { RoundConflict, SUPPLY_KEYS, type RunnerRound, type Supplies } from './runner';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
@@ -19,6 +21,35 @@ export function allowedOrigins(origin: string) {
   if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) return new Set([origin]);
   const twin = new URL(origin); twin.hostname = url.hostname.startsWith('www.') ? url.hostname.slice(4) : `www.${url.hostname}`;
   return new Set([origin, twin.origin]);
+}
+/**
+ * WHAT A ROUTE RUNNER'S ACCOUNT MAY REACH. An allowlist, not a list of things to block: an
+ * endpoint added later is closed to a runner until somebody puts it here on purpose.
+ *
+ * Hiding navigation is not a permission. Every one of these is checked again inside its
+ * handler — the round has to be one assigned to the person asking — and everything else under
+ * /api is refused outright, so platform-wide client data, billing, the referral network's
+ * controls and the office's own screens are unreachable from a runner's session whatever the
+ * browser sends.
+ */
+export const RUNNER_ENDPOINTS: ReadonlyArray<{ path: string; methods: readonly string[] }> = [
+  { path: '/api/health', methods: ['GET'] },
+  { path: '/api/portal', methods: ['GET'] },
+  { path: '/api/login', methods: ['POST'] },
+  { path: '/api/logout', methods: ['POST'] },
+  { path: '/api/runner/routes', methods: ['GET'] },
+  { path: '/api/runner/business', methods: ['GET'] },
+  { path: '/api/runner/history', methods: ['GET'] },
+  { path: '/api/runner/visit', methods: ['POST'] },
+  { path: '/api/runner/order', methods: ['POST'] },
+  { path: '/api/runner/pickup', methods: ['POST'] },
+  { path: '/api/runner/pickup/remove', methods: ['POST'] },
+  { path: '/api/runner/pickup/collected', methods: ['POST'] },
+  { path: '/api/runner/packed', methods: ['POST'] },
+];
+export function runnerMayCall(pathname: string, method: string) {
+  const allowed = RUNNER_ENDPOINTS.find(entry => entry.path === pathname);
+  return !!allowed && allowed.methods.includes(method === 'HEAD' ? 'GET' : method);
 }
 function json(response: ServerResponse, status: number, value: unknown) { response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); response.end(JSON.stringify(value)); }
 async function body(request: IncomingMessage) {
@@ -65,6 +96,198 @@ export function createPortalServer(options: Options) {
           if (result.ok) response.setHeader('Set-Cookie', `${cookieName}=${result.token}; ${cookieFlags}; Max-Age=28800`);
           json(response, 200, { ok: result.ok, message: result.message }); return;
         }
+        // A ROUTE RUNNER'S SESSION reaches its own routes and nothing else. The role is read
+        // from the account row, so no header, query or body can claim it or shed it.
+        const signedIn = store.clinicFromToken(cookie);
+        if (signedIn?.role === 'route_runner' && !runnerMayCall(url.pathname, request.method ?? 'GET')) {
+          json(response, 403, { error: 'Your account covers your own routes and visits. Anything else is your office’s to change.' });
+          return;
+        }
+
+        // THE WEEKLY PLANNER. Assigned routes, the pickups a runner adds to them, the supplies
+        // they confirm carrying and the visits they record. Every handler asks the runner layer
+        // whether this round is theirs; a round id belonging to anybody else is simply not found.
+        if (url.pathname.startsWith('/api/runner/')) {
+          if (!signedIn) { json(response, 401, { error: 'Please sign in again to open your routes.' }); return; }
+          const clinic = signedIn;
+          const who = { id: clinic.user_id, displayName: clinic.display_name ?? '' };
+          const runner = store.runner;
+
+          // One shape for a route, whichever endpoint returns it: the stops in order, what the
+          // office allocated, what the runner confirmed, and what is left in the car.
+          const shape = (round: RunnerRound) => ({
+            ...round,
+            collected: runner.collectedSupplies(clinic.id, round.id),
+            dropped: runner.droppedOnRound(clinic.id, round.id),
+            remaining: runner.remaining(clinic.id, round.id, round.supplies.packed),
+          });
+          const sendRoute = (round: RunnerRound) => json(response, 200, { route: shape(round) });
+
+          // A write is refused where the route is not theirs (403), where the office changed it
+          // first (409, with the current route so the screen can reload rather than guess), and
+          // with the reason itself where the reason is the runner's to fix.
+          const refuse = (error: unknown, roundIdValue: string) => {
+            if (error instanceof RoundConflict) {
+              const current = runner.round(clinic.id, roundIdValue);
+              json(response, 409, { error: error.message, route: current ? shape(current) : null });
+              return;
+            }
+            const message = error instanceof Error ? error.message : 'That change could not be saved.';
+            json(response, /not assigned to you|fixed in place/.test(message) ? 403 : 400, { error: message });
+          };
+
+          const readBody = async () => { try { return await body(request); } catch { return null; } };
+
+          if (url.pathname === '/api/runner/routes' && request.method === 'GET') {
+            const routes = runner.assignedRounds(clinic.id, who).map(shape);
+            // Only the visits that belong to the businesses on their own routes. A runner has no
+            // reason to read the practice's whole visit log, so they are not sent it.
+            const mine = new Set(routes.flatMap(r => r.items
+              .filter(item => item.kind === 'business')
+              .map(item => item.kind === 'business' ? item.business.id : '')));
+            const where = store.clinicLocation(clinic.id);
+            json(response, 200, {
+              routes,
+              visits: store.outreach.visits(clinic.id).filter(v => mine.has(v.businessId)),
+              materials: runner.visitMaterials(clinic.id),
+              clinic: where ? { lat: where.lat, lng: where.lng, label: where.label } : null,
+              practice: clinic.name,
+              runner: { name: clinic.display_name || null },
+            });
+            return;
+          }
+
+          // One business, with its script and its history — only where it is on a route of theirs.
+          if (url.pathname === '/api/runner/business' && request.method === 'GET') {
+            const id = url.searchParams.get('id') ?? '';
+            if (!runner.mayVisit(clinic.id, id, who)) {
+              json(response, 404, { error: 'That business is not on one of your routes.' }); return;
+            }
+            json(response, 200, {
+              business: store.outreach.business(clinic.id, id),
+              script: store.outreach.script(clinic.id, id),
+              visits: store.outreach.visits(clinic.id, id),
+            });
+            return;
+          }
+
+          // Their own work, newest first: the visits recorded against businesses on their routes.
+          if (url.pathname === '/api/runner/history' && request.method === 'GET') {
+            const mine = new Set(runner.assignedRounds(clinic.id, who).flatMap(r => r.items
+              .filter(item => item.kind === 'business')
+              .map(item => item.kind === 'business' ? item.business.id : '')));
+            json(response, 200, {
+              visits: store.outreach.visits(clinic.id).filter(v => mine.has(v.businessId)),
+              materials: runner.visitMaterials(clinic.id),
+            });
+            return;
+          }
+
+          if (url.pathname === '/api/runner/order' && request.method === 'POST') {
+            const input = reorderRouteInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: 'That new order could not be read.' }); return; }
+            try {
+              const completed = new Set(store.outreach.visits(clinic.id).map(v => v.businessId));
+              sendRoute(runner.reorder(clinic.id, input.data.roundId, input.data.order, who, {
+                revision: input.data.revision, completed,
+              }));
+            } catch (error) { refuse(error, input.data.roundId); }
+            return;
+          }
+
+          if (url.pathname === '/api/runner/pickup' && request.method === 'POST') {
+            const input = pickupInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: input.error.issues[0]?.message ?? 'Please check the pickup details.' }); return; }
+            const { roundId: id, pickupId, revision, ...draft } = input.data;
+            try {
+              sendRoute(pickupId
+                ? runner.updatePickup(clinic.id, id, pickupId, draft, who, { revision })
+                : runner.addPickup(clinic.id, id, draft, who, { revision, demo: store.isDemoClinic(clinic.id) }));
+            } catch (error) { refuse(error, id); }
+            return;
+          }
+
+          if (url.pathname === '/api/runner/pickup/remove' && request.method === 'POST') {
+            const input = pickupActionInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: 'That pickup could not be read.' }); return; }
+            try { sendRoute(runner.removePickup(clinic.id, input.data.roundId, input.data.pickupId, who, { revision: input.data.revision })); }
+            catch (error) { refuse(error, input.data.roundId); }
+            return;
+          }
+
+          if (url.pathname === '/api/runner/pickup/collected' && request.method === 'POST') {
+            const input = pickupActionInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: 'That pickup could not be read.' }); return; }
+            try { sendRoute(runner.collectPickup(clinic.id, input.data.roundId, input.data.pickupId, who, { revision: input.data.revision })); }
+            catch (error) { refuse(error, input.data.roundId); }
+            return;
+          }
+
+          if (url.pathname === '/api/runner/packed' && request.method === 'POST') {
+            const input = packedInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: 'Those quantities could not be read.' }); return; }
+            try {
+              sendRoute(runner.confirmPacked(clinic.id, input.data.roundId, input.data.supplies, who, {
+                revision: input.data.revision,
+                dropped: runner.droppedOnRound(clinic.id, input.data.roundId),
+              }));
+            } catch (error) { refuse(error, input.data.roundId); }
+            return;
+          }
+
+          // RECORD A VISIT from the planner. The visit itself is written by the same function
+          // every other screen uses, so there is one record of a conversation and one only. What
+          // is added here is the breakdown of what was dropped, and the TOTAL is the sum of it:
+          // the browser does not get to send a total that disagrees with its own parts.
+          if (url.pathname === '/api/runner/visit' && request.method === 'POST') {
+            const input = runnerVisitInput.safeParse(await readBody());
+            if (!input.success) { json(response, 400, { error: 'That visit could not be saved. Please check it and try again.' }); return; }
+            const draft = input.data;
+            if (!runner.mayVisit(clinic.id, draft.businessId, who)) {
+              json(response, 403, { error: 'That business is not on one of your routes.' }); return;
+            }
+            const round = runner.roundForBusiness(clinic.id, draft.businessId, who);
+            const total = SUPPLY_KEYS.reduce((sum, key) => sum + draft.dropped[key], 0);
+            if (round && total > 0) {
+              if (!round.supplies.packed) {
+                json(response, 400, { error: 'Confirm what you packed before recording materials dropped.' }); return;
+              }
+              // A retry of a submission already saved must not be measured against its own drop
+              // a second time, so what this visit already recorded is added back to what is left.
+              const visitId = draft.clientRef ? `v_${draft.clientRef}` : '';
+              const already = visitId ? runner.visitMaterials(clinic.id)[visitId] : undefined;
+              const left = runner.remaining(clinic.id, round.id, round.supplies.packed);
+              const short = SUPPLY_KEYS.find(key => draft.dropped[key] > left[key] + (already?.[key] ?? 0));
+              if (short) {
+                json(response, 400, { error: `You have ${Math.max(0, left[short] + (already?.[short] ?? 0))} ${short} left on this route, so ${draft.dropped[short]} cannot be recorded as dropped.` });
+                return;
+              }
+            }
+            try {
+              const saved = store.outreach.recordVisit(clinic.id, {
+                businessId: draft.businessId, visitedOn: draft.visitedOn, spokeWith: draft.spokeWith,
+                contactRole: draft.contactRole, outcome: draft.outcome, materials: total,
+                note: draft.note, nextAction: draft.nextAction, followUpOn: draft.followUpOn,
+                clientRef: draft.clientRef, staff: clinic.display_name || '',
+              });
+              // The breakdown is written after the visit. If this were to fail the visit still
+              // holds the correct total, which is what every other screen reads; the row is keyed
+              // on the visit id, so a retry rewrites it rather than adding to it.
+              const dropped = runner.saveVisitMaterials(clinic.id, saved.visit.id, round?.id ?? null, draft.dropped);
+              const current = round ? runner.round(clinic.id, round.id) : null;
+              json(response, 200, {
+                visit: saved.visit, business: saved.business, dropped,
+                route: current ? shape(current) : null,
+              });
+            } catch (error) {
+              json(response, 400, { error: error instanceof Error ? error.message : 'That visit could not be saved.' });
+            }
+            return;
+          }
+
+          json(response, 404, { error: 'No such endpoint.' }); return;
+        }
+
         // THE FIELD LOG. Drivers, routes and sign-ups for the signed-in clinic only.
         if (url.pathname === '/api/field' && request.method === 'GET') {
           const clinic = store.clinicFromToken(cookie);

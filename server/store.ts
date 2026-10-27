@@ -8,7 +8,15 @@ import type { FieldLog } from '../data/field-data';
 import { openNetwork } from './network/db';
 import { openBakeries } from './network/bakeries';
 import { openOutreach } from './outreach';
+import { openRunner } from './runner';
 export type PortalStore = ReturnType<typeof openStore>;
+/**
+ * WHAT A LOGIN IS FOR. '' is every account that existed before this column: the practice's own
+ * login, which keeps exactly the screens it had. 'route_runner' is a field rep — the weekly
+ * planner, their own routes, and nothing else. A role is never read from a request.
+ */
+export const ROLES = ['', 'route_runner'] as const;
+export type Role = (typeof ROLES)[number];
 const hours = 8 * 60 * 60 * 1000;
 export function digest(value: string) { return createHash('sha256').update(value).digest('hex'); }
 export function passwordHash(password: string, salt: string) { return scryptSync(password, salt, 64).toString('hex'); }
@@ -52,6 +60,11 @@ export function openStore(filename: string, enableSample = true) {
   const userColumns = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>).map(c => c.name);
   if (!userColumns.includes('display_name')) db.exec("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
   if (!userColumns.includes('staff_id')) db.exec('ALTER TABLE users ADD COLUMN staff_id TEXT');
+  // WHAT THIS LOGIN IS FOR. Empty is what every existing account reads as, and an empty role
+  // changes nothing about what it can see: the practice's login keeps the portal it had. A
+  // 'route_runner' is restricted to its own routes, and that restriction is enforced in
+  // server/http.ts rather than by hiding navigation.
+  if (!userColumns.includes('role')) db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT ''");
 
   // WHETHER A ROW IS ILLUSTRATIVE. Nullable with no default: an existing row reads NULL,
   // meaning nobody has said, and the activate-live command refuses to delete what nobody has
@@ -65,10 +78,12 @@ export function openStore(filename: string, enableSample = true) {
   const bakeries = openBakeries(db);
   // The released businesses, their scripts and the visits recorded against them.
   const outreach = openOutreach(db);
+  // Assignments, pickups, supplies and the order a runner drives their round in.
+  const runner = openRunner(db);
   // The owner sets the username and the password. The only rule left is that neither is empty:
   // length and format are the owner's call. What protects the account is the scrypt hash and the
   // rate limit below, not a character count.
-  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false, user: { displayName?: string; staffId?: string } = {}) {
+  function createClient(clinicId: string, name: string, username: string, password: string, plan: 'a' | 'b' = 'a', demo = false, user: { displayName?: string; staffId?: string; role?: Role } = {}) {
     if (!username.trim()) throw new Error('A username is required.');
     if (!password) throw new Error('A password is required.');
     const salt = randomBytes(24).toString('hex');
@@ -77,9 +92,10 @@ export function openStore(filename: string, enableSample = true) {
       db.prepare('INSERT OR IGNORE INTO clinics (id,name,plan,demo) VALUES (?,?,?,?)').run(clinicId, name, plan, demo ? 1 : 0);
       // A second account on an existing clinic must not quietly change what that clinic buys.
       db.prepare('UPDATE clinics SET plan=? WHERE id=? AND plan IS NULL').run(plan, clinicId);
-      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id) VALUES (?,?,?,?,?,?,?)')
+      db.prepare('INSERT INTO users (id,clinic_id,email,hash,salt,display_name,staff_id,role) VALUES (?,?,?,?,?,?,?,?)')
         .run(randomBytes(16).toString('hex'), clinicId, username.trim().toLowerCase(), passwordHash(password, salt), salt,
-             (user.displayName ?? '').trim(), user.staffId?.trim() || null);
+             (user.displayName ?? '').trim(), user.staffId?.trim() || null,
+             ROLES.includes(user.role as Role) ? user.role ?? '' : '');
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
@@ -111,10 +127,10 @@ export function openStore(filename: string, enableSample = true) {
   /** Who can sign in, for an audit. Never returns a hash, a salt or anything derived from one. */
   function logins() {
     return db.prepare(`SELECT u.email AS username, u.display_name AS name, u.clinic_id AS clinic,
-        c.name AS clinicName, c.demo AS demo,
+        c.name AS clinicName, c.demo AS demo, u.role AS role,
         (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.expires_at>?) AS activeSessions
       FROM users u JOIN clinics c ON c.id=u.clinic_id ORDER BY c.name, u.email`).all(Date.now()) as Array<{
-        username: string; name: string; clinic: string; clinicName: string; demo: number; activeSessions: number }>;
+        username: string; name: string; clinic: string; clinicName: string; demo: number; role: string; activeSessions: number }>;
   }
 
   /** Is this an illustrative account? Read from the clinic row, never from a request. */
@@ -161,7 +177,7 @@ export function openStore(filename: string, enableSample = true) {
   // with scripts/import-campaigns.ts. There is no sample clinic in this build to seed.
   function session(token: string | undefined) {
     if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.email,u.display_name,u.staff_id FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; email: string; display_name: string; staff_id: string | null} | undefined;
+    const value = db.prepare('SELECT c.id,c.name,c.plan,c.demo,u.id AS user_id,u.email,u.display_name,u.staff_id,u.role FROM sessions s JOIN users u ON u.id=s.user_id JOIN clinics c ON c.id=u.clinic_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(token), Date.now()) as {id: string; name: string; plan: string; demo: number; user_id: string; email: string; display_name: string; staff_id: string | null; role: string} | undefined;
     return value ?? null;
   }
   function snapshot(token: string | undefined): PortalSnapshot {
@@ -176,7 +192,8 @@ export function openStore(filename: string, enableSample = true) {
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
     return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 },
-      user: { name: clinic.display_name || null, staffId: clinic.staff_id || null }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
+      user: { name: clinic.display_name || null, staffId: clinic.staff_id || null,
+        role: clinic.role === 'route_runner' ? 'route_runner' : '' }, campaigns: values.map(row => ({ id: row.id, name: row.name, period: row.period, locations: JSON.parse(row.locations), leads: JSON.parse(row.leads) })) };
   }
   function signIn(username: string, password: string, ip: string, previousToken?: string) {
     const now = Date.now();
@@ -200,5 +217,5 @@ export function openStore(filename: string, enableSample = true) {
   function signOut(token?: string) { if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(digest(token)); }
   // `clinicFromToken` is how every Network Map endpoint learns which clinic is asking. It is
   // the session row and nothing else: there is no code path that takes a clinic from a request.
-  return { db, snapshot, signIn, signOut, createClient, setPassword, logins, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, close: () => db.close() };
+  return { db, snapshot, signIn, signOut, createClient, setPassword, logins, isDemoClinic, saveCampaigns, saveFieldLog, fieldLog, visitNotes, saveVisitNote, clinicFromToken: session, ...network, ...bakeries, outreach, runner, close: () => db.close() };
 }
