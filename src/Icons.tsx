@@ -3,7 +3,8 @@
 // a stat card look like they were drawn by the same hand.
 import type { ReactElement } from 'react';
 export type IconName = 'dumbbell' | 'lotus' | 'scissors' | 'hand' | 'spine' | 'basket' | 'sparkle'
-  | 'clinic' | 'search' | 'plus' | 'check' | 'minus' | 'up' | 'down' | 'calendar' | 'route' | 'map' | 'refresh' | 'back' | 'arrow' | 'pin' | 'clock' | 'info';
+  | 'clinic' | 'search' | 'plus' | 'check' | 'minus' | 'up' | 'down' | 'calendar' | 'route' | 'map' | 'refresh' | 'back' | 'arrow' | 'pin' | 'clock' | 'info'
+  | 'people' | 'cake' | 'trophy' | 'close' | 'lock' | 'home' | 'chart' | 'notebook' | 'exit' | 'sunrise' | 'shop';
 
 const PATHS: Record<IconName, ReactElement> = {
   dumbbell: <><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></>,
@@ -29,6 +30,17 @@ const PATHS: Record<IconName, ReactElement> = {
   pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.4"/></>,
+  people: <><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3H3ZM16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3h-3"/></>,
+  cake: <><path d="M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V8M12 5.5v.01"/></>,
+  trophy: <><path d="M7 3h10v7a5 5 0 0 1-10 0V3ZM7 5H3v3a4 4 0 0 0 4 4M17 5h4v3a4 4 0 0 1-4 4M12 15v5M7 21h10"/></>,
+  close: <><path d="m6 6 12 12M18 6 6 18"/></>,
+  lock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
+  home: <><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></>,
+  chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
+  notebook: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/></>,
+  exit: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10"/></>,
+  sunrise: <><path d="M12 3v4M5.6 8.6 8 11M18.4 8.6 16 11M3 18h3M18 18h3M8 18a4 4 0 0 1 8 0M2 22h20"/></>,
+  shop: <><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5V20h16V9.5M9 20v-6h6v6M8 9.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></>,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {

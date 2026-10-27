@@ -260,7 +260,7 @@
   padding:var(--s-10) 0 var(--s-2); border:0; }
 .plan-b .dash-welcome-eyebrow{
   font:500 var(--t-body)/1.2 var(--font); color:var(--n-500); letter-spacing:-.01em; }
-.plan-b .dash-welcome h2{
+.plan-b .dash-welcome h1{
   margin-top:var(--s-1); font:680 var(--t-display)/1.08 var(--font); letter-spacing:-.03em;
   color:var(--n-900); }
 .plan-b .dash-welcome-sub{
@@ -328,7 +328,7 @@
 
 @media (max-width:760px){
   .plan-b .dash-welcome{ flex-direction:column; gap:var(--s-3); padding-top:var(--s-6); }
-  .plan-b .dash-welcome h2{ font-size:1.75rem; }
+  .plan-b .dash-welcome h1{ font-size:1.75rem; }
   .plan-b .dash-next{ padding:var(--s-5); gap:var(--s-4); }
   .plan-b .dash-next h3{ font-size:1.5rem; }
   .plan-b .dash-next-facts{ gap:var(--s-3) var(--s-4); }
@@ -382,7 +382,11 @@
 .plan-b .dash-list>li{ padding:var(--s-3) 0; border-bottom:1px solid var(--n-100); }
 .plan-b .dash-list>li:last-child{ border-bottom:0; padding-bottom:0; }
 .plan-b .dash-list>li:first-child{ padding-top:0; }
-.plan-b .dash-row-main strong{ font:600 var(--t-body)/1.35 var(--font); color:var(--n-900); }
+/* The name and its Sample mark sit on one line and wrap together, rather than the mark
+   dropping underneath and reading as a grey bar across the row. */
+.plan-b .dash-row-main strong{ display:flex; align-items:baseline; flex-wrap:wrap;
+  gap:var(--s-2); font:600 var(--t-body)/1.35 var(--font); color:var(--n-900); }
+.plan-b .dash-row-main strong .sample-tag{ margin-left:0; }
 .plan-b .dash-row-main span{ font:450 var(--t-sub)/1.4 var(--font); color:var(--n-500);
   margin-top:3px; }
 .plan-b .dash-empty{ padding:var(--s-5); border:1px dashed var(--n-300); border-radius:var(--r-md);

@@ -9,8 +9,8 @@ import BakeryNetwork from './BakeryNetwork';
 import DashboardHome from './Dashboard';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
-import AgendaScreen from './AgendaScreen';
 import PageStage from './PageStage';
+import { Icon, type IconName } from './Icons';
 import AssignedBusinesses from './AssignedBusinesses';
 import RoundAgenda from './RoundAgenda';
 import VisitHistory from './VisitHistory';
@@ -18,28 +18,6 @@ import Performance from './Performance';
 
 
 
-type IconName = 'pin' | 'people' | 'cake' | 'trophy' | 'clock' | 'arrow' | 'close' | 'lock'
-  | 'home' | 'chart' | 'route' | 'notebook' | 'exit' | 'sunrise' | 'clinic';
-function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
-  const paths = {
-    pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
-    people: <><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3H3ZM16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3h-3"/></>,
-    cake: <><path d="M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c2 1.5 4 1.5 7 0s5-1.5 7 0M12 12V8M12 5.5v.01"/></>,
-    trophy: <><path d="M7 3h10v7a5 5 0 0 1-10 0V3ZM7 5H3v3a4 4 0 0 0 4 4M17 5h4v3a4 4 0 0 1-4 4M12 15v5M7 21h10"/></>,
-    clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
-    arrow: <><path d="M5 12h14M14 7l5 5-5 5"/></>,
-    close: <><path d="m6 6 12 12M18 6 6 18"/></>,
-    lock: <><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></>,
-    home: <><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1Z"/></>,
-    chart: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
-    route: <><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/></>,
-    notebook: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/></>,
-    clinic: <><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5V20h16V9.5M9 20v-6h6v6M8 9.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0"/></>,
-    sunrise: <><path d="M12 3v4M5.6 8.6 8 11M18.4 8.6 16 11M3 18h3M18 18h3M8 18a4 4 0 0 1 8 0M2 22h20"/></>,
-    exit: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10"/></>,
-  };
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
-}
 // The logo goes home: the website from the sign-in screen, the report once signed in.
 function Brand({ name, centered = false, onHome }: { name: string; centered?: boolean; onHome?: () => void }) {
   const logo = <img src="/assets/owo-logo.png" alt={name} width="1579" height="574"/>;
@@ -137,7 +115,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
     { id: 'home', label: 'Dashboard', icon: 'home' },
     ...(plan === 'b' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'sunrise' as IconName }] : []),
-    ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'clinic' as IconName }] : []),
+    ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'shop' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
     ...(plan === 'b' ? [{ id: 'history' as typeof view, label: 'Visit history', icon: 'clock' as IconName }] : []),
@@ -179,6 +157,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>
+      <h1 className="sr-only" id="report-title">Your campaign report</h1>
       <section className="hero"><div className="campaign-line"><p>{data.clinic?.name}<span className="slash">/</span><span>{campaign?.name ?? 'Your campaigns'}</span></p><button className="past-jobs-button" onClick={() => dialog.current?.showModal()}><Icon name="clock" size={18}/> Past jobs</button></div></section>
       {campaign ? <CampaignReport key={campaign.id} campaign={campaign} config={data.config} today={data.today} selected={selected} onSelect={setSelected}/> : <div className="empty-panel"><h2>Your first campaign starts here.</h2><p>No drops have been logged yet. Your report will appear when your campaign is added.</p></div>}
       <MonthByMonth campaigns={data.campaigns} currentId={campaignId} onPick={id => { setCampaignId(id); setSelected(null); }}/>

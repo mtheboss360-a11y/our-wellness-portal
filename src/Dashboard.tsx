@@ -72,16 +72,27 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
     let live = true;
     // Both are optional: a clinic can have a field log and no map, or a map and no log. One
     // failing must not blank the other, so each settles on its own.
-    void Promise.allSettled([getField(), getNetworkMap(), getRounds(), getBusinesses()])
-      .then(([field, network, rounds, businesses]) => {
+    // THE OUTREACH DATA FIRST, and the older sources only if there is no outreach data to
+    // show. The dashboard was asking for five endpoints every time it opened, two of which it
+    // then ignored — and one of those, /api/network/map, runs the discovery refresh. Opening
+    // the first screen of the portal should not be able to spend a Google call.
+    void Promise.allSettled([getRounds(), getBusinesses()]).then(async ([rounds, businesses]) => {
+      if (!live) return;
+      const released = businesses.status === 'fulfilled' ? businesses.value.businesses : [];
+      if (rounds.status === 'fulfilled' && businesses.status === 'fulfilled') {
+        setWork({ rounds: rounds.value.rounds, visits: rounds.value.visits,
+          businesses: released, clinic: rounds.value.clinic });
+      }
+
+      if (released.length) { setState('ready'); return; }
+
+      // No businesses released: this clinic is still on the imported field log and the map.
+      const [field, network] = await Promise.allSettled([getField(), getNetworkMap()]);
       if (!live) return;
       if (field.status === 'fulfilled') setLog(field.value.field);
       if (network.status === 'fulfilled') setMap(network.value);
-      if (rounds.status === 'fulfilled' && businesses.status === 'fulfilled') {
-        setWork({ rounds: rounds.value.rounds, visits: rounds.value.visits,
-          businesses: businesses.value.businesses, clinic: rounds.value.clinic });
-      }
-      setState(field.status === 'rejected' && network.status === 'rejected' && rounds.status === 'rejected' ? 'error' : 'ready');
+      setState(field.status === 'rejected' && network.status === 'rejected'
+        && rounds.status === 'rejected' ? 'error' : 'ready');
     });
     return () => { live = false; };
   }, []);
@@ -127,7 +138,7 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
     <header className="dash-welcome">
       <div>
         <p className="dash-welcome-eyebrow">{greeting},</p>
-        <h2>{staff ?? clinicName}</h2>
+        <h1>{staff ?? clinicName}</h1>
         {staff && <p className="dash-welcome-sub">{clinicName}</p>}
       </div>
       <div className="dash-welcome-actions">
