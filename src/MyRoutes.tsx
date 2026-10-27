@@ -29,9 +29,10 @@ import {
 import {
   addDays, attributeVisits, clockOf, durationLabel, isoOf, itemAddress, itemName, longDate,
   minutesNowIn, mondayOf, planRoute, shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE,
-  type PlannedItem,
+  type Attribution, type PlannedItem,
 } from './lib/route-math';
-import { Icon, type IconName } from './Icons';
+import { Icon } from './Icons';
+import { useFocusTrap } from './lib/focus-trap';
 import GuidedVisit, { type VisitSubmission } from './GuidedVisit';
 
 const SUPPLIES: Array<{ key: keyof Supplies; label: string }> = [
@@ -75,6 +76,10 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
   const [pending, setPending] = useState<{ roundId: string; items: RunnerItem[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const toastTimer = useRef<number>(0);
+  const drawerRef = useRef<HTMLElement>(null);
+  // Something typed into the drawer and not yet saved. A tap on the backdrop with a half-filled
+  // pickup in front of you should not throw it away without asking.
+  const unsaved = useRef(false);
 
   const say = useCallback((text: string) => {
     setToast(text);
@@ -82,6 +87,21 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
     toastTimer.current = window.setTimeout(() => setToast(''), 3200);
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+  /** Close the drawer — asking first where there is unsaved work in it. */
+  const closeDrawer = useCallback(() => {
+    if (!unsaved.current) { setDrawer(null); return; }
+    setConfirming({
+      title: 'Leave without saving?',
+      text: 'What you have typed into this panel has not been saved. Leaving now discards it.',
+      run: () => { unsaved.current = false; setConfirming(null); setDrawer(null); },
+    });
+  }, []);
+  // The keyboard goes into the drawer, stays there while it is open, and comes back out to
+  // whatever opened it.
+  useFocusTrap(!!drawer, drawerRef, closeDrawer);
+  // A panel that has just opened has nothing unsaved in it yet.
+  useEffect(() => { unsaved.current = false; }, [drawer]);
 
   const load = useCallback(() => {
     setError('');
@@ -198,26 +218,13 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
   const days = Array.from({ length: 7 }, (_, index) => addDays(week, index));
 
   return <main className="rr-wrap">
-    <p className="rr-eyebrow">Field operations / Weekly planner</p>
+    {/* The week is the screen. Above it: what this is, and the one thing a runner adds. */}
     <div className="rr-title">
-      <div>
-        <h1>My routes<span>.</span></h1>
-        <p>Everything you need for your round. Arrange your stops, add a pickup, check your
-          supplies, then get moving.</p>
-      </div>
-      <div className="rr-title-actions">
-        <button className="rr-btn rr-btn-outline" onClick={() => window.print()}>
-          <Icon name="notebook" size={15}/>Print
-        </button>
-        <button className="rr-btn rr-btn-outline" disabled={!plan || !route}
-          onClick={() => void copyItinerary(route, plan, data, say)}>
-          <Icon name="route" size={15}/>Copy route
-        </button>
-        <button className="rr-btn rr-btn-primary" disabled={!route}
-          onClick={() => setDrawer({ kind: 'pickup' })}>
-          <Icon name="plus" size={15}/>Add pickup
-        </button>
-      </div>
+      <h1>My routes<span>.</span></h1>
+      <button className="rr-btn rr-btn-primary" disabled={!route}
+        onClick={() => setDrawer({ kind: 'pickup' })}>
+        <Icon name="plus" size={15}/>Add pickup
+      </button>
     </div>
 
     {error && <div className="rr-state" role="alert">
@@ -234,14 +241,18 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
     </div>}
 
     {!error && data && <>
-      <section className="rr-strip" aria-label="This route at a glance">
-        <Chip icon="calendar"
-          label={selected === today ? 'Assigned today' : `Assigned ${shortDate(selected)}`}
-          value={route ? `${items.length} ${items.length === 1 ? 'stop' : 'stops'}` : 'No route'}/>
-        <Chip icon="clock" label="Estimated duration" value={plan ? durationLabel(plan.totalMinutes) : '—'}/>
-        <Chip icon="truck" label="Travel allowance" value={plan ? durationLabel(plan.travelMinutes) : '—'}/>
-        <Chip icon="check" label="Stops completed" value={plan ? `${plan.completed} / ${plan.items.length}` : '—'}/>
-      </section>
+      <p className="rr-line">
+        {!route || !plan
+          ? <span>{selected === today ? 'Nothing assigned today' : `Nothing assigned for ${shortDate(selected)}`}</span>
+          : <>
+              <span><b>{plan.items.length}</b> stops</span>
+              <span><b>{plan.completed}</b> done</span>
+              <span>finish about <b>{clockOf(plan.endsAt)}</b></span>
+              <span>{route.supplies.packed
+                ? <>left: <b>{Math.max(0, route.remaining.flyers)}</b> flyers · <b>{Math.max(0, route.remaining.treats)}</b> treats · <b>{Math.max(0, route.remaining.cards)}</b> cards</>
+                : <>supplies <b>not confirmed</b></>}</span>
+            </>}
+      </p>
 
       <section className="rr-week" aria-labelledby="rr-week-title">
         <div className="rr-week-head">
@@ -300,24 +311,15 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
             <p>Your office assigns the businesses on a route. When a day is assigned to you it
               appears here, with the stops in order and the script for every conversation.</p>
           </div> : <>
+            {/* One action on this panel: where to go now. */}
             <div className="rr-headline">
-              <ul className="rr-facts">
-                <li><Icon name="clock" size={15}/>{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</li>
-                <li><Icon name="pin" size={15}/>{plan.items.length} {plan.items.length === 1 ? 'stop' : 'stops'}</li>
-                <li><Icon name="truck" size={15}/>{durationLabel(plan.travelMinutes)} travel allowance</li>
-              </ul>
-              <div className="rr-actions">
-                <button className="rr-btn rr-btn-subtle rr-btn-sm" onClick={() => setDrawer({ kind: 'timing' })}>
-                  Route timing
-                </button>
-                <button className="rr-btn rr-btn-dark rr-btn-sm" onClick={() => setDrawer({ kind: 'pickup' })}>
-                  <Icon name="plus" size={14}/>Pickup stop
-                </button>
-                {plan.next && <button className="rr-btn rr-btn-primary rr-btn-sm"
-                  onClick={() => openStop(plan.next!, setVisiting, setDrawer)}>
-                  {plan.completed ? 'Next stop' : 'Start the route'}<Icon name="arrow" size={14}/>
-                </button>}
-              </div>
+              <span className="rr-facts">{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</span>
+              {plan.next
+                ? <button className="rr-btn rr-btn-primary" onClick={() => openStop(plan.next!, setVisiting, setDrawer)}>
+                    {plan.completed ? `Next: ${itemName(plan.next.item)}` : 'Start the route'}
+                    <Icon name="arrow" size={15}/>
+                  </button>
+                : <span className="rr-tag rr-tag-green">Route finished</span>}
             </div>
 
             <div className="rr-progress-wrap">
@@ -336,15 +338,14 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
               origin={data.clinic?.label ?? data.practice}
               onMove={commitOrder}
               onOpen={item => openStop(item, setVisiting, setDrawer)}
-              onCollect={pickupId => setDrawer({ kind: 'collect', pickupId })}/>
+              onEdit={pickupId => setDrawer({ kind: 'pickup', pickupId })}/>
 
-            <p className="rr-footnote">
-              Travel times are planning allowances, not live driving directions: a leg between two
-              known map positions is worked out from the distance, and everything else is allowed
-              {' '}{TRAVEL_ALLOWANCE} minutes. Check the road and the opening hours before you set off.
-              Reordering your stops saves the new order and works the times out again. The businesses
-              and the date are your office’s and stay as they are.
-            </p>
+            <div className="rr-footnote">
+              <span>Times are estimates, not driving directions.</span>
+              <button className="rr-link" onClick={() => setDrawer({ kind: 'timing' })}>Where they come from</button>
+              <button className="rr-link" onClick={() => void copyItinerary(route, plan, data, say)}>Copy route</button>
+              <button className="rr-link" onClick={() => window.print()}>Print</button>
+            </div>
           </>}
         </section>
 
@@ -353,42 +354,45 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
             <div className="rr-panel-head">
               <div>
                 <h3 id="rr-supplies-title">What to bring</h3>
-                <p className="rr-sub">Assigned quantities · confirm your load</p>
+                <p className="rr-sub">{route?.supplies.packed
+                  ? `Load confirmed by ${route.supplies.packedBy || 'you'}`
+                  : 'Confirm your load before recording anything dropped'}</p>
               </div>
               <span className="rr-tag rr-tag-gold">Supplies</span>
             </div>
             {!route ? <p className="rr-note-inline">Pick a day with a route to check its supplies.</p> : <>
-              <div className="rr-supplies">
-                {SUPPLIES.map(supply => <div className="rr-supply" key={supply.key}>
-                  <div className="rr-supply-name">{supply.label}
-                    <small>Assigned {route.supplies.planned[supply.key]}
-                      {route.collected[supply.key] ? ` · +${route.collected[supply.key]} picked up` : ''}</small>
-                  </div>
-                  <div className="rr-supply-value">{route.supplies.planned[supply.key]}</div>
-                  <div className="rr-supply-left">{route.supplies.packed
-                    ? <><strong>{Math.max(0, route.remaining[supply.key])}</strong> left</>
-                    : 'Not packed'}</div>
-                </div>)}
-              </div>
-              <p className="rr-note-inline">{route.supplies.packed
-                ? `What is left is your confirmed load, plus what you picked up, less what you recorded dropping. Confirmed by ${route.supplies.packedBy || 'you'}.`
-                : 'Confirm what you actually have in the car before you record anything dropped. The assigned quantities are your office’s and you cannot change them.'}</p>
+              <table className="rr-bring">
+                <thead>
+                  <tr><th scope="col"><span className="rr-sr">Material</span></th>
+                    <th scope="col">Given</th><th scope="col">Picked up</th>
+                    <th scope="col">Dropped</th><th scope="col">Left</th></tr>
+                </thead>
+                <tbody>
+                  {SUPPLIES.map(supply => <tr key={supply.key}>
+                    <th scope="row">{supply.label}</th>
+                    <td>{route.supplies.planned[supply.key]}</td>
+                    <td>{route.collected[supply.key] || '—'}</td>
+                    <td>{route.dropped[supply.key] || '—'}</td>
+                    <td className="rr-bring-left">{route.supplies.packed
+                      ? Math.max(0, route.remaining[supply.key]) : '—'}</td>
+                  </tr>)}
+                </tbody>
+              </table>
               <div className="rr-panel-actions">
-                <button className="rr-btn rr-btn-dark" onClick={() => setDrawer({ kind: 'supplies' })}>
+                <button className={`rr-btn ${route.supplies.packed ? 'rr-btn-white' : 'rr-btn-dark'}`}
+                  onClick={() => setDrawer({ kind: 'supplies' })}>
                   {route.supplies.packed ? 'Change what you packed' : 'Confirm what you packed'}
                 </button>
               </div>
             </>}
           </section>
 
-          <section className="rr-panel" aria-labelledby="rr-detail-title">
-            <div className="rr-panel-head">
-              <div>
-                <h3 id="rr-detail-title">Round details</h3>
-                <p className="rr-sub">Worked out again whenever a stop moves</p>
-              </div>
-            </div>
-            {!plan ? <p className="rr-note-inline">No route for this day.</p> : <>
+          {plan && (plan.warnings.length > 0 || true) && <section className="rr-panel">
+            {plan.warnings.map(warning => <p className="rr-warning" key={warning}>
+              <Icon name="warn" size={15}/>{warning}
+            </p>)}
+            <details className="rr-details">
+              <summary>The day in figures</summary>
               <div className="rr-summary">
                 {([
                   ['Leave at', clockOf(plan.startsAt)],
@@ -402,40 +406,39 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
                   <span>{label}</span><b>{value}</b>
                 </div>)}
               </div>
-              {plan.warnings.map(warning => <p className="rr-warning" key={warning}>
-                <Icon name="warn" size={15}/>{warning}
-              </p>)}
-              <div className="rr-panel-actions">
-                <button className="rr-btn rr-btn-dark" onClick={() => setDrawer({ kind: 'pickup' })}>
-                  <Icon name="plus" size={14}/>Add a pickup
-                </button>
-              </div>
-            </>}
-          </section>
+            </details>
+          </section>}
         </aside>
       </div>
 
-      <p className="rr-page-note">
-        Your routes, your supplies and every visit you record are saved to your practice’s account,
-        not to this phone, so they are the same on every device you sign in on. The quantities your
-        office assigned, the businesses on a route and its date are theirs to set.
-      </p>
     </>}
 
+    {/* ON A PHONE the next stop follows you down the page. The week has to be at the top — it is
+        how a day is chosen — so the one action that matters is pinned to the bottom instead of
+        being scrolled past. It is the same action as the one on the panel; only one shows. */}
+    {route && plan?.next && !drawer && <div className="rr-next-bar">
+      <button className="rr-btn rr-btn-primary" onClick={() => openStop(plan.next!, setVisiting, setDrawer)}>
+        {plan.completed ? `Next: ${itemName(plan.next.item)}` : 'Start the route'}
+        <Icon name="arrow" size={16}/>
+      </button>
+    </div>}
+
     {/* The drawer: one panel, whichever job is in hand. */}
-    <div className={`rr-backdrop ${drawer ? 'is-open' : ''}`} onClick={() => setDrawer(null)}/>
-    <aside className={`rr-drawer ${drawer ? 'is-open' : ''}`} role="dialog" aria-modal={drawer ? true : undefined}
+    <div className={`rr-backdrop ${drawer ? 'is-open' : ''}`} onClick={closeDrawer}/>
+    <aside ref={drawerRef} tabIndex={-1}
+      className={`rr-drawer ${drawer ? 'is-open' : ''}`} role="dialog" aria-modal={drawer ? true : undefined}
       aria-hidden={drawer ? undefined : true} aria-labelledby="rr-drawer-title">
       {drawer && route && <>
         {drawer.kind === 'pickup' && <PickupPanel
           route={route}
           pickupId={drawer.pickupId}
           busy={busy}
-          onClose={() => setDrawer(null)}
+          onClose={closeDrawer}
+          onDirty={() => { unsaved.current = true; }}
           onSave={async draft => {
             const saved = await write(() => savePickup(route.id, route.revision, draft),
               drawer.pickupId ? 'Pickup updated.' : 'Pickup added. Drag it into position.');
-            if (saved) setDrawer(null);
+            if (saved) { unsaved.current = false; setDrawer(null); }
           }}
           onRemove={() => setConfirming({
             title: 'Remove this pickup?',
@@ -449,12 +452,14 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
           route={route}
           pickupId={drawer.pickupId}
           busy={busy}
-          onClose={() => setDrawer(null)}
-          onEdit={() => setDrawer({ kind: 'pickup', pickupId: drawer.pickupId })}
+          onClose={closeDrawer}
+          onDirty={() => { unsaved.current = true; }}
+          onEdit={() => { unsaved.current = false; setDrawer({ kind: 'pickup', pickupId: drawer.pickupId }); }}
           onCollect={async collected => {
             const saved = await write(() => collectPickup(route.id, drawer.pickupId, route.revision, collected),
               'Picked up. Those supplies are in your car.');
             if (!saved) return;
+            unsaved.current = false;
             setDrawer(null);
             // On to whatever is actually next. Collecting is a stop like any other, and the
             // point of finishing one is being pointed at the following one.
@@ -463,14 +468,15 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
             if (after?.item.kind === 'business') setVisiting(after.item.business.id);
           }}/>}
         {drawer.kind === 'supplies' && <SuppliesPanel
-          route={route} busy={busy} onClose={() => setDrawer(null)}
+          route={route} busy={busy} onClose={closeDrawer}
+          onDirty={() => { unsaved.current = true; }}
           onSave={async supplies => {
             const saved = await write(() => confirmPacked(route.id, supplies, route.revision),
               'Supplies confirmed.');
-            if (saved) setDrawer(null);
+            if (saved) { unsaved.current = false; setDrawer(null); }
           }}/>}
         {drawer.kind === 'timing' && plan && <TimingPanel
-          route={route} plan={plan} onClose={() => setDrawer(null)}/>}
+          route={route} plan={plan} onClose={closeDrawer}/>}
       </>}
     </aside>
 
@@ -499,17 +505,11 @@ function openStop(item: PlannedItem, visit: (id: string) => void, drawer: (value
   else drawer({ kind: item.item.pickup.status === 'collected' ? 'pickup' : 'collect', pickupId: item.item.id });
 }
 
-function Chip({ icon, label, value }: { icon: IconName; label: string; value: string }) {
-  return <div className="rr-chip">
-    <span className="rr-chip-icon"><Icon name={icon} size={17}/></span>
-    <div><span>{label}</span><strong>{value}</strong></div>
-  </div>;
-}
 
 /** One day in the week strip. Touch-friendly, and it says what is on the day without opening it. */
 function Day({ day, today, current, routes, visits, attributed, onPick }: {
   day: string; today: string; current: boolean; routes: RunnerRoute[]; visits: Visit[];
-  attributed: Map<string, string>; onPick: () => void;
+  attributed: Map<string, Attribution>; onPick: () => void;
 }) {
   const plans = routes.map(route => planRoute(route, visits, { today, attributed }));
   const stops = routes.reduce((total, route) => total + route.items.length, 0);
@@ -544,9 +544,10 @@ function Day({ day, today, current, routes, visits, attributed, onPick }: {
  * ARRIVING AT A PICKUP. What to collect, where, by when — and the counts confirmed as they go
  * in the car, because what was ordered and what the bakery actually had are different numbers.
  */
-function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect }: {
+function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect, onDirty }: {
   route: RunnerRoute; pickupId: string; busy: boolean;
   onClose: () => void; onEdit: () => void; onCollect: (collected: Supplies) => void;
+  onDirty: () => void;
 }) {
   const found = route.items.find(item => item.kind === 'pickup' && item.id === pickupId);
   const pickup = found?.kind === 'pickup' ? found.pickup : null;
@@ -611,7 +612,7 @@ function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect }: {
             <label htmlFor={`rr-got-${supply.key}`}>{supply.label}</label>
             <input id={`rr-got-${supply.key}`} type="number" inputMode="numeric" min={0} max={10000}
               value={form[supply.key]}
-              onChange={event => setForm(current => ({ ...current, [supply.key]: event.target.value }))}/>
+              onChange={event => { onDirty(); setForm(current => ({ ...current, [supply.key]: event.target.value })); }}/>
           </div>)}
         </div>
         <p className="rr-hint">These start at what you said you were collecting. Change them to
@@ -636,12 +637,12 @@ function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect }: {
  * on a phone and HTML5 dragging does not exist there. Move up / Move down do the same job from a
  * keyboard, and a stop that is finished or fixed in place refuses to move either way.
  */
-function Itinerary({ plan, items, done, busy, origin, onMove, onOpen, onCollect }: {
+function Itinerary({ plan, items, done, busy, origin, onMove, onOpen, onEdit }: {
   plan: ReturnType<typeof planRoute>; items: RunnerItem[]; done: Set<string>; busy: boolean;
   origin: string;
   onMove: (next: RunnerItem[]) => void;
   onOpen: (item: PlannedItem) => void;
-  onCollect: (pickupId: string) => void;
+  onEdit: (pickupId: string) => void;
 }) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [target, setTarget] = useState<{ key: string; after: boolean } | null>(null);
@@ -717,39 +718,60 @@ function Itinerary({ plan, items, done, busy, origin, onMove, onOpen, onCollect 
             <span className="rr-time">{entry.item.kind === 'business' && !entry.measured && !entry.done
               ? `~${clockOf(entry.arriveAt)}` : clockOf(entry.arriveAt)}</span>
           </div>
-          <p className="rr-where">{entry.item.kind === 'business'
-            ? `${entry.item.business.category} · ${entry.item.business.address}`
-            : `${PICKUP_LABEL[pickup!.kind]} · ${pickup!.address}`}</p>
-          <div className="rr-meta">
-            <span className={`rr-tag ${pickup ? 'rr-tag-gold' : entry.done ? 'rr-tag-green' : 'rr-tag-gray'}`}>
-              {pickup ? (pickup.status === 'collected' ? 'Picked up' : 'Pickup') : entry.done ? 'Visited' : 'Business'}
-            </span>
-            <span className="rr-tiny">{entry.minutes} min on site</span>
-            {entry.wait > 0 && <span className="rr-tiny">{entry.wait} min wait</span>}
+          <p className="rr-where">{itemAddress(entry.item)}</p>
+
+          {/* One status, and only where it is worth saying. */}
+          {(entry.done || entry.late > 0 || entry.item.locked || pickup) && <div className="rr-meta">
+            {entry.done && <span className="rr-tag rr-tag-green">
+              {pickup ? 'Picked up' : entry.visit?.outcomeLabel ?? 'Visited'}
+            </span>}
+            {!entry.done && pickup && <span className="rr-tag rr-tag-gold">
+              Pickup {pickup.windowStart}–{pickup.windowEnd}
+            </span>}
             {entry.late > 0 && <span className="rr-tag rr-tag-red">Window missed</span>}
-            {entry.item.locked && <span className="rr-tag rr-tag-gray">Fixed by your office</span>}
-            {entry.item.kind === 'business' && entry.item.business.demo === 1 && <span className="rr-tag rr-tag-gray">Sample</span>}
-            {pickup && <span className="rr-tiny">Window {pickup.windowStart}–{pickup.windowEnd}</span>}
-            {entry.done && entry.visit && <span className="rr-tiny">{entry.visit.outcomeLabel}
-              {entry.visit.materials ? ` · ${entry.visit.materials} materials dropped` : ''}</span>}
-          </div>
-          {pickup?.items && <p className="rr-where">To collect: {pickup.items}
-            {pickup.reference ? ` · ${pickup.reference}` : ''}</p>}
+            {entry.item.locked && <span className="rr-tag rr-tag-gray">Fixed</span>}
+          </div>}
+
+          {/* The one thing to do here. Directions sits beside it, because it is the other. */}
           <div className="rr-stop-actions">
             <button className={`rr-btn rr-btn-sm ${entry.done ? 'rr-btn-white' : 'rr-btn-subtle'}`}
-              onClick={() => onOpen(entry)}>
-              {pickup ? 'Edit pickup' : entry.done ? 'Open the visit' : 'Start visit'}
-              {!entry.done && !pickup && <Icon name="arrow" size={13}/>}
+              onClick={() => onOpen(entry)} disabled={busy && !entry.done}>
+              {pickup
+                ? (pickup.status === 'collected' ? 'Open the pickup' : 'Collect')
+                : entry.done ? 'Open the visit' : 'Start visit'}
+              {!entry.done && <Icon name="arrow" size={13}/>}
             </button>
-            {pickup && <button className="rr-btn rr-btn-sm rr-btn-white" disabled={pickup.status === 'collected' || busy}
-              onClick={() => onCollect(pickup.id)}>
-              {pickup.status === 'collected' ? 'Picked up' : 'Mark picked up'}
-            </button>}
             <a className="rr-btn rr-btn-sm rr-btn-white" href={directionsTo(entry.item)}
-              target="_blank" rel="noreferrer noopener">
+              target="_blank" rel="noreferrer noopener" aria-label={`Directions to ${itemName(entry.item)}`}>
               <Icon name="map" size={13}/>Directions
             </a>
           </div>
+
+          <details className="rr-details rr-stop-details">
+            <summary>Details</summary>
+            <ul>
+              {entry.item.kind === 'business' && <li>{entry.item.business.category}</li>}
+              {pickup && <li>{PICKUP_LABEL[pickup.kind]}</li>}
+              <li>{entry.minutes} min at the stop · {entry.measured
+                ? `${entry.travel} min drive, from the distance`
+                : `${entry.travel} min travel allowance`}</li>
+              {entry.wait > 0 && <li>{entry.wait} min waiting for the window to open</li>}
+              {pickup?.items && <li>To collect: {pickup.items}{pickup.reference ? ` · ${pickup.reference}` : ''}</li>}
+              {pickup?.note && <li>{pickup.note}</li>}
+              {pickup?.collected && <li>Collected: {pickup.collected.flyers} flyers ·
+                {' '}{pickup.collected.treats} treats · {pickup.collected.cards} cards</li>}
+              {entry.visit && <li>{entry.visit.spokeWith ? `Spoke with ${entry.visit.spokeWith}` : 'Nobody recorded'}
+                {entry.visit.materials ? ` · ${entry.visit.materials} materials dropped` : ''}</li>}
+              {entry.attribution === 'inferred' && <li className="rr-inferred">
+                This visit does not say which route it was on. It has been matched to this one
+                because it is the last route before it that had this business on it.
+              </li>}
+              {entry.item.kind === 'business' && entry.item.business.demo === 1 && <li>Illustrative business.</li>}
+              {pickup && pickup.status !== 'collected' && <li>
+                <button className="rr-link" onClick={() => onEdit(pickup.id)}>Edit this pickup</button>
+              </li>}
+            </ul>
+          </details>
         </div>
         <div className="rr-move">
           <button aria-label={`Move ${itemName(entry.item)} up`} disabled={index === 0 || fixed || busy}
@@ -781,9 +803,10 @@ function moveTo(items: RunnerItem[], done: Set<string>, key: string, to: number)
 }
 
 /** Add or change a pickup. The one place a runner puts something of their own on a route. */
-function PickupPanel({ route, pickupId, busy, onClose, onSave, onRemove }: {
+function PickupPanel({ route, pickupId, busy, onClose, onSave, onRemove, onDirty }: {
   route: RunnerRoute; pickupId?: string; busy: boolean;
-  onClose: () => void; onSave: (draft: PickupDraft & { pickupId?: string }) => void; onRemove: () => void;
+  onClose: () => void; onSave: (draft: PickupDraft & { pickupId?: string }) => void;
+  onRemove: () => void; onDirty: () => void;
 }) {
   const existing = pickupId
     ? route.items.find(item => item.kind === 'pickup' && item.id === pickupId)
@@ -799,11 +822,16 @@ function PickupPanel({ route, pickupId, busy, onClose, onSave, onRemove }: {
   }));
   const [failed, setFailed] = useState('');
   const collected = pickup?.status === 'collected';
-  const set = <K extends keyof PickupDraft>(key: K, value: PickupDraft[K]) =>
+  const set = <K extends keyof PickupDraft>(key: K, value: PickupDraft[K]) => {
+    onDirty();
     setForm(current => ({ ...current, [key]: value }));
-  const supply = (key: keyof Supplies, value: string) => setForm(current => ({
-    ...current, supplies: { ...(current.supplies as Supplies), [key]: Number(value) || 0 },
-  }));
+  };
+  const supply = (key: keyof Supplies, value: string) => {
+    onDirty();
+    setForm(current => ({
+      ...current, supplies: { ...(current.supplies as Supplies), [key]: Number(value) || 0 },
+    }));
+  };
 
   function submit() {
     if (!form.title.trim()) return setFailed('Give the pickup a location name.');
@@ -913,8 +941,9 @@ function PickupPanel({ route, pickupId, busy, onClose, onSave, onRemove }: {
 }
 
 /** Confirm the load. The runner's own count, which the office's allocation does not overwrite. */
-function SuppliesPanel({ route, busy, onClose, onSave }: {
-  route: RunnerRoute; busy: boolean; onClose: () => void; onSave: (supplies: Supplies) => void;
+function SuppliesPanel({ route, busy, onClose, onSave, onDirty }: {
+  route: RunnerRoute; busy: boolean; onClose: () => void;
+  onSave: (supplies: Supplies) => void; onDirty: () => void;
 }) {
   const start = route.supplies.packed ?? route.supplies.planned;
   const [form, setForm] = useState<Record<keyof Supplies, string>>({
@@ -960,7 +989,7 @@ function SuppliesPanel({ route, busy, onClose, onSave }: {
         </label>
         <input id={`rr-packed-${supply.key}`} type="number" inputMode="numeric" min={0} max={10000}
           value={form[supply.key]}
-          onChange={event => setForm(current => ({ ...current, [supply.key]: event.target.value }))}/>
+          onChange={event => { onDirty(); setForm(current => ({ ...current, [supply.key]: event.target.value })); }}/>
         {route.dropped[supply.key] > 0 && <p className="rr-hint">
           {route.dropped[supply.key]} already recorded as dropped on this route.
         </p>}
