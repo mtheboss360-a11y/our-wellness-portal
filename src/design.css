@@ -1356,9 +1356,10 @@
 
 .orb2-ring{ position:absolute; inset:0; width:100%; height:100%; }
 .orb2-ring ellipse{ fill:none; }
-.orb2-ring-halo{ stroke:var(--good-fill); stroke-width:22; opacity:.75; }
-.orb2-ring-line{ stroke:var(--forest-2); stroke-width:2; opacity:.5; }
-.orb2-ring-inner{ stroke:var(--n-200); stroke-width:1.5; stroke-dasharray:3 8; }
+.orb2-ring-wash{ stroke:var(--good-fill); stroke-width:26; opacity:.5; }
+.orb2-ring-line{ stroke:var(--forest-2); stroke-width:1.6; opacity:.55; }
+.orb2-ring-sage{ stroke:#B8CDBC; stroke-width:1.1; opacity:.6; }
+.orb2-ring-faint{ stroke:#C9DACC; stroke-width:1; opacity:.4; }
 
 .orb2-hub{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
   display:flex; flex-direction:column; align-items:flex-start; gap:2px;

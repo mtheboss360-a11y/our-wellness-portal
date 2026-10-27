@@ -139,10 +139,16 @@ export default function ReferralOrbit({ practice, connections }: {
 
     <div className="orb2-stage">
       {/* The path they ride. Decorative: every name is in the list beside it. */}
+      {/* The loop: thin layered lines rather than one band, so it reads as a path the cards
+          sit on and not as a container drawn around them. The outermost is a soft sage wash;
+          the rest are hairlines in evergreen and sage, fading inwards. */}
       <svg className="orb2-ring" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
-        <ellipse className="orb2-ring-halo" cx="500" cy="310" rx="410" ry="273"/>
+        <ellipse className="orb2-ring-wash" cx="500" cy="310" rx="413" ry="276"/>
         <ellipse className="orb2-ring-line" cx="500" cy="310" rx="410" ry="273"/>
-        <ellipse className="orb2-ring-inner" cx="500" cy="310" rx="230" ry="155"/>
+        <ellipse className="orb2-ring-sage" cx="500" cy="310" rx="396" ry="264"/>
+        <ellipse className="orb2-ring-sage" cx="500" cy="310" rx="330" ry="220"/>
+        <ellipse className="orb2-ring-faint" cx="500" cy="310" rx="265" ry="177"/>
+        <ellipse className="orb2-ring-faint" cx="500" cy="310" rx="200" ry="134"/>
       </svg>
 
       <div className="orb2-hub">
