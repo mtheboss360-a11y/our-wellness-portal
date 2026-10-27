@@ -88,6 +88,8 @@ export type PlannedItem = {
   minutes: number;
   done: boolean;
   visit: Visit | null;
+  /** How this stop came to be done: recorded against this round, or matched to it afterwards. */
+  attribution: Attribution['basis'] | null;
   status: 'completed' | 'in-progress' | 'upcoming';
 };
 
@@ -122,10 +124,20 @@ export type RoutePlan = {
  * this, any visit on or after a round's date counted toward it, so one conversation next Friday
  * marked this Tuesday's round complete as well.
  */
+export type Attribution = {
+  roundId: string;
+  /**
+   * `recorded` — the visit itself names this round, because the planner said so at the time.
+   * `inferred` — nobody said. It is the round this visit most likely belongs to, and a screen
+   * showing it as progress has to say that it was matched rather than recorded.
+   */
+  basis: 'recorded' | 'inferred';
+};
+
 export function attributeVisits(
   rounds: Array<{ id: string; date: string; items: RunnerItem[] }>,
   visits: Visit[],
-): Map<string, string> {
+): Map<string, Attribution> {
   const known = new Set(rounds.map(r => r.id));
   const byBusiness = new Map<string, Array<{ id: string; date: string }>>();
   for (const round of rounds) {
@@ -138,15 +150,19 @@ export function attributeVisits(
   }
   for (const list of byBusiness.values()) list.sort((a, b) => a.date.localeCompare(b.date));
 
-  const attributed = new Map<string, string>();
+  const attributed = new Map<string, Attribution>();
   for (const visit of visits) {
     if (visit.roundId) {
-      if (known.has(visit.roundId)) attributed.set(visit.id, visit.roundId);
+      if (known.has(visit.roundId)) attributed.set(visit.id, { roundId: visit.roundId, basis: 'recorded' });
       continue; // a visit that names a round we are not showing belongs to that one, not to these
     }
     const candidates = (byBusiness.get(visit.businessId) ?? []).filter(r => r.date <= visit.visitedOn);
     const latest = candidates.at(-1);
-    if (latest) attributed.set(visit.id, latest.id);
+    // A GUESS, AND MARKED AS ONE. The record itself is not touched: `visits.round_id` stays
+    // null, nothing is written back, and the screen says the visit was matched to this round
+    // rather than recorded on it. Two rounds that could both explain one conversation is a
+    // question for a person, not something to settle quietly in a map.
+    if (latest) attributed.set(visit.id, { roundId: latest.id, basis: 'inferred' });
   }
   return attributed;
 }
@@ -179,7 +195,7 @@ export function planRoute(
     clinic?: Where; today?: string; nowMinutes?: number;
     assumptions?: Partial<Assumptions>; hours?: OpeningHours; allowance?: number;
     /** Which round each visit belongs to, from `attributeVisits`. */
-    attributed?: Map<string, string>;
+    attributed?: Map<string, Attribution>;
     /** Now, for judging how old a coordinate is. Only tests pass it. */
     now?: number;
   } = {},
@@ -196,12 +212,15 @@ export function planRoute(
   // A visit counts toward THIS round and no other. `attributeVisits` decides which round each
   // one belongs to; without that map — a caller laying out a single round in isolation — the
   // older rule applies, where a visit on or after the round's date counts toward it.
-  const onThisRound = new Map<string, Visit>();
+  const onThisRound = new Map<string, { visit: Visit; basis: Attribution['basis'] }>();
   for (const visit of [...visits].sort((a, b) => a.visitedOn.localeCompare(b.visitedOn))) {
+    let basis: Attribution['basis'] = 'recorded';
     if (options.attributed) {
-      if (options.attributed.get(visit.id) !== round.id) continue;
+      const where = options.attributed.get(visit.id);
+      if (where?.roundId !== round.id) continue;
+      basis = where.basis;
     } else if (visit.visitedOn < round.date) continue;
-    if (!onThisRound.has(visit.businessId)) onThisRound.set(visit.businessId, visit);
+    if (!onThisRound.has(visit.businessId)) onThisRound.set(visit.businessId, { visit, basis });
   }
 
   const warnings: string[] = [];
@@ -235,7 +254,8 @@ export function planRoute(
 
     const minutes = item.kind === 'business' ? as.visitMinutes : (item.pickup.minutes || PICKUP_MINUTES);
     const departAt = arriveAt + minutes;
-    const visit = item.kind === 'business' ? onThisRound.get(item.business.id) ?? null : null;
+    const found = item.kind === 'business' ? onThisRound.get(item.business.id) ?? null : null;
+    const visit = found?.visit ?? null;
     const done = item.kind === 'business' ? visit !== null : item.pickup.status === 'collected';
 
     travelTotal += travel; onSite += minutes; waitTotal += wait;
@@ -248,7 +268,8 @@ export function planRoute(
       : isToday && options.nowMinutes !== undefined && options.nowMinutes >= arriveAt && options.nowMinutes < departAt
         ? 'in-progress' : 'upcoming';
 
-    return { item, index, arriveAt, departAt, travel, measured, wait, late, minutes, done, visit, status };
+    return { item, index, arriveAt, departAt, travel, measured, wait, late, minutes, done, visit,
+      attribution: found?.basis ?? null, status };
   });
 
   if (opening.closed) {
