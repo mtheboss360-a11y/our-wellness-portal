@@ -6,7 +6,28 @@
 // Partners have equal-size bubbles because the owner gets names, not a comparison of businesses.
 // The practice is the only larger bubble. On opening, partners gather at the practice and fan out
 // to their positions. The motion runs once when this graph mounts and respects reduced motion.
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+/**
+ * Whether this reader has asked for less motion.
+ *
+ * The CSS rule beside this hides the <animateTransform> elements, which works in Chromium but
+ * is not a specified way to stop a SMIL animation and is not dependable across browsers. So
+ * the animation is not rendered at all: nothing to stop, nothing to hide.
+ */
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(() => {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+  });
+  useEffect(() => {
+    let query: MediaQueryList;
+    try { query = window.matchMedia('(prefers-reduced-motion: reduce)'); } catch { return; }
+    const onChange = () => setReduced(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+  return reduced;
+}
 
 export type Connection = { id: string; name: string; demo: boolean };
 
@@ -29,12 +50,17 @@ function twoLines(name: string, perLine = 13): [string, string | null] {
     if (first && (`${first} ${word}`).length > perLine) break;
     first = first ? `${first} ${word}` : word;
   }
-  return [first, name.slice(first.length).trim() || null];
+  const rest = name.slice(first.length).trim();
+  if (!rest) return [first, null];
+  // A second line longer than the bubble is wider than the circle it sits in. The whole name
+  // is in the connections list underneath, so the bubble shows as much as fits and stops.
+  return [first, rest.length > perLine + 5 ? `${rest.slice(0, perLine + 4).trimEnd()}…` : rest];
 }
 
 export default function ReferralBubbles({ practice, connections }: {
   practice: string; connections: Connection[];
 }) {
+  const stillness = usePrefersReducedMotion();
   // Give the full practice network room to breathe. Up to 18 accounts use one broad ring;
   // larger networks use a staggered inner and outer ring. Every partner stays the same size.
   const shown = useMemo(() => connections.slice(0, MAX_NODES), [connections]);
@@ -89,10 +115,12 @@ export default function ReferralBubbles({ practice, connections }: {
           <title>{connection.name}</title>
           <g className="bub-fan">
             {/* The gather-and-fan: starts at the practice and settles where it belongs. */}
+            {!stillness && (
             <animateTransform attributeName="transform" type="translate"
               from={`${BOX.w / 2 - x} ${BOX.h / 2 - y}`} to="0 0" dur="0.9s"
               begin={`${delay}s`} fill="freeze" calcMode="spline"
               keyTimes="0;1" keySplines=".16 1 .3 1"/>
+            )}
             <circle r={NODE}/>
             <g className="bub-copy" style={{ animationDelay: `${delay + 0.18}s` }}>
               <text className="bub-initials" textAnchor="middle" y={two ? -13 : -7}>{initials(connection.name)}</text>

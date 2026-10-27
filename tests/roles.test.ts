@@ -153,3 +153,65 @@ test('a role change does not reach across practices', async () => {
   assert.throws(() => p.store.setRole('nobody', 'owner'), /No login called/);
   await p.close();
 });
+
+// ── WHERE A SIGN-IN LANDS ───────────────────────────────────────────────────
+// The portal keeps the open section in ?v=, which outlives a session: signing out on Visit
+// history and back in an hour later dropped you into Visit history. These cover the rule
+// without a browser, by driving the same sessionStorage the components use.
+test('a sign-in is fresh once, and not again until the session ends', async () => {
+  const store: Record<string, string> = {};
+  (globalThis as { sessionStorage?: unknown }).sessionStorage = {
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => { store[k] = v; },
+    removeItem: (k: string) => { delete store[k]; },
+  };
+  const { isFreshSignIn, endSession } = await import('../src/lib/landing.ts');
+
+  assert.equal(isFreshSignIn(), true, 'the first mount after signing in');
+  assert.equal(isFreshSignIn(), false, 'a refresh is not a new sign-in');
+  assert.equal(isFreshSignIn(), false);
+
+  endSession();
+  assert.equal(isFreshSignIn(), true, 'signing out and back in is');
+  delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+});
+
+test('without sessionStorage it reports not-fresh, which is the old behaviour', async () => {
+  // A locked-down private window. Falling back to "restore the URL" is never worse than before.
+  (globalThis as { sessionStorage?: unknown }).sessionStorage = {
+    getItem() { throw new Error('denied'); },
+    setItem() { throw new Error('denied'); },
+    removeItem() { throw new Error('denied'); },
+  };
+  const { isFreshSignIn, endSession } = await import('../src/lib/landing.ts');
+  assert.equal(isFreshSignIn(), false);
+  assert.doesNotThrow(() => endSession());
+  delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+});
+
+test('a business name too long for a bubble is cut, not spilled', async () => {
+  // The splitter is not exported, so this is the same rule stated once more. It exists
+  // because an over-long second line draws outside the circle it belongs to, and the full
+  // name is always readable in the connections list underneath.
+  const twoLines = (name: string, perLine = 13): [string, string | null] => {
+    if (name.length <= perLine) return [name, null];
+    const words = name.split(/\s+/);
+    if (words.length === 1) return [name.slice(0, perLine), name.slice(perLine)];
+    let first = '';
+    for (const word of words) {
+      if (first && (`${first} ${word}`).length > perLine) break;
+      first = first ? `${first} ${word}` : word;
+    }
+    const rest = name.slice(first.length).trim();
+    if (!rest) return [first, null];
+    return [first, rest.length > perLine + 5 ? `${rest.slice(0, perLine + 4).trimEnd()}…` : rest];
+  };
+
+  assert.deepEqual(twoLines('Yoga Cave'), ['Yoga Cave', null], 'a short name stays on one line');
+  assert.deepEqual(twoLines('KidSnips Naperville'), ['KidSnips', 'Naperville']);
+  assert.deepEqual(twoLines('Fieldstone Physical Therapy'), ['Fieldstone', 'Physical Therapy']);
+
+  const [, second] = twoLines('Cedar Spine & Wellness Chiropractic Associates');
+  assert.ok(second && second.length <= 18, `the second line is cut, got ${second?.length}`);
+  assert.ok(second!.endsWith('…'), 'and says it was cut');
+});
