@@ -7,6 +7,7 @@ import NetworkMap from './NetworkMap';
 import Drivers from './Drivers';
 import BakeryNetwork from './BakeryNetwork';
 import DashboardHome from './Dashboard';
+import Overview from './Overview';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
 import PageStage from './PageStage';
@@ -124,7 +125,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     { id: 'network', label: 'Referral network', icon: 'pin' },
     ...(plan === 'a' ? [{ id: 'bakeries' as typeof view, label: 'Bakery network', icon: 'cake' as IconName }] : []),
   ];
-  return <div className={`portal-page portal-shell ${plan === 'b' ? 'plan-b' : ''}`}>
+  return <div className={`portal-page portal-shell ${plan === 'b' ? 'plan-b' : ''} ${plan === 'b' && view === 'home' ? 'is-overview' : ''}`}>
     <a className="skip-link" href="#report">Skip to the page</a>
     {/* The rail. On a phone it lies down under the brand and scrolls sideways. */}
     <aside className="rail">
@@ -154,7 +155,10 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       : view === 'history' ? <VisitHistory onClose={() => setView('home')}/>
       : view === 'performance' ? <Performance today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
-      : view === 'home' ? <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>
+      : view === 'home' ? (plan === 'b'
+          ? <Overview clinicName={data.clinic?.name ?? data.config.name} today={data.today}
+              staffName={data.user?.name ?? null} onGo={setView}/>
+          : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>
       <OutreachReport campaigns={data.campaigns}/>
       <h1 className="sr-only" id="report-title">Your campaign report</h1>

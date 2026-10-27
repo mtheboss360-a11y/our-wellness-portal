@@ -173,3 +173,86 @@ test('a follow-up due today is due but not yet overdue', () => {
   assert.equal(month.overdue, 1, 'only the one whose date has passed');
   store.close();
 });
+
+// ── THE ACTIVITY CHART ──────────────────────────────────────────────────────
+// A chart is read as evidence. These are about what it must never imply.
+import { activitySeries } from '../src/lib/staff-dashboard.ts';
+
+const visitOn = (store: ReturnType<typeof openStore>, businessId: string, on: string, materials = 1) =>
+  store.outreach.recordVisit('hyline', {
+    businessId, staff: 'Alexis', visitedOn: on, spokeWith: 'Dana', contactRole: 'Owner',
+    outcome: 'materials', materials, note: '', nextAction: '', followUpOn: null,
+    clientRef: `c${on.replace(/-/g, '')}${businessId.slice(-6)}`,
+  });
+
+test('the chart draws the periods that exist and no others', () => {
+  const store = world();
+  const id = ids(store);
+  visitOn(store, id['Karve Pilates'], '2026-10-05');
+  visitOn(store, id['Yoga Cave'], '2026-10-07');
+
+  const weeks = activitySeries(store.outreach.visits('hyline'), 'week', '2026-10-27');
+  assert.equal(weeks.length, 1, 'one week of records is one column, not a padded run of zeroes');
+  assert.equal(weeks[0].visits, 2);
+  store.close();
+});
+
+test('a genuine gap between two active periods is shown, not closed up', () => {
+  const store = world();
+  const id = ids(store);
+  visitOn(store, id['Karve Pilates'], '2026-10-05');
+  visitOn(store, id['Yoga Cave'], '2026-10-26');
+
+  const weeks = activitySeries(store.outreach.visits('hyline'), 'week', '2026-10-27');
+  assert.equal(weeks.length, 4, 'four weeks span those two dates');
+  assert.deepEqual(weeks.map(w => w.visits), [1, 0, 0, 1], 'the quiet fortnight is visible');
+  store.close();
+});
+
+test('nothing recorded draws nothing at all', () => {
+  assert.deepEqual(activitySeries([], 'week', '2026-10-27'), []);
+  assert.deepEqual(activitySeries([], 'month', '2026-10-27'), []);
+});
+
+test('a visit dated in the future is not charted', () => {
+  const store = world();
+  const id = ids(store);
+  visitOn(store, id['Karve Pilates'], '2026-10-05');
+  visitOn(store, id['Yoga Cave'], '2026-12-01');
+  const weeks = activitySeries(store.outreach.visits('hyline'), 'week', '2026-10-27');
+  assert.equal(weeks.length, 1, 'only what has happened');
+  store.close();
+});
+
+test('months bucket by calendar month and roll over a year end', () => {
+  const store = world();
+  const id = ids(store);
+  visitOn(store, id['Karve Pilates'], '2026-11-20');
+  visitOn(store, id['Yoga Cave'], '2027-01-04');
+  const months = activitySeries(store.outreach.visits('hyline'), 'month', '2027-01-20');
+  assert.deepEqual(months.map(m => m.key), ['2026-11', '2026-12', '2027-01']);
+  assert.deepEqual(months.map(m => m.visits), [1, 0, 1]);
+  store.close();
+});
+
+test('the Overview, Visit History and Performance count the same visits', () => {
+  const store = world();
+  const id = ids(store);
+  visitOn(store, id['Karve Pilates'], '2026-10-05', 10);
+  visitOn(store, id['Yoga Cave'], '2026-10-19', 12);
+  visitOn(store, id['Salon Fluxx'], '2026-09-20', 7);
+
+  const visits = store.outreach.visits('hyline');
+  const month = staffMonth(visits, store.outreach.businesses('hyline'), '2026-10-27');
+
+  // Visit History filters the same array by month; Performance sums the same field.
+  const historyOctober = visits.filter(v => v.visitedOn.slice(0, 7) === '2026-10');
+  assert.equal(month.visits, historyOctober.length);
+  assert.equal(month.materials, historyOctober.reduce((n, v) => n + v.materials, 0));
+
+  // And the chart's October bucket agrees with both.
+  const october = activitySeries(visits, 'month', '2026-10-27').find(b => b.key === '2026-10')!;
+  assert.equal(october.visits, month.visits);
+  assert.equal(october.materials, month.materials);
+  store.close();
+});

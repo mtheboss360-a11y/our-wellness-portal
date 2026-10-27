@@ -85,3 +85,70 @@ export function owedACall(visits: Visit[], today: string, limit = 5) {
 /** The businesses nobody has been to, for the "worth approaching" list. */
 export const notYetVisited = (businesses: Business[], limit = 6) =>
   businesses.filter(business => business.stage === 'new').slice(0, limit);
+
+/** One bucket of the activity chart: a period, what it covers, and what happened in it. */
+export type Bucket = { key: string; label: string; from: string; to: string; visits: number; materials: number };
+
+const addDays = (iso: string, days: number) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+/** The Monday on or before a date. Weeks start on Monday because rounds do. */
+const mondayOf = (iso: string) => {
+  const day = new Date(`${iso}T12:00:00Z`).getUTCDay();
+  return addDays(iso, day === 0 ? -6 : 1 - day);
+};
+
+/**
+ * Visits over time, for the chart on the Overview.
+ *
+ * It returns the periods that exist and no others. A practice with three weeks of records gets
+ * three columns, not twelve with nine zeroes — padding a chart out to a tidy length invents a
+ * flat run that never happened, and a reader takes that as evidence of a quiet month.
+ *
+ * The only zeroes here are genuine gaps BETWEEN two periods that do have activity, because
+ * leaving those out would show a continuous climb where there was a break.
+ */
+export function activitySeries(visits: Visit[], period: 'week' | 'month', today: string): Bucket[] {
+  if (!visits.length) return [];
+
+  const keyOf = (iso: string) => period === 'week' ? mondayOf(iso) : iso.slice(0, 7);
+  const counted = new Map<string, { visits: number; materials: number }>();
+  for (const visit of visits) {
+    if (visit.visitedOn > today) continue;
+    const key = keyOf(visit.visitedOn);
+    const row = counted.get(key) ?? { visits: 0, materials: 0 };
+    row.visits += 1; row.materials += visit.materials;
+    counted.set(key, row);
+  }
+  if (!counted.size) return [];
+
+  const keys = [...counted.keys()].sort();
+  const first = keys[0], last = keys[keys.length - 1];
+
+  // Walk from the first period with activity to the last, so a genuine gap shows as a gap.
+  const all: string[] = [];
+  if (period === 'week') {
+    for (let at = first; at <= last; at = addDays(at, 7)) all.push(at);
+  } else {
+    let [y, m] = first.split('-').map(Number);
+    const [ly, lm] = last.split('-').map(Number);
+    while (y < ly || (y === ly && m <= lm)) {
+      all.push(`${y}-${String(m).padStart(2, '0')}`);
+      m += 1; if (m > 12) { m = 1; y += 1; }
+    }
+  }
+
+  return all.map(key => {
+    const row = counted.get(key) ?? { visits: 0, materials: 0 };
+    const from = period === 'week' ? key : `${key}-01`;
+    const to = period === 'week' ? addDays(key, 6) : key;
+    return {
+      key, from, to, visits: row.visits, materials: row.materials,
+      label: period === 'week'
+        ? new Date(`${key}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+        : new Date(`${key}-01T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+    };
+  });
+}
