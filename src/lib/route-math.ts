@@ -21,10 +21,50 @@ import { DEFAULTS, OPENS, driveMinutes, weekdayOf, type Assumptions, type Openin
 export { clockOf, durationLabel, WEEKDAY } from './agenda-math';
 
 /**
- * Minutes allowed for a leg we cannot measure — a pickup, or a business with no coordinate.
- * Suburban hop with parking. It is an allowance and every screen that shows it says so.
+ * Minutes allowed for a leg we cannot measure — a pickup, or a business with no usable
+ * coordinate. Suburban hop with parking. It is an allowance and every screen that shows it
+ * says so.
  */
 export const TRAVEL_ALLOWANCE = 8;
+
+/**
+ * HOW LONG A COORDINATE MAY BE USED. Google's terms let a place id be kept indefinitely and a
+ * coordinate for thirty days, which is the rule the network cache already follows. A stop whose
+ * coordinates are older than that is treated as having none: it still routes by street address,
+ * and its leg becomes an allowance rather than a measurement from a figure we may no longer
+ * hold. `geoAt` is null for a coordinate that came from the practice's own release file rather
+ * than from Google, and those do not expire.
+ */
+export const COORDINATE_DAYS = 30;
+const COORDINATE_LIFETIME = COORDINATE_DAYS * 24 * 60 * 60 * 1000;
+
+/** Where a business is, if we may still say. */
+export function positionOf(business: { lat: number | null; lng: number | null; geoAt: number | null },
+  at = Date.now()): { lat: number; lng: number } | null {
+  if (business.lat === null || business.lng === null) return null;
+  if (business.geoAt !== null && at - business.geoAt > COORDINATE_LIFETIME) return null;
+  return { lat: business.lat, lng: business.lng };
+}
+
+/**
+ * THE TIME OF DAY WHERE THE PRACTICE IS, in minutes from midnight. A runner's phone may be set
+ * to another zone — or simply be wrong — and "you should be here now" read off the wrong clock
+ * is worse than no mark at all.
+ */
+export function minutesNowIn(timeZone: string, at = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(at);
+    const hour = Number(parts.find(p => p.type === 'hour')?.value ?? NaN);
+    const minute = Number(parts.find(p => p.type === 'minute')?.value ?? NaN);
+    return Number.isFinite(hour) && Number.isFinite(minute) ? (hour % 24) * 60 + minute : null;
+  } catch {
+    // A zone this runtime does not know. No mark on the itinerary beats a mark in the wrong
+    // place, so the caller gets nothing rather than the device's own clock.
+    return null;
+  }
+}
 
 /** How long a pickup takes when the runner did not say. Their own figure is used where given. */
 export const PICKUP_MINUTES = 10;
@@ -140,6 +180,8 @@ export function planRoute(
     assumptions?: Partial<Assumptions>; hours?: OpeningHours; allowance?: number;
     /** Which round each visit belongs to, from `attributeVisits`. */
     attributed?: Map<string, string>;
+    /** Now, for judging how old a coordinate is. Only tests pass it. */
+    now?: number;
   } = {},
 ): RoutePlan {
   const as = { ...DEFAULTS, ...options.assumptions };
@@ -171,8 +213,10 @@ export function planRoute(
   let travelTotal = 0, onSite = 0, waitTotal = 0;
 
   const items = round.items.map((item, index) => {
-    const here: Where = item.kind === 'business' && item.business.lat !== null && item.business.lng !== null
-      ? { lat: item.business.lat, lng: item.business.lng } : null;
+    // A pickup has an address and no coordinate, so it cannot be placed on a map. What matters
+    // is that the NEXT leg starts from here all the same: measuring the leg after a pickup from
+    // the business before it would quietly pretend the pickup was not driven to.
+    const here: Where = item.kind === 'business' ? positionOf(item.business, options.now ?? Date.now()) : null;
     if (item.kind === 'business' && !here) unlocated.push(item.business.name);
 
     const measured = !!(here && from);
@@ -196,7 +240,9 @@ export function planRoute(
 
     travelTotal += travel; onSite += minutes; waitTotal += wait;
     cursor = departAt;
-    if (here) from = here;
+    // Always the stop we have just left, known or not. Where it is not known the next leg is an
+    // allowance too, which is the honest answer: we cannot measure from a place we cannot place.
+    from = here;
 
     const status: PlannedItem['status'] = done ? 'completed'
       : isToday && options.nowMinutes !== undefined && options.nowMinutes >= arriveAt && options.nowMinutes < departAt
@@ -209,7 +255,7 @@ export function planRoute(
     warnings.push(`This route is booked on a day the practice is closed, so nothing holds its start time.`);
   }
   if (unlocated.length) {
-    warnings.push(`${unlocated.join(', ')} ${unlocated.length === 1 ? 'has' : 'have'} no map position, so ${unlocated.length === 1 ? 'its' : 'their'} travel time is an allowance rather than an estimate from the distance.`);
+    warnings.push(`${unlocated.join(', ')} ${unlocated.length === 1 ? 'has' : 'have'} no map position we can use, so ${unlocated.length === 1 ? 'its' : 'their'} travel time is an allowance rather than an estimate from the distance.`);
   }
 
   const endsAt = items.length ? items[items.length - 1].departAt : startsAt;

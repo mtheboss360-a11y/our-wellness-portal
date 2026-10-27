@@ -180,6 +180,8 @@ export const pickupInput = z.object({
 
 export const pickupActionInput = z.object({
   roundId, pickupId: z.string().min(1).max(80), revision,
+  /** What was actually collected, where the runner confirmed it. Absent on a removal. */
+  collected: supplyInput.optional(),
 }).strict();
 
 export const packedInput = z.object({

@@ -28,7 +28,8 @@ import {
 } from './lib/api';
 import {
   addDays, attributeVisits, clockOf, durationLabel, isoOf, itemAddress, itemName, longDate,
-  mondayOf, planRoute, shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE, type PlannedItem,
+  minutesNowIn, mondayOf, planRoute, shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE,
+  type PlannedItem,
 } from './lib/route-math';
 import { Icon, type IconName } from './Icons';
 import GuidedVisit, { type VisitSubmission } from './GuidedVisit';
@@ -54,15 +55,18 @@ const directionsTo = (item: RunnerItem) => {
 
 type Drawer =
   | { kind: 'pickup'; pickupId?: string }
+  /** Collecting one, which is a different job from editing it. */
+  | { kind: 'collect'; pickupId: string }
   | { kind: 'supplies' }
   | { kind: 'timing' };
 
-export default function MyRoutes({ today }: { today: string }) {
+export default function MyRoutes({ today, timezone }: { today: string; timezone: string }) {
   const [data, setData] = useState<RunnerPayload | null>(null);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(today);
   const [week, setWeek] = useState(() => mondayOf(today));
   const [picked, setPicked] = useState(false);
+  const [chosenRound, setChosenRound] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [visiting, setVisiting] = useState<string | null>(null);
   const [toast, setToast] = useState('');
@@ -92,10 +96,15 @@ export default function MyRoutes({ today }: { today: string }) {
     if (!data || picked) return;
     const dates = data.routes.map(r => r.date).sort();
     const day = dates.includes(today) ? today : dates.find(d => d > today) ?? dates.at(-1) ?? today;
-    setSelected(day); setWeek(mondayOf(day)); setPicked(true);
+    setSelected(day); setWeek(mondayOf(day)); setPicked(true); setChosenRound(null);
   }, [data, picked, today]);
 
-  const route = data?.routes.find(r => r.date === selected) ?? null;
+  const onThisDay = useMemo(
+    () => (data?.routes ?? []).filter(r => r.date === selected),
+    [data, selected]);
+  // Two rounds can be booked on one day. The first is opened, and the others are offered rather
+  // than hidden — which is what taking routes.find() did.
+  const route = onThisDay.find(r => r.id === chosenRound) ?? onThisDay[0] ?? null;
   const items = pending && route && pending.roundId === route.id ? pending.items : route?.items ?? [];
 
   // Which round each recorded visit belongs to. Worked out across every route at once, because
@@ -107,9 +116,11 @@ export default function MyRoutes({ today }: { today: string }) {
   const plan = useMemo(() => route
     ? planRoute({ ...route, items }, data?.visits ?? [], {
         clinic: data?.clinic ?? null, today, attributed,
-        nowMinutes: new Date().getHours() * 60 + new Date().getMinutes(),
+        // The practice's clock. A phone set to another zone would otherwise mark the wrong
+        // stop as the one somebody should be standing in front of.
+        nowMinutes: minutesNowIn(timezone) ?? undefined,
       })
-    : null, [route, items, data, today, attributed]);
+    : null, [route, items, data, today, attributed, timezone]);
 
   const done = useMemo(() => new Set((plan?.items ?? []).filter(i => i.done).map(i => refOf(i.item))), [plan]);
 
@@ -151,8 +162,7 @@ export default function MyRoutes({ today }: { today: string }) {
   // ── The guided visit takes the whole screen, and comes back here ──────────
   if (visiting && route && plan) {
     const at = plan.items.findIndex(i => i.item.kind === 'business' && i.item.business.id === visiting);
-    const after = plan.items.slice(at + 1).find(i => !i.done && i.item.kind === 'business');
-    const nextId = after && after.item.kind === 'business' ? after.item.business.id : null;
+    const after = plan.items.slice(at + 1).find(i => !i.done);
     const save = async (draft: VisitSubmission) => {
       const result = await recordRunnerVisit({
         roundId: route.id,
@@ -175,7 +185,11 @@ export default function MyRoutes({ today }: { today: string }) {
           save={save}
           materials={{ remaining: route.remaining, confirmed: route.supplies.packed !== null }}
           onClose={() => { setVisiting(null); void load(); }}
-          onNext={nextId ? () => { setVisiting(nextId); } : undefined}
+          onNext={after ? () => {
+            // Whatever is actually next: another door, or the bakery between here and it.
+            if (after.item.kind === 'business') setVisiting(after.item.business.id);
+            else { setVisiting(null); setDrawer({ kind: 'collect', pickupId: after.item.id }); }
+          } : undefined}
           nextLabel={after ? `Next: ${itemName(after.item)}` : undefined}/>
       </div>
     </main>;
@@ -221,7 +235,9 @@ export default function MyRoutes({ today }: { today: string }) {
 
     {!error && data && <>
       <section className="rr-strip" aria-label="This route at a glance">
-        <Chip icon="calendar" label="Assigned today" value={route ? `${items.length} ${items.length === 1 ? 'stop' : 'stops'}` : 'No route'}/>
+        <Chip icon="calendar"
+          label={selected === today ? 'Assigned today' : `Assigned ${shortDate(selected)}`}
+          value={route ? `${items.length} ${items.length === 1 ? 'stop' : 'stops'}` : 'No route'}/>
         <Chip icon="clock" label="Estimated duration" value={plan ? durationLabel(plan.totalMinutes) : '—'}/>
         <Chip icon="truck" label="Travel allowance" value={plan ? durationLabel(plan.travelMinutes) : '—'}/>
         <Chip icon="check" label="Stops completed" value={plan ? `${plan.completed} / ${plan.items.length}` : '—'}/>
@@ -248,9 +264,9 @@ export default function MyRoutes({ today }: { today: string }) {
         </div>
         <div className="rr-week-grid">
           {days.map(day => <Day key={day} day={day} today={today} current={day === selected}
-            route={data.routes.find(r => r.date === day) ?? null}
+            routes={data.routes.filter(r => r.date === day)}
             visits={data.visits} attributed={attributed}
-            onPick={() => { setSelected(day); setPicked(true); }}/>)}
+            onPick={() => { setSelected(day); setPicked(true); setChosenRound(null); }}/>)}
         </div>
       </section>
 
@@ -268,6 +284,15 @@ export default function MyRoutes({ today }: { today: string }) {
               {route ? (plan && plan.completed === plan.items.length && plan.items.length ? 'Finished' : route.status === 'done' ? 'Done' : 'Assigned') : 'No route'}
             </span>
           </div>
+
+          {onThisDay.length > 1 && <div className="rr-round-pick" role="tablist" aria-label="Rounds booked for this day">
+            {onThisDay.map((other, index) => <button key={other.id} role="tab"
+              aria-selected={other.id === route?.id}
+              className={other.id === route?.id ? 'is-current' : ''}
+              onClick={() => setChosenRound(other.id)}>
+              Round {index + 1}<small>{other.items.length} stops</small>
+            </button>)}
+          </div>}
 
           {!route || !plan ? <div className="rr-empty">
             <Icon name="calendar" size={35}/>
@@ -311,8 +336,7 @@ export default function MyRoutes({ today }: { today: string }) {
               origin={data.clinic?.label ?? data.practice}
               onMove={commitOrder}
               onOpen={item => openStop(item, setVisiting, setDrawer)}
-              onCollect={pickupId => void write(() => collectPickup(route.id, pickupId, route.revision),
-                'Picked up. Those supplies are in your car.')}/>
+              onCollect={pickupId => setDrawer({ kind: 'collect', pickupId })}/>
 
             <p className="rr-footnote">
               Travel times are planning allowances, not live driving directions: a leg between two
@@ -421,6 +445,23 @@ export default function MyRoutes({ today }: { today: string }) {
               void write(() => removePickup(route.id, drawer.pickupId!, route.revision), 'Pickup removed.');
             },
           })}/>}
+        {drawer.kind === 'collect' && <CollectPanel
+          route={route}
+          pickupId={drawer.pickupId}
+          busy={busy}
+          onClose={() => setDrawer(null)}
+          onEdit={() => setDrawer({ kind: 'pickup', pickupId: drawer.pickupId })}
+          onCollect={async collected => {
+            const saved = await write(() => collectPickup(route.id, drawer.pickupId, route.revision, collected),
+              'Picked up. Those supplies are in your car.');
+            if (!saved) return;
+            setDrawer(null);
+            // On to whatever is actually next. Collecting is a stop like any other, and the
+            // point of finishing one is being pointed at the following one.
+            const at = plan?.items.findIndex(i => refOf(i.item) === `pickup:${drawer.pickupId}`) ?? -1;
+            const after = at < 0 ? undefined : plan?.items.slice(at + 1).find(i => !i.done);
+            if (after?.item.kind === 'business') setVisiting(after.item.business.id);
+          }}/>}
         {drawer.kind === 'supplies' && <SuppliesPanel
           route={route} busy={busy} onClose={() => setDrawer(null)}
           onSave={async supplies => {
@@ -448,10 +489,14 @@ export default function MyRoutes({ today }: { today: string }) {
   </main>;
 }
 
-/** A stop opens into its guided visit; a pickup opens into its own panel. */
+/**
+ * A business opens into its guided visit; a pickup opens into collecting it. Editing a pickup
+ * is a different button, because arriving at one and changing your mind about one are different
+ * things to be doing on a pavement.
+ */
 function openStop(item: PlannedItem, visit: (id: string) => void, drawer: (value: Drawer) => void) {
   if (item.item.kind === 'business') visit(item.item.business.id);
-  else drawer({ kind: 'pickup', pickupId: item.item.id });
+  else drawer({ kind: item.item.pickup.status === 'collected' ? 'pickup' : 'collect', pickupId: item.item.id });
 }
 
 function Chip({ icon, label, value }: { icon: IconName; label: string; value: string }) {
@@ -462,31 +507,128 @@ function Chip({ icon, label, value }: { icon: IconName; label: string; value: st
 }
 
 /** One day in the week strip. Touch-friendly, and it says what is on the day without opening it. */
-function Day({ day, today, current, route, visits, attributed, onPick }: {
-  day: string; today: string; current: boolean; route: RunnerRoute | null; visits: Visit[];
+function Day({ day, today, current, routes, visits, attributed, onPick }: {
+  day: string; today: string; current: boolean; routes: RunnerRoute[]; visits: Visit[];
   attributed: Map<string, string>; onPick: () => void;
 }) {
-  const plan = route ? planRoute(route, visits, { today, attributed }) : null;
+  const plans = routes.map(route => planRoute(route, visits, { today, attributed }));
+  const stops = routes.reduce((total, route) => total + route.items.length, 0);
+  const done = plans.reduce((total, plan) => total + plan.completed, 0);
+  const minutes = plans.reduce((total, plan) => total + plan.totalMinutes, 0);
+  const shown = routes.flatMap(route => route.items).slice(0, 3);
   return <button type="button" className={`rr-day ${current ? 'is-current' : ''}`}
     aria-pressed={current} onClick={onPick}>
     <span className="rr-day-top">
       <strong>{shortDate(day).replace(',', '')}</strong>
-      <b>{route ? route.items.length : '–'}</b>
+      <b>{routes.length ? stops : '–'}</b>
     </span>
     <span className="rr-day-list">
-      {!route ? <span className="rr-day-empty">No route assigned</span> : <>
-        {route.items.slice(0, 3).map(item => <span key={refOf(item)}
+      {!routes.length ? <span className="rr-day-empty">No route assigned</span> : <>
+        {shown.map(item => <span key={refOf(item)}
           className={`rr-day-item ${item.kind === 'pickup' ? 'is-pickup' : ''}`}>
           {item.kind === 'pickup' ? `↳ ${item.pickup.title}` : item.business.name}
         </span>)}
-        {route.items.length > 3 && <span className="rr-day-more">+{route.items.length - 3} more</span>}
+        {stops > 3 && <span className="rr-day-more">+{stops - 3} more</span>}
       </>}
     </span>
     <span className="rr-day-foot">
-      <span>{plan ? `${plan.completed} done` : day === today ? 'Today' : 'No route'}</span>
-      <span>{plan ? durationLabel(plan.totalMinutes) : '—'}</span>
+      <span>{routes.length
+        ? `${done} done${routes.length > 1 ? ` · ${routes.length} routes` : ''}`
+        : day === today ? 'Today' : 'No route'}</span>
+      <span>{routes.length ? durationLabel(minutes) : '—'}</span>
     </span>
   </button>;
+}
+
+/**
+ * ARRIVING AT A PICKUP. What to collect, where, by when — and the counts confirmed as they go
+ * in the car, because what was ordered and what the bakery actually had are different numbers.
+ */
+function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect }: {
+  route: RunnerRoute; pickupId: string; busy: boolean;
+  onClose: () => void; onEdit: () => void; onCollect: (collected: Supplies) => void;
+}) {
+  const found = route.items.find(item => item.kind === 'pickup' && item.id === pickupId);
+  const pickup = found?.kind === 'pickup' ? found.pickup : null;
+  const [form, setForm] = useState<Record<keyof Supplies, string>>(() => ({
+    flyers: String(pickup?.supplies.flyers ?? 0),
+    treats: String(pickup?.supplies.treats ?? 0),
+    cards: String(pickup?.supplies.cards ?? 0),
+  }));
+  const [failed, setFailed] = useState('');
+  if (!pickup) return null;
+
+  function submit() {
+    const value: Supplies = {
+      flyers: Number(form.flyers), treats: Number(form.treats), cards: Number(form.cards),
+    };
+    for (const supply of SUPPLIES) {
+      const count = value[supply.key];
+      if (!Number.isInteger(count) || count < 0 || count > 10000) {
+        return setFailed(`${supply.label}: enter a whole number from 0 to 10000.`);
+      }
+    }
+    setFailed('');
+    onCollect(value);
+  }
+
+  return <>
+    <div className="rr-drawer-head">
+      <div>
+        <p className="rr-eyebrow" style={{ color: '#6e8875' }}>Pickup stop</p>
+        <h2 id="rr-drawer-title">{pickup.title}</h2>
+        <small>{PICKUP_LABEL[pickup.kind]} · {pickup.windowStart}–{pickup.windowEnd}</small>
+      </div>
+      <button className="rr-btn rr-btn-white rr-btn-icon" aria-label="Close" onClick={onClose}>
+        <Icon name="close" size={16}/>
+      </button>
+    </div>
+    <div className="rr-drawer-scroll">
+      <div className="rr-card">
+        <h3>Where</h3>
+        <p>{pickup.address}</p>
+        <div className="rr-stop-actions">
+          <a className="rr-btn rr-btn-sm rr-btn-white" target="_blank" rel="noreferrer noopener"
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pickup.address)}&travelmode=driving`}>
+            <Icon name="map" size={13}/>Directions
+          </a>
+        </div>
+      </div>
+
+      <div className="rr-card">
+        <h3>What to collect</h3>
+        <p>{pickup.items || 'Nothing was written down for this pickup.'}</p>
+        {pickup.reference && <p>Under {pickup.reference}.</p>}
+        {pickup.note && <p>{pickup.note}</p>}
+      </div>
+
+      {pickup.status === 'collected' ? <p className="rr-notice">
+        Already collected. What you confirmed is counted in your supplies.
+      </p> : <>
+        <p className="rr-section-title">What you actually came away with</p>
+        <div className="rr-grid">
+          {SUPPLIES.map(supply => <div className="rr-field" key={supply.key}>
+            <label htmlFor={`rr-got-${supply.key}`}>{supply.label}</label>
+            <input id={`rr-got-${supply.key}`} type="number" inputMode="numeric" min={0} max={10000}
+              value={form[supply.key]}
+              onChange={event => setForm(current => ({ ...current, [supply.key]: event.target.value }))}/>
+          </div>)}
+        </div>
+        <p className="rr-hint">These start at what you said you were collecting. Change them to
+          what is really in the car — that is what your remaining supplies are counted from.</p>
+      </>}
+      {failed && <p className="rr-error" role="alert">{failed}</p>}
+    </div>
+    <div className="rr-drawer-foot">
+      <button className="rr-btn rr-btn-white" onClick={onEdit} disabled={pickup.status === 'collected'}>
+        Edit pickup
+      </button>
+      <button className="rr-btn rr-btn-primary" onClick={submit}
+        disabled={busy || pickup.status === 'collected'}>
+        {busy ? 'Saving…' : 'Mark picked up'}
+      </button>
+    </div>
+  </>;
 }
 
 /**

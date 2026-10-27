@@ -24,4 +24,7 @@ export type PortalSnapshot = { config: PublicPortal; clinic: { id: string; name:
   /** What this session may do. Set by the server; the browser follows it, never decides it.
       'route_runner' is a field rep on the weekly planner — see server/runner.ts. */
   role?: 'admin' | 'owner' | 'staff' | 'route_runner' | 'unassigned' | null;
-  campaigns: Campaign[]; today: string };
+  campaigns: Campaign[]; today: string;
+  /** Where the practice is, so a screen can read the time off the practice's clock rather than
+      off a phone that may be set to another zone. */
+  timezone?: string };

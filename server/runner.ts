@@ -34,7 +34,10 @@ export type Pickup = {
   /** The window the place can be collected from, as the runner was told it. */
   windowStart: string; windowEnd: string;
   minutes: number; items: string; reference: string; note: string;
+  /** What the runner expects to collect. Their own plan, not the office's allocation. */
   supplies: Supplies;
+  /** What they actually came away with. Null until the pickup is marked collected. */
+  collected: Supplies | null;
   status: 'planned' | 'collected';
   collectedAt: number | null;
   position: number;
@@ -97,6 +100,7 @@ const SCHEMA = [
      reference TEXT NOT NULL DEFAULT '',
      note TEXT NOT NULL DEFAULT '',
      supplies TEXT NOT NULL DEFAULT '{}',
+     collected TEXT,
      status TEXT NOT NULL DEFAULT 'planned',
      collected_at INTEGER,
      position INTEGER NOT NULL,
@@ -148,7 +152,8 @@ const trim = (value: unknown, length: number) => String(value ?? '').trim().slic
 type PickupRow = {
   id: string; round_id: string; kind: string; title: string; address: string;
   window_start: string; window_end: string; minutes: number; items: string; reference: string;
-  note: string; supplies: string; status: string; collected_at: number | null; position: number;
+  note: string; supplies: string; collected: string | null; status: string;
+  collected_at: number | null; position: number;
 };
 
 type BusinessRow = {
@@ -183,6 +188,10 @@ export function openRunner(db: DatabaseSync) {
   add('rounds', 'runner_id', 'TEXT');
   add('rounds', 'revision', 'INTEGER NOT NULL DEFAULT 0');
   add('round_stops', 'locked', 'INTEGER NOT NULL DEFAULT 0');
+  // WHAT WAS ACTUALLY COLLECTED, beside what the runner said they would collect. Null until the
+  // pickup is marked collected: planned and actual are two different numbers, like every other
+  // pair of them here.
+  add('round_pickups', 'collected', 'TEXT');
 
   const begin = () => { db.prepare('BEGIN IMMEDIATE').run(); };
   const commit = () => { db.prepare('COMMIT').run(); };
@@ -205,6 +214,7 @@ export function openRunner(db: DatabaseSync) {
     title: r.title, address: r.address, windowStart: r.window_start, windowEnd: r.window_end,
     minutes: r.minutes, items: r.items, reference: r.reference, note: r.note,
     supplies: toSupplies(r.supplies),
+    collected: r.collected ? toSupplies(r.collected) : null,
     status: r.status === 'collected' ? 'collected' : 'planned',
     collectedAt: r.collected_at, position: r.position,
   });
@@ -237,7 +247,7 @@ export function openRunner(db: DatabaseSync) {
         FROM round_stops s JOIN businesses b ON b.id=s.business_id
         WHERE s.round_id=? AND s.clinic_id=?`).all(roundId, clinicId) as BusinessRow[];
     const pickups = db.prepare(`SELECT id,round_id,kind,title,address,window_start,window_end,minutes,items,
-        reference,note,supplies,status,collected_at,position FROM round_pickups
+        reference,note,supplies,collected,status,collected_at,position FROM round_pickups
         WHERE round_id=? AND clinic_id=?`).all(roundId, clinicId) as PickupRow[];
     const list: RunnerItem[] = [
       ...stops.map(r => ({
@@ -505,14 +515,20 @@ export function openRunner(db: DatabaseSync) {
     return round(clinicId, roundId)!;
   }
 
-  /** Mark a pickup collected. What it was carrying becomes available to drop. */
+  /**
+   * Mark a pickup collected, with what was actually in the bag. Only what is collected counts
+   * toward what the runner is carrying — a pickup still ahead of them is not supplies they have.
+   */
   function collectPickup(clinicId: string, roundId: string, pickupId: string, user: Who,
-    options: { revision?: number } = {}) {
+    options: { revision?: number; collected?: Partial<Supplies> } = {}) {
     const row = assertMine(clinicId, roundId, user);
     check(row, options.revision);
-    const changed = db.prepare(`UPDATE round_pickups SET status='collected', collected_at=?
+    const planned = db.prepare('SELECT supplies FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
+      .get(pickupId, roundId, clinicId) as { supplies: string } | undefined;
+    const actual = toSupplies(options.collected ?? planned?.supplies ?? {});
+    const changed = db.prepare(`UPDATE round_pickups SET status='collected', collected_at=?, collected=?
       WHERE id=? AND round_id=? AND clinic_id=? AND status<>'collected'`)
-      .run(now(), pickupId, roundId, clinicId);
+      .run(now(), JSON.stringify(actual), pickupId, roundId, clinicId);
     if (!changed.changes) {
       const exists = db.prepare('SELECT status FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
         .get(pickupId, roundId, clinicId) as { status: string } | undefined;
@@ -551,12 +567,15 @@ export function openRunner(db: DatabaseSync) {
     return round(clinicId, roundId)!;
   }
 
-  /** What the collected pickups have added to the car. */
+  /**
+   * What the collected pickups have added to the car — what was actually collected, which is
+   * not always what was planned. A pickup that has not been collected adds nothing.
+   */
   function collectedSupplies(clinicId: string, roundId: string): Supplies {
-    const rows = db.prepare(`SELECT supplies FROM round_pickups
-      WHERE round_id=? AND clinic_id=? AND status='collected'`).all(roundId, clinicId) as Array<{ supplies: string }>;
+    const rows = db.prepare(`SELECT supplies,collected FROM round_pickups
+      WHERE round_id=? AND clinic_id=? AND status='collected'`).all(roundId, clinicId) as Array<{ supplies: string; collected: string | null }>;
     return rows.reduce<Supplies>((total, row) => {
-      const value = toSupplies(row.supplies);
+      const value = toSupplies(row.collected ?? row.supplies);
       return { flyers: total.flyers + value.flyers, treats: total.treats + value.treats, cards: total.cards + value.cards };
     }, { ...NO_SUPPLIES });
   }

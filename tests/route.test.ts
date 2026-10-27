@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  planRoute, moveItem, attributeVisits, mondayOf, addDays, weekLabel, TRAVEL_ALLOWANCE,
+  planRoute, moveItem, attributeVisits, minutesNowIn, itemName as itemNameOf,
+  mondayOf, addDays, weekLabel, TRAVEL_ALLOWANCE,
 } from '../src/lib/route-math.ts';
 import type { RunnerItem } from '../server/runner.ts';
 import type { Business, Visit } from '../server/outreach.ts';
@@ -22,7 +23,7 @@ const pickup = (id: string, windowStart: string, windowEnd: string, minutes = 10
   kind: 'pickup', id, position: 0, locked: false,
   pickup: { id, roundId: 'r', kind: 'treats', title: id, address: `${id} Road`,
     windowStart, windowEnd, minutes, items: '', reference: '', note: '',
-    supplies: { flyers: 0, treats: 0, cards: 0 }, status, collectedAt: null, position: 0 },
+    supplies: { flyers: 0, treats: 0, cards: 0 }, collected: null, status, collectedAt: null, position: 0 },
 });
 const visit = (businessId: string, visitedOn: string, roundId: string | null = null): Visit => ({
   id: `v_${businessId}_${visitedOn}`, businessId, businessName: businessId, staff: 'Alexis', visitedOn,
@@ -148,4 +149,62 @@ test('the week runs Monday to Sunday, whatever day is open', () => {
   assert.equal(addDays('2026-10-31', 1), '2026-11-01');
   assert.equal(weekLabel('2026-10-26'), 'Oct 26 – Nov 1');
   assert.equal(weekLabel('2026-11-02'), 'Nov 2–8');
+});
+
+test('every leg starts from the stop before it, and an unplaceable stop breaks the measurement', () => {
+  // A pickup sits between two businesses we do have positions for. The leg after it must not be
+  // measured from the business before it, which would pretend the pickup was never driven to.
+  const withPickup = planRoute(
+    round([stop('A', 41.70, -88.16), pickup('Bakery', '00:00', '23:59'), stop('B', 41.76, -88.21)]), [],
+    { clinic: { lat: 41.68, lng: -88.14 } });
+  assert.equal(withPickup.items[0].measured, true);
+  assert.equal(withPickup.items[1].measured, false, 'a pickup cannot be placed');
+  assert.equal(withPickup.items[2].measured, false, 'and neither can the leg out of it');
+  assert.equal(withPickup.items[2].travel, TRAVEL_ALLOWANCE);
+
+  // Without the pickup, that same pair of businesses is measured.
+  const direct = planRoute(round([stop('A', 41.70, -88.16), stop('B', 41.76, -88.21)]), [],
+    { clinic: { lat: 41.68, lng: -88.14 } });
+  assert.equal(direct.items[1].measured, true);
+});
+
+test('a coordinate older than Google lets us keep it is not used', () => {
+  const now = Date.UTC(2026, 9, 27);
+  const day = 24 * 60 * 60 * 1000;
+  const fresh = { ...stop('A', 41.70, -88.16) };
+  (fresh as { business: { geoAt: number | null } }).business.geoAt = now - 10 * day;
+  const stale = { ...stop('B', 41.76, -88.21) };
+  (stale as { business: { geoAt: number | null } }).business.geoAt = now - 31 * day;
+
+  const plan = planRoute(round([fresh, stale]), [], { clinic: { lat: 41.68, lng: -88.14 }, now });
+  assert.equal(plan.items[0].measured, true, 'ten days old is still ours to use');
+  assert.equal(plan.items[1].measured, false, 'thirty-one days old is not');
+  assert.deepEqual(plan.unlocated, ['B']);
+
+  // A coordinate that never came from Google carries no stamp and does not expire.
+  const own = planRoute(round([stop('A', 41.70, -88.16)]), [], { clinic: { lat: 41.68, lng: -88.14 }, now });
+  assert.equal(own.items[0].measured, true);
+});
+
+test('the clock is the practice’s, whatever the phone is set to', () => {
+  const noon = new Date('2026-10-27T17:00:00Z'); // midday in Chicago, five in London
+  assert.equal(minutesNowIn('America/Chicago', noon), 12 * 60);
+  assert.equal(minutesNowIn('Europe/London', noon), 17 * 60); // GMT by late October
+  assert.equal(minutesNowIn('Not/AZone', noon), null);
+});
+
+test('the next stop is the next unfinished one, pickup or not', () => {
+  // Practice → A → pickup → B. Finishing A must point at the pickup, not past it at B.
+  const items = [stop('A'), pickup('Bakery', '09:00', '17:00'), stop('B')];
+  const visited = visit('A', '2026-10-27', 'r');
+  const attributed = attributeVisits([{ id: 'r', date: '2026-10-27', items }], [visited]);
+  const plan = planRoute(round(items), [visited], { attributed });
+  assert.equal(plan.items[0].done, true);
+  assert.equal(plan.next?.item.kind, 'pickup');
+  assert.equal(plan.next && itemNameOf(plan.next.item), 'Bakery');
+
+  // Once it is collected, the next stop is B.
+  const after = planRoute(round([stop('A'), pickup('Bakery', '09:00', '17:00', 10, 'collected'), stop('B')]),
+    [visited], { attributed });
+  assert.equal(after.next?.item.kind, 'business');
 });

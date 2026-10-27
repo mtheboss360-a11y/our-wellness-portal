@@ -301,6 +301,26 @@ test('a pickup can be edited and removed; a collected one stays on the record', 
   store.close();
 });
 
+test('a pickup counts what was actually collected, not what was planned', () => {
+  const store = world();
+  const round = booked(store, ['Karve Pilates']);
+  const me = who(store, 'alexis', 'Alexis');
+  const added = store.runner.addPickup('hyline', round, PICKUP, me);
+  const pickupId = added.items.find(i => i.kind === 'pickup')!.id;
+
+  // Nothing is in the car until it has been collected, however much was planned.
+  assert.deepEqual(store.runner.collectedSupplies('hyline', round), { flyers: 0, treats: 0, cards: 0 });
+
+  // The bakery had three dozen, not four.
+  const done = store.runner.collectPickup('hyline', round, pickupId, me,
+    { collected: { flyers: 0, treats: 36, cards: 0 } });
+  assert.deepEqual(store.runner.collectedSupplies('hyline', round), { flyers: 0, treats: 36, cards: 0 });
+  const pickup = done.items.find(i => i.kind === 'pickup');
+  assert.equal(pickup?.kind === 'pickup' && pickup.pickup.supplies.treats, 48, 'what was planned is kept');
+  assert.equal(pickup?.kind === 'pickup' && pickup.pickup.collected?.treats, 36, 'beside what was collected');
+  store.close();
+});
+
 test('a pickup is checked before it is written', () => {
   const store = world();
   const round = booked(store, ['Karve Pilates']);

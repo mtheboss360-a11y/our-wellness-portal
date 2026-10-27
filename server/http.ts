@@ -221,7 +221,8 @@ export function createPortalServer(options: Options) {
           if (url.pathname === '/api/runner/pickup/collected' && request.method === 'POST') {
             const input = pickupActionInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That pickup could not be read.' }); return; }
-            try { sendRoute(runner.collectPickup(clinic.id, input.data.roundId, input.data.pickupId, who, { revision: input.data.revision })); }
+            try { sendRoute(runner.collectPickup(clinic.id, input.data.roundId, input.data.pickupId, who,
+              { revision: input.data.revision, collected: input.data.collected })); }
             catch (error) { refuse(error, input.data.roundId); }
             return;
           }

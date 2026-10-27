@@ -107,8 +107,8 @@ export const savePickup = (roundId: string, revision: number, draft: PickupDraft
   runnerWrite('/api/runner/pickup', { roundId, revision, ...draft });
 export const removePickup = (roundId: string, pickupId: string, revision: number) =>
   runnerWrite('/api/runner/pickup/remove', { roundId, pickupId, revision });
-export const collectPickup = (roundId: string, pickupId: string, revision: number) =>
-  runnerWrite('/api/runner/pickup/collected', { roundId, pickupId, revision });
+export const collectPickup = (roundId: string, pickupId: string, revision: number, collected?: Supplies) =>
+  runnerWrite('/api/runner/pickup/collected', { roundId, pickupId, revision, collected });
 export const confirmPacked = (roundId: string, supplies: Supplies, revision: number) =>
   runnerWrite('/api/runner/packed', { roundId, supplies, revision });
 
