@@ -32,6 +32,15 @@ const CAPACITY = RINGS.reduce((total, ring) => total + ring.max, 0);
 type Placed = { connection: Connection; x: number; y: number; delay: number };
 
 /**
+ * The SVG the lines are drawn in. It is stretched to the stage (preserveAspectRatio="none"),
+ * so a ring given as a percentage of the stage becomes that percentage of these numbers —
+ * which is what lets one set of constants place both the cards and the line under them.
+ */
+const VB = { w: 1000, h: 620 };
+const svgRing = ({ rx, ry }: { rx: number; ry: number }, scale = 1) =>
+  ({ rx: (rx / 100) * VB.w * scale, ry: (ry / 100) * VB.h * scale });
+
+/**
  * Angles at which an ellipse is cut into `count` pieces of EQUAL ARC LENGTH.
  *
  * Even angles are not even spacing on an ellipse — they bunch the cards at the two ends,
@@ -136,15 +145,18 @@ export default function ReferralOrbit({ practice, connections }: {
     <div className="orb2-stage">
       {/* The path they ride. Decorative: every name is in the list beside it. */}
       {/* The loop: thin layered lines rather than one band, so it reads as a path the cards
-          sit on and not as a container drawn around them. The outermost is a soft sage wash;
-          the rest are hairlines in evergreen and sage, fading inwards. */}
-      <svg className="orb2-ring" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
-        <ellipse className="orb2-ring-wash" cx="500" cy="310" rx="413" ry="276"/>
-        <ellipse className="orb2-ring-line" cx="500" cy="310" rx="410" ry="273"/>
-        <ellipse className="orb2-ring-sage" cx="500" cy="310" rx="396" ry="264"/>
-        <ellipse className="orb2-ring-sage" cx="500" cy="310" rx="330" ry="220"/>
-        <ellipse className="orb2-ring-faint" cx="500" cy="310" rx="265" ry="177"/>
-        <ellipse className="orb2-ring-faint" cx="500" cy="310" rx="200" ry="134"/>
+          sit on and not as a container drawn around them.
+
+          The radii come from RINGS rather than being typed in, because a line that does not
+          pass through the cards is worse than no line. They were hand-set before and sat ten
+          units inside the cards, with three more rings at radii nothing was on. */}
+      <svg className="orb2-ring" viewBox={`0 0 ${VB.w} ${VB.h}`} preserveAspectRatio="none" aria-hidden="true">
+        <ellipse className="orb2-ring-wash" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[1])}/>
+        <ellipse className="orb2-ring-line" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[1])}/>
+        <ellipse className="orb2-ring-sage" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[1], 0.955)}/>
+        {/* The inner path exists only when there are cards on it. */}
+        {placed.length > RINGS[1].max &&
+          <ellipse className="orb2-ring-faint" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[0])}/>}
       </svg>
 
       <div className="orb2-hub">

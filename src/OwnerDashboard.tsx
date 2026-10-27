@@ -13,7 +13,7 @@
 //   - Nothing invented. No route, no QR code, no NFC link. A missing field reads "Not added".
 //   - No bubble graph. A circle big enough to hold a business name is a large circle, and
 //     twenty-five of them crowd. The network here is an orbit of name cards instead.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getRounds, getBusinesses, type Business, type Round, type Visit } from './lib/api';
 import { planRound, clockOf, durationLabel, milesFrom } from './lib/round-math';
 import { staffMonth, owedACall, activitySeries } from './lib/staff-dashboard';
@@ -229,11 +229,6 @@ function StatSwap({ which, businesses, visits, rounds, clinic, month, today }: {
   clinic: { lat: number; lng: number } | null;
   month: ReturnType<typeof staffMonth>; today: string;
 }) {
-  // A panel that slid in for the previous card should not slide again on a re-render that had
-  // nothing to do with the reader. Keying the animation on the selection is what limits it.
-  const first = useRef(true);
-  useEffect(() => { first.current = false; }, [which]);
-
   const body = useMemo(() => {
     if (which === 'accounts') return accountsPanel(businesses);
     if (which === 'routes') return routesPanel(rounds, visits, clinic, today);
