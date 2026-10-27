@@ -69,12 +69,15 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
     <a className="rr-sr" href="#rr-main">Skip to the page</a>
     <header className="rr-top">
       <div className="rr-topinner">
+        {/* The logo carries the name, so the name is not set beside it a second time. It sits on
+            an ivory plate because the mark is dark ink and gold: on the forest bar on its own it
+            is a smudge, and the brand is not something to show badly. */}
         <div className="rr-brand">
-          <img className="rr-mark" src="/assets/owo-logo.png" alt="" width="1579" height="574"/>
-          <div className="rr-brand-copy">
-            <span className="rr-brand-name">Our Wellness Network</span>
-            <span className="rr-brand-sub">ROUTE RUNNER</span>
-          </div>
+          <span className="rr-plate">
+            <img className="rr-mark" src="/assets/owo-logo.png" alt="Our Wellness Network"
+              width="1579" height="574"/>
+          </span>
+          <span className="rr-brand-sub">Route runner</span>
         </div>
         <div className="rr-toptools">
           {data.clinic?.demo && <span className="rr-pill"><i/>Illustrative account</span>}
@@ -96,7 +99,7 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
     </header>
 
     <div id="rr-main">
-      {view === 'routes' && <MyRoutes today={data.today}/>}
+      {view === 'routes' && <MyRoutes today={data.today} timezone={data.timezone ?? 'America/Chicago'}/>}
       {view === 'history' && <History/>}
       {view === 'help' && <Help phone={data.config.supportPhone} dial={data.config.supportDial} practice={practice}/>}
       {view === 'profile' && <Profile name={name} practice={practice} onSignOut={leave} signingOut={signingOut}/>}
