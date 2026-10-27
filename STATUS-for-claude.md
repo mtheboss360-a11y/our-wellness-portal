@@ -152,15 +152,23 @@ npm run assign-round -- --round r_… --unassign
 
 Things worth knowing before changing any of it:
 
-- **Assignment is the permission.** `rounds.runner_id` is the assignment. A round that has never
-  been assigned falls back to matching `rounds.staff` against the login's display name, because
-  that is how every round in the database today was handed out. The fallback only matches a
-  non-empty name, so a login with no name on it inherits nothing.
+- **Assignment is the permission, and only the user id is consulted.** `rounds.runner_id`. There
+  was a fallback that matched `rounds.staff` against the login's display name, because that is
+  how rounds booked before assignments existed were handed out — two people called Alexis would
+  have seen each other's day, so it is gone. `npm run claim-rounds -- --clinic <id> --username
+  <name>` lists the historical name matches and `--apply` turns them into real assignments.
+  **A round with no `runner_id` shows on nobody's planner.**
+- **A visit belongs to one round.** `visits.round_id` is written from the round the screen was
+  on, and `visits.recorded_by` from the login. Both are nullable and nothing was backfilled: a
+  visit recorded before these existed is attributed by `attributeVisits` to the last round on or
+  before its date that held that business, and belongs to no login at all. Visit history is
+  `recorded_by`, never "every visit at a business on your route".
 - **A pickup is not a business.** `round_pickups` belongs to one round. It never enters
   `businesses`, the directory or the referral map, and the office's own screens do not show it.
 - **Three supply numbers, never two.** `round_supplies.planned` is the office's allocation and a
   runner cannot write it; `packed` is their own count; `visit_materials` is what was dropped.
-  `visits.materials` stays the authoritative total and is written as the sum of the breakdown.
+  `visits.materials` stays the authoritative total and is written as the sum of the breakdown —
+  in the same transaction as the visit, so a visit cannot exist without the counts behind it.
 - **`rounds.revision`** is bumped by every write. A change sent against an older revision is
   refused with 409 and the current route, never merged.
 - **Reordering** keeps a locked stop at its exact position and keeps finished stops in the order

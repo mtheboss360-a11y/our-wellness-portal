@@ -34,7 +34,10 @@ export type Pickup = {
   /** The window the place can be collected from, as the runner was told it. */
   windowStart: string; windowEnd: string;
   minutes: number; items: string; reference: string; note: string;
+  /** What the runner expects to collect. Their own plan, not the office's allocation. */
   supplies: Supplies;
+  /** What they actually came away with. Null until the pickup is marked collected. */
+  collected: Supplies | null;
   status: 'planned' | 'collected';
   collectedAt: number | null;
   position: number;
@@ -97,6 +100,7 @@ const SCHEMA = [
      reference TEXT NOT NULL DEFAULT '',
      note TEXT NOT NULL DEFAULT '',
      supplies TEXT NOT NULL DEFAULT '{}',
+     collected TEXT,
      status TEXT NOT NULL DEFAULT 'planned',
      collected_at INTEGER,
      position INTEGER NOT NULL,
@@ -114,16 +118,6 @@ const SCHEMA = [
      packed_by TEXT NOT NULL DEFAULT '',
      packed_at INTEGER,
      demo INTEGER)`,
-  // MATERIALS DROPPED, split by kind. `visits.materials` stays the authoritative total — every
-  // screen already reads it — and this is the breakdown behind it, so the two cannot disagree:
-  // the total is written as the sum of these three.
-  `CREATE TABLE IF NOT EXISTS visit_materials (
-     visit_id TEXT PRIMARY KEY REFERENCES visits(id) ON DELETE CASCADE,
-     clinic_id TEXT NOT NULL REFERENCES clinics(id),
-     round_id TEXT,
-     flyers INTEGER NOT NULL DEFAULT 0,
-     treats INTEGER NOT NULL DEFAULT 0,
-     cards INTEGER NOT NULL DEFAULT 0)`,
   // WHO CHANGED A ROUND AND HOW. A runner reordering their own day is not a thing to hide, and
   // "the stops were in a different order this morning" has to be answerable.
   `CREATE TABLE IF NOT EXISTS round_changes (
@@ -158,7 +152,8 @@ const trim = (value: unknown, length: number) => String(value ?? '').trim().slic
 type PickupRow = {
   id: string; round_id: string; kind: string; title: string; address: string;
   window_start: string; window_end: string; minutes: number; items: string; reference: string;
-  note: string; supplies: string; status: string; collected_at: number | null; position: number;
+  note: string; supplies: string; collected: string | null; status: string;
+  collected_at: number | null; position: number;
 };
 
 type BusinessRow = {
@@ -193,6 +188,10 @@ export function openRunner(db: DatabaseSync) {
   add('rounds', 'runner_id', 'TEXT');
   add('rounds', 'revision', 'INTEGER NOT NULL DEFAULT 0');
   add('round_stops', 'locked', 'INTEGER NOT NULL DEFAULT 0');
+  // WHAT WAS ACTUALLY COLLECTED, beside what the runner said they would collect. Null until the
+  // pickup is marked collected: planned and actual are two different numbers, like every other
+  // pair of them here.
+  add('round_pickups', 'collected', 'TEXT');
 
   const begin = () => { db.prepare('BEGIN IMMEDIATE').run(); };
   const commit = () => { db.prepare('COMMIT').run(); };
@@ -215,6 +214,7 @@ export function openRunner(db: DatabaseSync) {
     title: r.title, address: r.address, windowStart: r.window_start, windowEnd: r.window_end,
     minutes: r.minutes, items: r.items, reference: r.reference, note: r.note,
     supplies: toSupplies(r.supplies),
+    collected: r.collected ? toSupplies(r.collected) : null,
     status: r.status === 'collected' ? 'collected' : 'planned',
     collectedAt: r.collected_at, position: r.position,
   });
@@ -247,7 +247,7 @@ export function openRunner(db: DatabaseSync) {
         FROM round_stops s JOIN businesses b ON b.id=s.business_id
         WHERE s.round_id=? AND s.clinic_id=?`).all(roundId, clinicId) as BusinessRow[];
     const pickups = db.prepare(`SELECT id,round_id,kind,title,address,window_start,window_end,minutes,items,
-        reference,note,supplies,status,collected_at,position FROM round_pickups
+        reference,note,supplies,collected,status,collected_at,position FROM round_pickups
         WHERE round_id=? AND clinic_id=?`).all(roundId, clinicId) as PickupRow[];
     const list: RunnerItem[] = [
       ...stops.map(r => ({
@@ -289,17 +289,33 @@ export function openRunner(db: DatabaseSync) {
   type Who = { id: string; displayName: string };
 
   /**
-   * THE ROUNDS ONE PERSON IS ALLOWED TO SEE. The round's `runner_id` is the assignment; a round
-   * that has never been assigned falls back to the name it was booked under, because that is how
-   * every round in the database today was handed out (`plan-round --staff "Alexis"`). The
-   * fallback only ever matches a non-empty display name, so an account with no name on it
-   * inherits nothing.
+   * THE ROUNDS ONE PERSON IS ALLOWED TO SEE — the ones assigned to their account, and nothing
+   * else. `runner_id` is the assignment and the only thing consulted.
+   *
+   * This used to fall back to matching `rounds.staff` against the login's display name, because
+   * that is how every round booked before assignments existed was handed out. Two people called
+   * Alexis would then have seen each other's day, so the fallback is gone: a name is not an
+   * identity. `scripts/claim-rounds.ts` turns those historical name matches into real
+   * assignments, one login at a time, with somebody looking at the list first.
    */
   function assignedRounds(clinicId: string, user: Who): RunnerRound[] {
-    const name = user.displayName.trim().toLowerCase();
+    if (!user.id) return [];
     const rows = db.prepare(`SELECT ${ROUND_COLUMNS} FROM rounds
-      WHERE clinic_id=? AND (runner_id=? OR (runner_id IS NULL AND ?<>'' AND LOWER(TRIM(staff))=?))
-      ORDER BY on_date DESC`).all(clinicId, user.id, name, name) as RoundRow[];
+      WHERE clinic_id=? AND runner_id=? ORDER BY on_date DESC`).all(clinicId, user.id) as RoundRow[];
+    return rows.map(r => hydrate(clinicId, r));
+  }
+
+  /**
+   * THE HISTORICAL ROUNDS that were booked under this person's name and never assigned to an
+   * account. Returned for somebody to look at; `assign` is what actually hands them over, and
+   * each one is written to the round's own history.
+   */
+  function claimableRounds(clinicId: string, displayName: string) {
+    const name = displayName.trim().toLowerCase();
+    if (!name) return [];
+    const rows = db.prepare(`SELECT ${ROUND_COLUMNS} FROM rounds
+      WHERE clinic_id=? AND runner_id IS NULL AND LOWER(TRIM(staff))=? ORDER BY on_date DESC`)
+      .all(clinicId, name) as RoundRow[];
     return rows.map(r => hydrate(clinicId, r));
   }
 
@@ -356,18 +372,18 @@ export function openRunner(db: DatabaseSync) {
   }
 
   /**
-   * WHAT A RUNNER MAY RECORD A VISIT AGAINST. Only a business on a round of theirs — otherwise a
-   * signed-in runner could record a conversation against any business the practice holds.
+   * WHAT A RUNNER MAY RECORD A VISIT AGAINST: a named round of theirs, with that business on it.
+   *
+   * The round is named by the caller rather than searched for. A business can sit on two rounds
+   * — a follow-up a week later is the ordinary case — and picking one of them here would attach
+   * the conversation, and the materials dropped at it, to whichever round happened to sort
+   * first. Returns the round, or null where the pairing is not this person's.
    */
-  function mayVisit(clinicId: string, businessId: string, user: Who) {
-    return assignedRounds(clinicId, user).some(r =>
-      r.items.some(item => item.kind === 'business' && item.business.id === businessId));
-  }
-
-  /** Which round of theirs a business sits on, nearest date first. Used to attribute materials. */
-  function roundForBusiness(clinicId: string, businessId: string, user: Who) {
-    return assignedRounds(clinicId, user).find(r =>
-      r.items.some(item => item.kind === 'business' && item.business.id === businessId)) ?? null;
+  function roundStopFor(clinicId: string, roundId: string, businessId: string, user: Who) {
+    const round = assignedRounds(clinicId, user).find(r => r.id === roundId);
+    if (!round) return null;
+    return round.items.some(item => item.kind === 'business' && item.business.id === businessId)
+      ? round : null;
   }
 
   /**
@@ -499,14 +515,20 @@ export function openRunner(db: DatabaseSync) {
     return round(clinicId, roundId)!;
   }
 
-  /** Mark a pickup collected. What it was carrying becomes available to drop. */
+  /**
+   * Mark a pickup collected, with what was actually in the bag. Only what is collected counts
+   * toward what the runner is carrying — a pickup still ahead of them is not supplies they have.
+   */
   function collectPickup(clinicId: string, roundId: string, pickupId: string, user: Who,
-    options: { revision?: number } = {}) {
+    options: { revision?: number; collected?: Partial<Supplies> } = {}) {
     const row = assertMine(clinicId, roundId, user);
     check(row, options.revision);
-    const changed = db.prepare(`UPDATE round_pickups SET status='collected', collected_at=?
+    const planned = db.prepare('SELECT supplies FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
+      .get(pickupId, roundId, clinicId) as { supplies: string } | undefined;
+    const actual = toSupplies(options.collected ?? planned?.supplies ?? {});
+    const changed = db.prepare(`UPDATE round_pickups SET status='collected', collected_at=?, collected=?
       WHERE id=? AND round_id=? AND clinic_id=? AND status<>'collected'`)
-      .run(now(), pickupId, roundId, clinicId);
+      .run(now(), JSON.stringify(actual), pickupId, roundId, clinicId);
     if (!changed.changes) {
       const exists = db.prepare('SELECT status FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
         .get(pickupId, roundId, clinicId) as { status: string } | undefined;
@@ -545,12 +567,15 @@ export function openRunner(db: DatabaseSync) {
     return round(clinicId, roundId)!;
   }
 
-  /** What the collected pickups have added to the car. */
+  /**
+   * What the collected pickups have added to the car — what was actually collected, which is
+   * not always what was planned. A pickup that has not been collected adds nothing.
+   */
   function collectedSupplies(clinicId: string, roundId: string): Supplies {
-    const rows = db.prepare(`SELECT supplies FROM round_pickups
-      WHERE round_id=? AND clinic_id=? AND status='collected'`).all(roundId, clinicId) as Array<{ supplies: string }>;
+    const rows = db.prepare(`SELECT supplies,collected FROM round_pickups
+      WHERE round_id=? AND clinic_id=? AND status='collected'`).all(roundId, clinicId) as Array<{ supplies: string; collected: string | null }>;
     return rows.reduce<Supplies>((total, row) => {
-      const value = toSupplies(row.supplies);
+      const value = toSupplies(row.collected ?? row.supplies);
       return { flyers: total.flyers + value.flyers, treats: total.treats + value.treats, cards: total.cards + value.cards };
     }, { ...NO_SUPPLIES });
   }
@@ -562,21 +587,6 @@ export function openRunner(db: DatabaseSync) {
     return rows.reduce<Supplies>((total, row) => ({
       flyers: total.flyers + qty(row.flyers), treats: total.treats + qty(row.treats), cards: total.cards + qty(row.cards),
     }), { ...NO_SUPPLIES });
-  }
-
-  /**
-   * The breakdown behind one visit's materials total. Written after the visit itself, keyed on
-   * the visit id, so a retried submission rewrites the same row rather than adding to it.
-   */
-  function saveVisitMaterials(clinicId: string, visitId: string, roundId: string | null, dropped: Partial<Supplies>) {
-    const visit = db.prepare('SELECT id FROM visits WHERE id=? AND clinic_id=?').get(visitId, clinicId);
-    if (!visit) throw new Error('That visit is not yours.');
-    const value = toSupplies(dropped);
-    db.prepare(`INSERT INTO visit_materials (visit_id,clinic_id,round_id,flyers,treats,cards) VALUES (?,?,?,?,?,?)
-      ON CONFLICT(visit_id) DO UPDATE SET round_id=excluded.round_id, flyers=excluded.flyers,
-        treats=excluded.treats, cards=excluded.cards`)
-      .run(visitId, clinicId, roundId, value.flyers, value.treats, value.cards);
-    return value;
   }
 
   /** The breakdowns for a set of visits, so a screen can show what went where. */
@@ -599,10 +609,10 @@ export function openRunner(db: DatabaseSync) {
   }
 
   return {
-    round, items, supplies, changes, assignedRounds, mayRun, mayVisit, roundForBusiness,
+    round, items, supplies, changes, assignedRounds, claimableRounds, mayRun, roundStopFor,
     assignRound, setPlannedSupplies, lockStop, reorder,
     addPickup, updatePickup, removePickup, collectPickup, confirmPacked,
-    collectedSupplies, droppedOnRound, saveVisitMaterials, visitMaterials, remaining,
+    collectedSupplies, droppedOnRound, visitMaterials, remaining,
   };
 }
 

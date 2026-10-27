@@ -95,28 +95,31 @@ async function runnerWrite(path: string, body: unknown): Promise<{ route: Runner
 }
 
 export const getRunnerRoutes = () => request<RunnerPayload>('/api/runner/routes');
-export const getRunnerBusiness = (id: string) =>
+export const getRunnerBusiness = (roundId: string, id: string) =>
   request<{ business: Business; script: { script: Script; edited: boolean } | null; visits: Visit[] }>(
-    `/api/runner/business?id=${encodeURIComponent(id)}`);
+    `/api/runner/business?round=${encodeURIComponent(roundId)}&id=${encodeURIComponent(id)}`);
+/** The visits this login recorded, with the date of each round they were recorded on. */
 export const getRunnerHistory = () =>
-  request<{ visits: Visit[]; materials: Record<string, Supplies> }>('/api/runner/history');
+  request<{ visits: Visit[]; rounds: Record<string, string> }>('/api/runner/history');
 export const reorderRoute = (roundId: string, order: ItemRef[], revision: number) =>
   runnerWrite('/api/runner/order', { roundId, order, revision });
 export const savePickup = (roundId: string, revision: number, draft: PickupDraft & { pickupId?: string }) =>
   runnerWrite('/api/runner/pickup', { roundId, revision, ...draft });
 export const removePickup = (roundId: string, pickupId: string, revision: number) =>
   runnerWrite('/api/runner/pickup/remove', { roundId, pickupId, revision });
-export const collectPickup = (roundId: string, pickupId: string, revision: number) =>
-  runnerWrite('/api/runner/pickup/collected', { roundId, pickupId, revision });
+export const collectPickup = (roundId: string, pickupId: string, revision: number, collected?: Supplies) =>
+  runnerWrite('/api/runner/pickup/collected', { roundId, pickupId, revision, collected });
 export const confirmPacked = (roundId: string, supplies: Supplies, revision: number) =>
   runnerWrite('/api/runner/packed', { roundId, supplies, revision });
 
 /** A visit recorded from the planner: the same record, with the breakdown of what was dropped. */
 export type RunnerVisitDraft = {
+  /** The round this visit is being recorded on. The server checks it is the caller's. */
+  roundId: string;
   businessId: string; visitedOn: string; spokeWith: string; contactRole: string;
   outcome: Outcome; dropped: Supplies; note: string; nextAction: string;
   followUpOn: string | null; clientRef?: string;
 };
 export const recordRunnerVisit = (input: RunnerVisitDraft) =>
-  request<{ visit: Visit; business: Business; dropped: Supplies; route: RunnerRoute | null }>(
+  request<{ visit: Visit; business: Business; dropped: Supplies | null; route: RunnerRoute | null }>(
     '/api/runner/visit', 'POST', input);

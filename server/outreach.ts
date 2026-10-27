@@ -65,7 +65,17 @@ export type Visit = {
   spokeWith: string; contactRole: string; outcome: Outcome; outcomeLabel: string;
   materials: number; note: string; nextAction: string; followUpOn: string | null;
   createdAt: number; edited: boolean;
+  /** The round this visit was recorded against, where the screen said which. Null for every
+      visit recorded before a round could be named, and for one recorded off a round. */
+  roundId: string | null;
+  /** The login that recorded it. Null for the same reason: nothing is attributed backwards. */
+  recordedBy: string | null;
+  /** What was dropped, by kind, where it was counted that way. Null where only a total exists. */
+  dropped: Materials | null;
 };
+
+/** Materials, counted by kind. The total on the visit is the sum of these three. */
+export type Materials = { flyers: number; treats: number; cards: number };
 
 export type ReleaseEntry = {
   name: string; category: string; address: string;
@@ -84,6 +94,8 @@ type VisitRow = {
   id: string; business_id: string; business_name: string; staff: string; visited_on: string;
   spoke_with: string; contact_role: string; outcome: string; materials: number; note: string;
   next_action: string; follow_up_on: string | null; created_at: number; edits: number;
+  round_id: string | null; recorded_by: string | null;
+  flyers: number | null; treats: number | null; cards: number | null;
 };
 
 const SCHEMA = [
@@ -137,6 +149,16 @@ const SCHEMA = [
      created_at INTEGER NOT NULL,
      edits INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS visits_by_business ON visits(clinic_id, business_id)`,
+  // MATERIALS DROPPED, split by kind. `visits.materials` stays the authoritative total and is
+  // written as the sum of these three, in the same transaction as the visit, so the total and
+  // its parts cannot disagree and a half-written visit cannot exist.
+  `CREATE TABLE IF NOT EXISTS visit_materials (
+     visit_id TEXT PRIMARY KEY REFERENCES visits(id) ON DELETE CASCADE,
+     clinic_id TEXT NOT NULL REFERENCES clinics(id),
+     round_id TEXT,
+     flyers INTEGER NOT NULL DEFAULT 0,
+     treats INTEGER NOT NULL DEFAULT 0,
+     cards INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS visit_edits (
      id TEXT PRIMARY KEY,
      visit_id TEXT NOT NULL REFERENCES visits(id),
@@ -166,6 +188,11 @@ const SCHEMA = [
 ].join(';\n');
 
 const now = () => Date.now();
+/** A quantity as the database will hold it: a whole number, never negative, never absurd. */
+const count = (value: unknown) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(10000, Math.trunc(n))) : 0;
+};
 const asStage = (value: string): Stage =>
   (STAGES as readonly string[]).includes(value) ? value as Stage : 'new';
 
@@ -196,6 +223,11 @@ export function openOutreach(db: DatabaseSync) {
   // of a list they were already in.
   add('businesses', 'types', 'TEXT');
   add('visits', 'demo', 'INTEGER');
+  // WHICH ROUND, AND WHO. Both nullable with no default and no backfill: a visit recorded
+  // before this existed cannot be attributed to a round or a person without guessing, and a
+  // guess here would put somebody's name on work they may not have done.
+  add('visits', 'round_id', 'TEXT');
+  add('visits', 'recorded_by', 'TEXT');
 
   // Transactions are run as statements rather than through exec so the whole file keeps one way
   // of talking to the database.
@@ -222,7 +254,16 @@ export function openOutreach(db: DatabaseSync) {
     outcome: r.outcome as Outcome, outcomeLabel: OUTCOMES[r.outcome as Outcome]?.label ?? r.outcome,
     materials: r.materials, note: r.note, nextAction: r.next_action,
     followUpOn: r.follow_up_on, createdAt: r.created_at, edited: r.edits > 0,
+    roundId: r.round_id, recordedBy: r.recorded_by,
+    dropped: r.flyers === null && r.treats === null && r.cards === null
+      ? null : { flyers: r.flyers ?? 0, treats: r.treats ?? 0, cards: r.cards ?? 0 },
   });
+
+  const VISIT_COLUMNS = `v.id,v.business_id,b.name AS business_name,v.staff,v.visited_on,v.spoke_with,
+        v.contact_role,v.outcome,v.materials,v.note,v.next_action,v.follow_up_on,v.created_at,v.edits,
+        v.round_id,v.recorded_by,m.flyers,m.treats,m.cards`;
+  const VISIT_FROM = `FROM visits v JOIN businesses b ON b.id=v.business_id
+      LEFT JOIN visit_materials m ON m.visit_id=v.id`;
 
   /**
    * Every business this practice has been released, newest release first. The clinic id comes
@@ -257,9 +298,7 @@ export function openOutreach(db: DatabaseSync) {
   /** Visits, newest first. With a business id, that relationship in order; without, the log. */
   function visits(clinicId: string, businessId?: string): Visit[] {
     const where = businessId ? 'WHERE v.clinic_id=? AND v.business_id=?' : 'WHERE v.clinic_id=?';
-    const sql = `SELECT v.id,v.business_id,b.name AS business_name,v.staff,v.visited_on,v.spoke_with,
-        v.contact_role,v.outcome,v.materials,v.note,v.next_action,v.follow_up_on,v.created_at,v.edits
-      FROM visits v JOIN businesses b ON b.id=v.business_id
+    const sql = `SELECT ${VISIT_COLUMNS} ${VISIT_FROM}
       ${where} ORDER BY v.visited_on DESC, v.created_at DESC`;
     const rows = (businessId
       ? db.prepare(sql).all(clinicId, businessId)
@@ -278,6 +317,12 @@ export function openOutreach(db: DatabaseSync) {
     businessId: string; staff: string; visitedOn: string; spokeWith: string; contactRole: string;
     outcome: Outcome; materials: number; note: string; nextAction: string; followUpOn: string | null;
     clientRef?: string;
+    /** The round this visit was recorded against. The caller has already checked it is theirs. */
+    roundId?: string | null;
+    /** The login recording it, so "my visits" means the ones this person actually recorded. */
+    recordedBy?: string | null;
+    /** Materials by kind. Where it is given, the total is its sum rather than anything sent. */
+    dropped?: Materials | null;
   }): { visit: Visit; business: Business } {
     const target = business(clinicId, input.businessId);
     if (!target) throw new Error('That business is not on your list.');
@@ -286,16 +331,35 @@ export function openOutreach(db: DatabaseSync) {
     const id = input.clientRef ? `v_${input.clientRef}` : `v_${randomUUID()}`;
     const already = db.prepare('SELECT id FROM visits WHERE id=? AND clinic_id=?').get(id, clinicId);
     if (already) {
+      // The same submission arriving twice — a double tap, a retry on a bad signal. The visit
+      // that was saved is returned whole, breakdown included, and nothing is written again.
       return { visit: visits(clinicId, input.businessId).find(v => v.id === id)!, business: target };
     }
+
+    // THE TOTAL IS THE SUM OF ITS PARTS where the parts were counted. A caller cannot send a
+    // total that disagrees with the breakdown it also sent.
+    const dropped = input.dropped
+      ? { flyers: count(input.dropped.flyers), treats: count(input.dropped.treats), cards: count(input.dropped.cards) }
+      : null;
+    const materials = dropped
+      ? dropped.flyers + dropped.treats + dropped.cards
+      : Math.max(0, Math.trunc(input.materials));
 
     begin();
     try {
       db.prepare(`INSERT INTO visits (id,clinic_id,business_id,staff,visited_on,spoke_with,contact_role,
-          outcome,materials,note,next_action,follow_up_on,created_at,demo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0)`)
+          outcome,materials,note,next_action,follow_up_on,created_at,demo,round_id,recorded_by)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?)`)
         .run(id, clinicId, input.businessId, input.staff, input.visitedOn, input.spokeWith,
-          input.contactRole, input.outcome, Math.max(0, Math.trunc(input.materials)), input.note,
-          input.nextAction, input.followUpOn, now());
+          input.contactRole, input.outcome, materials, input.note,
+          input.nextAction, input.followUpOn, now(), input.roundId ?? null, input.recordedBy ?? null);
+      // The breakdown goes in with the visit, not after it: a visit that exists without the
+      // counts behind it would leave the remaining-supplies figure wrong until somebody noticed.
+      if (dropped) {
+        db.prepare(`INSERT INTO visit_materials (visit_id,clinic_id,round_id,flyers,treats,cards)
+          VALUES (?,?,?,?,?,?)`)
+          .run(id, clinicId, input.roundId ?? null, dropped.flyers, dropped.treats, dropped.cards);
+      }
       db.prepare('UPDATE businesses SET stage=? WHERE id=? AND clinic_id=?')
         .run(OUTCOMES[input.outcome].stage, input.businessId, clinicId);
       commit();
@@ -305,6 +369,18 @@ export function openOutreach(db: DatabaseSync) {
       visit: visits(clinicId, input.businessId).find(v => v.id === id)!,
       business: business(clinicId, input.businessId)!,
     };
+  }
+
+  /**
+   * THE VISITS ONE PERSON RECORDED. Not the visits recorded at businesses they happen to be
+   * assigned — those are the practice's record and belong on the practice's screens. A visit
+   * with no `recorded_by` predates the column and is nobody's until somebody says otherwise.
+   */
+  function visitsRecordedBy(clinicId: string, userId: string): Visit[] {
+    const rows = db.prepare(`SELECT ${VISIT_COLUMNS} ${VISIT_FROM}
+      WHERE v.clinic_id=? AND v.recorded_by=? ORDER BY v.visited_on DESC, v.created_at DESC`)
+      .all(clinicId, userId) as VisitRow[];
+    return rows.map(toVisit);
   }
 
   /** Correct a visit, keeping what it said before. */
@@ -484,5 +560,5 @@ export function openOutreach(db: DatabaseSync) {
         id: string; name: string; released_at: number; released_by: string; size: number }>;
   }
 
-  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation, rounds, planRound, reorderRound, removeRound };
+  return { businesses, business, script, saveScript, visits, visitsRecordedBy, recordVisit, editVisit, release, releases, setLocation, rounds, planRound, reorderRound, removeRound };
 }

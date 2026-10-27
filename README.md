@@ -134,7 +134,15 @@ npm run plan-round -- --clinic hyline-dental --date 2026-10-27 --start 09:00 --s
 npm run assign-round -- --clinic hyline-dental --date 2026-10-27 --username alexis \
   --flyers 100 --treats 50 --cards 25
 npm run assign-round -- --clinic hyline-dental --date 2026-10-27 --lock "Karve Pilates"
+
+# Rounds booked under a name, before assignments existed:
+npm run claim-rounds -- --clinic hyline-dental --username alexisfield           # shows them
+npm run claim-rounds -- --clinic hyline-dental --username alexisfield --apply   # assigns them
 ```
+
+A round reaches a planner only when it is assigned to that **login**. Matching the name a round
+was booked under is not enough — two people share a name — so a round with no `runner_id` shows
+on nobody's planner until `assign-round` or `claim-rounds` gives it one.
 
 What a runner may change: the **order** of the stops on a route of theirs, the **pickups** they
 add among them, what they **confirm** carrying, and the **visits** they record. What they may
