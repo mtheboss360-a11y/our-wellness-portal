@@ -11,14 +11,21 @@
 //     in its network, not a league table of them.
 //   - No visit script. The API does not even send one to this role.
 //   - Nothing invented. No route, no QR code, no NFC link. A missing field reads "Not added".
-import { useCallback, useEffect, useMemo, useState } from 'react';
+//   - No bubble graph. The practice asked for it off this screen; the network is still a page
+//     of its own in the sidebar, and the connections list below is the same businesses by name.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getRounds, getBusinesses, type Business, type Round, type Visit } from './lib/api';
 import { planRound, clockOf, durationLabel, milesFrom } from './lib/round-math';
-import { staffMonth } from './lib/staff-dashboard';
+import { staffMonth, owedACall, activitySeries } from './lib/staff-dashboard';
 import { Icon, type IconName } from './Icons';
-import ReferralBubbles from './ReferralBubbles';
 
 type View = 'home' | 'network' | 'history' | 'performance' | 'businesses';
+
+// The four cards are a tablist: each one opens its own supporting panel underneath. The panel
+// is the only thing that changes — the network and everything below it stay where they are,
+// because an owner uses this screen by glancing at the same places twice a day.
+const METRICS = ['accounts', 'routes', 'materials', 'followups'] as const;
+type MetricKey = (typeof METRICS)[number];
 const RADII = [5, 10, 15] as const;
 type Radius = (typeof RADII)[number];
 
@@ -32,6 +39,7 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
   const [error, setError] = useState('');
   const [radius, setRadius] = useState<Radius>(5);
   const [openRoute, setOpenRoute] = useState<string | null>(null);
+  const [focus, setFocus] = useState<MetricKey>('accounts');
 
   const load = useCallback(() => {
     setError('');
@@ -60,6 +68,18 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
     ? [...data.rounds].sort((a, b) => b.date.localeCompare(a.date))
     : [], [data]);
 
+  // Arrow keys move between the cards, as a tablist is expected to. The card that opens is the
+  // one that is focused, so a keyboard reader and a mouse reader see the same thing.
+  const onTabKey = (event: React.KeyboardEvent<HTMLElement>) => {
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const to = step ? (METRICS.indexOf(focus) + step + METRICS.length) % METRICS.length
+      : event.key === 'Home' ? 0 : event.key === 'End' ? METRICS.length - 1 : -1;
+    if (to < 0) return;
+    event.preventDefault();
+    setFocus(METRICS[to]);
+    (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[to])?.focus();
+  };
+
   if (error) return <div className="own"><div className="own-state" role="alert">
     <h2>We couldn’t open your dashboard.</h2><p>{error}</p>
     <button className="dash-btn" onClick={() => void load()}>Try again</button>
@@ -86,28 +106,23 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
       {ownerName && <span className="own-chip">{ownerName} · Practice owner</span>}
     </header>
 
-    <section className="own-metrics" aria-label="Practice activity">
-      <Metric label="Referral accounts" value={data.businesses.length} icon="people"
+    <section className="own-metrics" role="tablist" aria-label="Practice activity" onKeyDown={onTabKey}>
+      <Metric id="accounts" selected={focus === 'accounts'} onSelect={setFocus}
+        label="Referral accounts" value={data.businesses.length} icon="people"
         note={data.businesses.length ? 'Curated for your practice' : 'None released yet'}/>
-      <Metric label="Routes scheduled" value={scheduled.filter(r => r.date >= today).length} icon="route"
+      <Metric id="routes" selected={focus === 'routes'} onSelect={setFocus}
+        label="Routes scheduled" value={scheduled.filter(r => r.date >= today).length} icon="route"
         note={scheduled.length ? `${scheduled.length} on record` : 'None scheduled'}/>
-      <Metric label="Materials dropped" value={month.materials} icon="sparkle" tone="gold"
+      <Metric id="materials" selected={focus === 'materials'} onSelect={setFocus}
+        label="Materials dropped" value={month.materials} icon="sparkle" tone="gold"
         note="This month, from recorded visits"/>
-      <Metric label="Follow-ups due" value={month.followUpsDue} icon="clock" tone="blue"
+      <Metric id="followups" selected={focus === 'followups'} onSelect={setFocus}
+        label="Follow-ups due" value={month.followUpsDue} icon="clock" tone="blue"
         note={month.overdue ? `${month.overdue} overdue` : 'None overdue'}/>
     </section>
 
-    <section className="own-panel own-network" aria-labelledby="own-net">
-      <div className="own-panel-head">
-        <div>
-          <h2 id="own-net">Your referral network</h2>
-          <p>Your practice at the centre · matched businesses around it</p>
-        </div>
-        <span className="own-kicker">Within {radius} miles</span>
-      </div>
-      <ReferralBubbles practice={clinicName}
-        connections={connections.within.map(b => ({ id: b.id, name: b.name, demo: b.demo === 1 }))}/>
-    </section>
+    <StatSwap which={focus} businesses={data.businesses} visits={data.visits}
+      rounds={scheduled} clinic={data.clinic} month={month} today={today}/>
 
     <div className="own-two">
       <section className="own-panel" aria-labelledby="own-conn">
@@ -186,17 +201,196 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
   </div>;
 }
 
-function Metric({ label, value, icon, note, tone }: {
-  label: string; value: number; icon: IconName; note: string; tone?: 'gold' | 'blue';
+/**
+ * THE PANEL UNDER THE CARDS. Whichever card is selected, this says what is behind its number.
+ *
+ * Every figure here is counted from records the practice already has — released businesses,
+ * saved visits and planned rounds. Nothing is estimated and nothing is carried over from
+ * another practice. The rules the rest of this screen keeps apply here too: no money, no
+ * appointments, nobody's name but a business's, and no league table of businesses.
+ */
+function StatSwap({ which, businesses, visits, rounds, clinic, month, today }: {
+  which: MetricKey; businesses: Business[]; visits: Visit[]; rounds: Round[];
+  clinic: { lat: number; lng: number } | null;
+  month: ReturnType<typeof staffMonth>; today: string;
 }) {
-  return <article className="own-metric">
-    <div className="own-metric-top">
+  // A panel that slid in for the previous card should not slide again on a re-render that had
+  // nothing to do with the reader. Keying the animation on the selection is what limits it.
+  const first = useRef(true);
+  useEffect(() => { first.current = false; }, [which]);
+
+  const body = useMemo(() => {
+    if (which === 'accounts') return accountsPanel(businesses);
+    if (which === 'routes') return routesPanel(rounds, visits, clinic, today);
+    if (which === 'materials') return materialsPanel(visits, month, today);
+    return followUpsPanel(visits, month, today);
+  }, [which, businesses, visits, rounds, clinic, month, today]);
+
+  return <section className="own-panel own-swap" id="own-swap" role="tabpanel"
+    aria-labelledby={`own-tab-${which}`} tabIndex={-1}>
+    <div className="own-panel-head">
+      <div><h2>{body.title}</h2><p>{body.caption}</p></div>
+    </div>
+    <div className="own-swap-body" key={which}>{body.content}</div>
+  </section>;
+}
+
+/** A figure and what it counts. Not a card — these sit in a row inside the panel. */
+const Stat = ({ label, value, note }: { label: string; value: string | number; note?: string }) =>
+  <div className="own-swap-stat">
+    <dt>{label}</dt>
+    <dd>{value}</dd>
+    {note && <p>{note}</p>}
+  </div>;
+
+const STAGE_LABEL: Record<string, string> = {
+  new: 'Not contacted yet', visited: 'Visited', interested: 'Interested',
+  partner: 'Partnered', 'follow-up': 'Follow-up agreed', declined: 'Not interested',
+};
+
+/** Where the released businesses have got to, and how many can be put on the map. */
+function accountsPanel(businesses: Business[]) {
+  const byStage = new Map<string, number>();
+  for (const business of businesses) byStage.set(business.stage, (byStage.get(business.stage) ?? 0) + 1);
+  const stages = [...byStage.entries()].sort((a, b) => b[1] - a[1]);
+  const placed = businesses.filter(b => b.lat !== null && b.lng !== null).length;
+  const sample = businesses.filter(b => b.demo === 1).length;
+
+  return {
+    title: 'Referral accounts',
+    caption: 'Where each released business has got to',
+    content: !businesses.length
+      ? <p className="own-empty">No businesses have been released to your practice yet.</p>
+      : <>
+          <dl className="own-swap-grid">
+            {stages.map(([stage, count]) =>
+              <Stat key={stage} label={STAGE_LABEL[stage] ?? stage} value={count}/>)}
+          </dl>
+          <p className="own-caption">
+            {placed === businesses.length
+              ? `All ${businesses.length} can be shown on the map.`
+              : `${placed} of ${businesses.length} can be shown on the map; the ${businesses.length - placed} others have no position yet.`}
+            {sample > 0 && ` ${sample} ${sample === 1 ? 'is' : 'are'} sample data, marked as such wherever ${sample === 1 ? 'it appears' : 'they appear'}.`}
+          </p>
+        </>,
+  };
+}
+
+/** The next round, and what the rounds on record add up to. */
+function routesPanel(rounds: Round[], visits: Visit[], clinic: { lat: number; lng: number } | null, today: string) {
+  const upcoming = rounds.filter(r => r.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const next = upcoming[0] ?? rounds[0] ?? null;
+  const plan = next ? planRound(clinic, next, visits, { today }) : null;
+  const stops = rounds.reduce((total, r) => total + r.stops.length, 0);
+  const recorded = rounds.reduce((total, r) => total + planRound(clinic, r, visits, { today }).completed, 0);
+
+  return {
+    title: next && next.date >= today ? 'Next route' : 'Routes on record',
+    caption: next ? `${rounds.length} ${rounds.length === 1 ? 'route' : 'routes'} on record for your practice` : 'Nothing booked yet',
+    content: !next || !plan
+      ? <p className="own-empty">No route is scheduled. When one is booked it appears here.</p>
+      : <>
+          <dl className="own-swap-grid">
+            <Stat label={next.date >= today ? 'Next route' : 'Most recent'} value={dayLabel(next.date)}
+              note={next.staff ? next.staff : undefined}/>
+            <Stat label="Stops on it" value={next.stops.length}
+              note={plan.stops.length ? `${plan.completed} recorded so far` : undefined}/>
+            <Stat label="Routes ahead" value={upcoming.length}
+              note={upcoming.length ? undefined : 'None booked'}/>
+            <Stat label="Stops recorded" value={`${recorded} of ${stops}`} note="Across every route"/>
+          </dl>
+          <p className="own-caption">
+            A booked stop is an intention. Only a visit somebody has recorded counts as done.
+          </p>
+        </>,
+  };
+}
+
+/** What was dropped this month, against last month, and by kind where that was counted. */
+function materialsPanel(visits: Visit[], month: ReturnType<typeof staffMonth>, today: string) {
+  const here = today.slice(0, 7);
+  const mine = visits.filter(v => v.visitedOn.slice(0, 7) === here);
+  const carrying = mine.filter(v => v.materials > 0).length;
+  const kinds = mine.reduce((total, v) => v.dropped
+    ? { flyers: total.flyers + v.dropped.flyers, treats: total.treats + v.dropped.treats,
+        cards: total.cards + v.dropped.cards, counted: total.counted + 1 }
+    : total, { flyers: 0, treats: 0, cards: 0, counted: 0 });
+  const change = month.materials - month.materialsLastMonth;
+  const weeks = activitySeries(mine, 'week', today);
+
+  return {
+    title: 'Materials dropped',
+    caption: 'This calendar month, from visits somebody recorded',
+    content: !mine.length
+      ? <p className="own-empty">No visits have been recorded this month, so nothing has been counted.</p>
+      : <>
+          <dl className="own-swap-grid">
+            <Stat label="This month" value={month.materials} note={`Across ${carrying} ${carrying === 1 ? 'visit' : 'visits'}`}/>
+            <Stat label="Last month" value={month.materialsLastMonth}
+              note={change === 0 ? 'The same' : `${Math.abs(change)} ${change > 0 ? 'more' : 'fewer'} this month`}/>
+            {kinds.counted > 0 && <Stat label="Flyers" value={kinds.flyers}/>}
+            {kinds.counted > 0 && <Stat label="Treats and cards" value={kinds.treats + kinds.cards}/>}
+          </dl>
+          {weeks.length > 1 && <ul className="own-swap-weeks">
+            {weeks.map(week => <li key={week.key}>
+              <span>{week.label}</span><strong>{week.materials}</strong>
+            </li>)}
+          </ul>}
+          {kinds.counted > 0 && kinds.counted < carrying && <p className="own-caption">
+            {carrying - kinds.counted} of these {carrying} visits recorded a total only, so the
+            split by kind covers {kinds.counted} of them.
+          </p>}
+        </>,
+  };
+}
+
+/** The businesses somebody said they would go back to, and has not. */
+function followUpsPanel(visits: Visit[], month: ReturnType<typeof staffMonth>, today: string) {
+  const owed = owedACall(visits, today, 15);
+  return {
+    title: 'Follow-ups due',
+    caption: 'A date was agreed, and nobody has been back since',
+    content: !owed.length
+      ? <p className="own-empty">Nothing is waiting. Every follow-up that has come due has been answered.</p>
+      : <>
+          <dl className="own-swap-grid">
+            <Stat label="Due" value={month.followUpsDue}/>
+            <Stat label="Overdue" value={month.overdue} note={month.overdue ? 'Past the agreed date' : 'None past its date'}/>
+          </dl>
+          <ul className="own-swap-list">
+            {owed.map(visit => <li key={visit.id}>
+              <span className="own-conn-name">{visit.businessName}</span>
+              <span className={visit.followUpOn! < today ? 'own-swap-late' : 'own-swap-when'}>
+                {visit.followUpOn! < today ? 'Overdue since ' : 'Due '}{dayLabel(visit.followUpOn!)}
+              </span>
+            </li>)}
+          </ul>
+          <p className="own-caption">Business names only, newest date last. Showing up to 15.</p>
+        </>,
+  };
+}
+
+/**
+ * One card, and the control that opens its panel.
+ *
+ * It is a button rather than a card with a click handler, so it is reachable by keyboard and
+ * announced as a control without any of it being bolted on afterwards. Only the selected card
+ * is in the tab order; the arrow keys move between them from there.
+ */
+function Metric({ id, label, value, icon, note, tone, selected, onSelect }: {
+  id: MetricKey; label: string; value: number; icon: IconName; note: string;
+  tone?: 'gold' | 'blue'; selected: boolean; onSelect: (id: MetricKey) => void;
+}) {
+  return <button type="button" className="own-metric" role="tab" id={`own-tab-${id}`}
+    aria-selected={selected} aria-controls="own-swap" tabIndex={selected ? 0 : -1}
+    onClick={() => onSelect(id)}>
+    <span className="own-metric-top">
       <span className="own-metric-label">{label}</span>
       <span className={`own-metric-icon ${tone ?? ''}`} aria-hidden="true"><Icon name={icon} size={14}/></span>
-    </div>
-    <p className="own-metric-value">{value}</p>
-    <p className="own-metric-note">{note}</p>
-  </article>;
+    </span>
+    <span className="own-metric-value">{value}</span>
+    <span className="own-metric-note">{note}</span>
+  </button>;
 }
 
 /**
