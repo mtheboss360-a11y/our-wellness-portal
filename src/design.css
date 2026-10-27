@@ -1376,18 +1376,14 @@
   /* One width for every card. A flex item that clamps its lines reports its longest WORD as
      its minimum width, so an auto-sized card collapsed around names like "Harbor Row
      Fitness". A fixed width also keeps the cards from implying one business matters more. */
-  width:200px; padding:7px 14px 7px 7px; background:var(--n-0);
+  width:160px; padding:9px 14px; justify-content:center; text-align:center;
+  background:var(--n-0);
   border:1px solid var(--n-200); border-radius:999px; box-shadow:var(--e-2);
   transform:translate(-50%,-50%) scale(.92); opacity:0;
   transition:left .62s cubic-bezier(.16,1,.3,1), top .62s cubic-bezier(.16,1,.3,1),
     transform .62s cubic-bezier(.16,1,.3,1), opacity .38s ease-out; }
 .orb2-card.is-out{ transform:translate(-50%,-50%) scale(1); opacity:1; }
-.orb2-chip{ display:grid; place-items:center; flex:none; width:30px; height:30px;
-  border-radius:50%; background:var(--good-fill); color:var(--forest-3);
-  font:700 var(--t-tiny)/1 var(--font); letter-spacing:-.02em; }
-.orb2-card:nth-child(5n+3) .orb2-chip{ background:var(--gold-fill); color:var(--gold-ink); }
-.orb2-card:nth-child(5n+4) .orb2-chip{ background:#EAF1F8; color:#456681; }
-/* Two lines rather than an ellipsis: a card exists to carry the name, and a clipped name is
+.orb2-card:nth-child(5n+3) .orb2-card:nth-child(5n+4) /* Two lines rather than an ellipsis: a card exists to carry the name, and a clipped name is
    a card that has stopped doing its job. Anything longer still falls back to the ellipsis,
    and the whole name is in the connections list below either way. */
 .orb2-name{ font:600 12.5px/1.25 var(--font); color:var(--n-800);
@@ -1491,7 +1487,7 @@
   .own-metric-value{ font-size:1.5rem; }
   .own-swap-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--s-3); }
   .orb2{ padding:var(--s-3) var(--s-4) var(--s-4); }
-  .orb2-card{ width:176px; }
+  .orb2-card{ width:150px; }
   .own-swap-stat dd{ font-size:1.15rem; }
   .own-swap-list li{ flex-direction:column; gap:2px; }
   .own-panel-head{ flex-direction:column; gap:var(--s-3); }

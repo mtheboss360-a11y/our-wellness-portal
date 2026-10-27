@@ -14,22 +14,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 export type Connection = { id: string; name: string; demo: boolean };
 
-/** Two letters from a name, for the chip on the card. */
-const initials = (name: string) => name.split(/\s+/).filter(Boolean)
-  .map(part => part[0]).join('').slice(0, 2).toUpperCase();
-
 /**
  * How many cards each ring carries, and how wide each ring is, as percentages of the stage.
  *
- * These are not taste. A card is about 180px wide and the stage is about 1050px, so half a
- * card is 8.5% — a ring wider than ~41% pushes its left and right cards off the edge. The
+ * These are not taste. A card is 160px wide and the stage about 1050px, so half a card is
+ * 7.6% — a ring wider than ~42% pushes its left and right cards off the edge. The
  * counts are the ellipse's perimeter divided by the width of a card, measured on the rendered
  * page. A network larger than the rings hold keeps the remainder in the list underneath:
  * shrinking the cards to fit more would make the names unreadable, and the name is the point.
  */
 const RINGS = [
-  { max: 5, rx: 23, ry: 25 },
-  { max: 9, rx: 39.5, ry: 44 },
+  { max: 6, rx: 21.5, ry: 25 },
+  { max: 12, rx: 42, ry: 44 },
 ] as const;
 const CAPACITY = RINGS.reduce((total, ring) => total + ring.max, 0);
 
@@ -64,7 +60,7 @@ function evenlySpaced(count: number, rx: number, ry: number, from: number): numb
 function place(shown: Connection[]): Placed[] {
   // A small network looks lost on two rings, so it uses the outer one alone.
   const rings = shown.length <= RINGS[1].max
-    ? [{ items: shown, rx: shown.length <= 4 ? 32 : RINGS[1].rx, ry: shown.length <= 4 ? 30 : RINGS[1].ry, offset: 0 }]
+    ? [{ items: shown, rx: shown.length <= 4 ? 33 : RINGS[1].rx, ry: shown.length <= 4 ? 30 : RINGS[1].ry, offset: 0 }]
     : [{ items: shown.slice(0, RINGS[0].max), ...RINGS[0], offset: 0 },
        { items: shown.slice(RINGS[0].max), ...RINGS[1], offset: 1 }];
 
@@ -164,7 +160,6 @@ export default function ReferralOrbit({ practice, connections }: {
           // The two positions are percentages of the same box, so the move scales with it.
           style={{ left: out ? `${x}%` : '50%', top: out ? `${y}%` : '50%',
             transitionDelay: stillness ? '0ms' : `${delay}s` }}>
-          <span className="orb2-chip" aria-hidden="true">{initials(connection.name)}</span>
           <span className="orb2-name" title={connection.name}>{connection.name}</span>
           {connection.demo && <span className="sr-only"> (sample)</span>}
         </li>)}
