@@ -148,9 +148,7 @@ export default function ReferralOrbit({ practice, connections }: {
       </svg>
 
       <div className="orb2-hub">
-        <span className="orb2-hub-mark" aria-hidden="true"/>
         <span className="orb2-hub-name">{practice}</span>
-        <span className="orb2-hub-sub">Your starting point</span>
       </div>
 
       <ul className="orb2-list">
