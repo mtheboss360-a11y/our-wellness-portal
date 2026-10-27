@@ -167,7 +167,12 @@ export function openStore(filename: string, enableSample = true) {
   function snapshot(token: string | undefined): PortalSnapshot {
     const clinic = session(token);
     const config = publicPortal(enableSample);
-    const base = { config, today: new Date().toISOString().slice(0, 10) };
+    // TODAY, WHERE THE PRACTICE IS — not in UTC. toISOString() rolls over at midnight GMT,
+    // which in Illinois is seven in the evening: a rep still out on a round would have watched
+    // the portal decide it was tomorrow. en-CA formats as YYYY-MM-DD, which is what every date
+    // in this database is.
+    const zone = process.env.PORTAL_TIMEZONE ?? 'America/Chicago';
+    const base = { config, today: new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date()) };
     if (!clinic) return { ...base, clinic: null, campaigns: [] };
     const values = db.prepare('SELECT id,name,period,locations,leads FROM campaigns WHERE clinic_id=? ORDER BY position').all(clinic.id) as Array<{id: string;name: string;period: string;locations: string;leads: string}>;
     return { ...base, clinic: { id: clinic.id, name: clinic.name, plan: clinic.plan === 'b' ? 'b' : 'a', demo: clinic.demo === 1 },

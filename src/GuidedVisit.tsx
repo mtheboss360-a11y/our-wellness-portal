@@ -166,12 +166,25 @@ function Brief({ business, visits, onNext }: { business: Business; visits: Visit
   </>;
 }
 
-/** STEP 2. The script, in the order it gets said. */
+/** The parts of a script, in the order they get said. */
+const PARTS = [
+  { id: 'opening', label: 'Opening' },
+  { id: 'introduction', label: 'The practice' },
+  { id: 'value', label: 'Why it helps' },
+  { id: 'ask', label: 'The ask' },
+  { id: 'objections', label: 'Objections' },
+  { id: 'closing', label: 'Close' },
+] as const;
+type Part = (typeof PARTS)[number]['id'];
+
+/** STEP 2. The script, one part at a time, with the said-out-loud lines set apart. */
 function ScriptView({ script, visits, onBack, onNext }: {
   script: Script | null; visits: Visit[]; onBack: () => void; onNext: () => void;
 }) {
   // A business somebody has already spoken to gets the follow-up opening, not the cold one.
   const returning = visits.length > 0;
+  const [part, setPart] = useState<Part>('opening');
+  const [copied, setCopied] = useState(false);
   if (!script) return <>
     <div className="gv-panel">
       <h3>No script yet</h3>
@@ -186,34 +199,76 @@ function ScriptView({ script, visits, onBack, onNext }: {
     </div>
   </>;
 
+  const opening = returning ? script.followUp : script.opening;
+  const spoken: Record<Part, string | null> = {
+    opening, introduction: null, value: null, ask: script.ask,
+    objections: null, closing: null,
+  };
+  const prose: Record<Part, string | null> = {
+    opening: null, introduction: script.introduction, value: script.value,
+    ask: null, objections: null, closing: script.closing,
+  };
+  const heading: Record<Part, string> = {
+    opening: returning ? 'Opening — you have been before' : 'Opening',
+    introduction: 'Introducing the practice', value: 'Why it helps them',
+    ask: 'The ask', objections: 'If they say…', closing: 'Closing',
+  };
+
+  // Copying the line is for the rep who would rather read it off their own notes app than
+  // hold the portal open in front of somebody.
+  async function copy() {
+    const text = spoken[part] ?? prose[part] ?? '';
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }
+    catch { /* a browser that refuses the clipboard is not an error worth showing */ }
+  }
+
   return <>
     {returning && <p className="gv-returning">
       You have been here before, so this starts with the follow-up line.
     </p>}
 
-    <div className="gv-panel gv-say">
-      <h3>{returning ? 'Opening — returning' : 'Opening'}</h3>
-      <p className="gv-quote">{returning ? script.followUp : script.opening}</p>
+    <div className="gv-script">
+      <nav className="gv-parts" aria-label="Parts of the script">
+        {PARTS.map((option, i) => <button key={option.id} type="button"
+          className={part === option.id ? 'is-here' : ''} aria-current={part === option.id ? 'true' : undefined}
+          onClick={() => setPart(option.id)}>
+          <span className="gv-part-n">{i + 1}</span>{option.label}
+        </button>)}
+      </nav>
+
+      <div className="gv-script-body">
+        <div className="gv-script-head">
+          <h3>{heading[part]}</h3>
+          {(spoken[part] || prose[part]) && <button className="dash-btn gv-copy" onClick={copy}>
+            <Icon name={copied ? 'check' : 'refresh'} size={14}/>{copied ? 'Copied' : 'Copy'}
+          </button>}
+        </div>
+
+        {spoken[part] && <p className="gv-quote">{spoken[part]}</p>}
+        {prose[part] && <p className="gv-prose">{prose[part]}</p>}
+
+        {part === 'objections' && <dl className="gv-objections">
+          <div><dt>“I’m busy”</dt><dd>{script.objections.busy}</dd></div>
+          <div><dt>“Not interested”</dt><dd>{script.objections.notInterested}</dd></div>
+          <div><dt>“We already work with someone”</dt><dd>{script.objections.alreadyPartnered}</dd></div>
+        </dl>}
+
+        <div className="gv-script-move">
+          {PARTS.findIndex(p => p.id === part) > 0 && <button className="dash-btn"
+            onClick={() => setPart(PARTS[PARTS.findIndex(p => p.id === part) - 1].id)}>
+            <Icon name="back" size={14}/>Previous
+          </button>}
+          {PARTS.findIndex(p => p.id === part) < PARTS.length - 1 && <button className="dash-btn"
+            onClick={() => setPart(PARTS[PARTS.findIndex(p => p.id === part) + 1].id)}>
+            Next part<Icon name="arrow" size={14}/>
+          </button>}
+        </div>
+      </div>
     </div>
-
-    <div className="gv-panel"><h3>Introducing the practice</h3><p className="gv-prose">{script.introduction}</p></div>
-    <div className="gv-panel"><h3>Why it helps them</h3><p className="gv-prose">{script.value}</p></div>
-    <div className="gv-panel gv-say"><h3>The ask</h3><p className="gv-quote">{script.ask}</p></div>
-
-    <div className="gv-panel">
-      <h3>If they say…</h3>
-      <dl className="gv-objections">
-        <div><dt>“I’m busy”</dt><dd>{script.objections.busy}</dd></div>
-        <div><dt>“Not interested”</dt><dd>{script.objections.notInterested}</dd></div>
-        <div><dt>“We already work with someone”</dt><dd>{script.objections.alreadyPartnered}</dd></div>
-      </dl>
-    </div>
-
-    <div className="gv-panel"><h3>Closing</h3><p className="gv-prose">{script.closing}</p></div>
 
     <div className="gv-foot">
       <button className="dash-btn" onClick={onBack}>Back</button>
-      <button className="gv-go" onClick={onNext}>Record the visit<Icon name="arrow" size={17}/></button>
+      <button className="gv-go" onClick={onNext}>Continue to record visit<Icon name="arrow" size={17}/></button>
     </div>
   </>;
 }

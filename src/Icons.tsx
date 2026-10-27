@@ -3,7 +3,7 @@
 // a stat card look like they were drawn by the same hand.
 import type { ReactElement } from 'react';
 export type IconName = 'dumbbell' | 'lotus' | 'scissors' | 'hand' | 'spine' | 'basket' | 'sparkle'
-  | 'clinic' | 'search' | 'plus' | 'check' | 'minus' | 'up' | 'down' | 'calendar' | 'route' | 'map' | 'refresh' | 'back' | 'arrow' | 'info';
+  | 'clinic' | 'search' | 'plus' | 'check' | 'minus' | 'up' | 'down' | 'calendar' | 'route' | 'map' | 'refresh' | 'back' | 'arrow' | 'pin' | 'clock' | 'info';
 
 const PATHS: Record<IconName, ReactElement> = {
   dumbbell: <><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/></>,
@@ -26,6 +26,8 @@ const PATHS: Record<IconName, ReactElement> = {
   refresh: <><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5"/></>,
   back: <><path d="M19 12H5M10 7l-5 5 5 5"/></>,
   arrow: <><path d="M5 12h14M14 7l5 5-5 5"/></>,
+  pin: <><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></>,
+  clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.4"/></>,
 };
 

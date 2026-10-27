@@ -1,0 +1,557 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE DESIGN SYSTEM.
+
+   Loaded after styles.css, so it is the last word. The old file keeps the
+   screens that have not been reworked yet; everything here is deliberate.
+
+   Three rules this file is built on:
+
+   1. ONE SCALE PER DIMENSION. Spacing, type, radius, elevation and duration
+      each come from a single list. A value not on a list is a value somebody
+      guessed, and a hundred guesses is what makes an interface feel cheap.
+
+   2. HIERARCHY BEFORE DECORATION. A screen reads in one order. Size, weight
+      and space establish that order; colour confirms it. Where a border and
+      a shadow would do the same job, neither is used — space does it.
+
+   3. THE BRAND IS THREE COLOURS. Deep forest green, ivory, muted gold. Gold
+      is the rarest thing on any screen: one accent per view, never two
+      competing. Everything else is the neutral ramp.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* ── Neutral ramp. Warm, never grey-blue: this is ivory and green, not steel. */
+  --n-0:#FFFFFF;
+  --n-25:#FCFCFA;   /* page */
+  --n-50:#F7F8F4;   /* sunken */
+  --n-100:#F0F2EC;  /* hover fill */
+  --n-200:#E4E8DF;  /* hairline */
+  --n-300:#D2D8CB;  /* strong hairline */
+  --n-400:#A8B2A2;  /* disabled ink */
+  --n-500:#7C8878;  /* quiet ink */
+  --n-600:#5C6757;  /* secondary ink */
+  --n-900:#1A2118;  /* primary ink */
+
+  /* ── Brand. */
+  --forest:#13291F;
+  --forest-2:#1C3A2C;
+  --forest-3:#2A5240;
+  --gold-ink:#8C6A23;   /* gold that passes on ivory */
+  --gold-line:#D9C48F;
+  --gold-fill:#F7F1E2;
+  --gold-pure:#B8903F;
+
+  /* ── Status. Used sparingly and only where a state is genuinely meaningful. */
+  --good-ink:#2A6141; --good-fill:#E9F2EA; --good-line:#C9E0CE;
+  --warn-ink:#7A5E1F; --warn-fill:#FBF6EA; --warn-line:#E8D7A8;
+  --stop-ink:#8A4A4A; --stop-fill:#FAEFEF; --stop-line:#E8CFCF;
+
+  /* ── Type. One family. The scale is a fourth, trimmed where it gets silly. */
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;
+  --t-display:2.25rem;  /* page title */
+  --t-title:1.5rem;     /* section title */
+  --t-head:1.0625rem;   /* card title */
+  --t-body:0.9375rem;   /* reading */
+  --t-sub:0.8125rem;    /* secondary */
+  --t-tiny:0.6875rem;   /* label, uppercase */
+  --t-figure:2rem;      /* a number that matters */
+
+  /* ── Space. 4px base. Nothing between these. */
+  --s-1:4px;  --s-2:8px;  --s-3:12px; --s-4:16px; --s-5:20px;
+  --s-6:24px; --s-8:32px; --s-10:40px; --s-12:48px; --s-16:64px;
+
+  /* ── Radius. Three, and a pill. */
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-pill:999px;
+
+  /* ── Elevation. Almost nothing. A card is defined by its edge, not its shadow. */
+  --e-0:none;
+  --e-1:0 1px 2px rgba(26,33,24,.04);
+  --e-2:0 2px 8px rgba(26,33,24,.06), 0 1px 2px rgba(26,33,24,.04);
+  --e-3:0 12px 32px rgba(26,33,24,.10), 0 2px 6px rgba(26,33,24,.05);
+
+  /* ── Motion. Short, and the same everywhere. */
+  --m-fast:120ms; --m-base:180ms; --m-slow:280ms;
+  --ease:cubic-bezier(.2,.7,.3,1);
+
+  --shell:264px;
+}
+
+@media (prefers-reduced-motion:reduce){
+  :root{ --m-fast:1ms; --m-base:1ms; --m-slow:1ms; }
+}
+
+/* ── BASE ──────────────────────────────────────────────────────────────── */
+
+.plan-b, .plan-b body{ font-family:var(--font); }
+.plan-b{ --page:var(--n-25); --ground:var(--n-25); --paper:var(--n-0);
+  --line:var(--n-200); --stone:var(--n-50);
+  --ink:var(--n-900); --ink-2:var(--n-600); --ink-3:var(--n-500);
+  --radius:var(--r-lg); }
+
+.plan-b h1,.plan-b h2,.plan-b h3{ font-family:var(--font); letter-spacing:-.022em;
+  color:var(--n-900); text-wrap:balance; }
+
+/* A label above a thing. The same everywhere, so it stops being decoration and
+   starts being a signal that a section begins. */
+.plan-b .dash-eyebrow,.plan-b .eyebrow{
+  font:650 var(--t-tiny)/1.3 var(--font); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--n-500); margin:0 0 var(--s-2); }
+
+/* ── THE SHELL ──────────────────────────────────────────────────────────── */
+
+.plan-b.portal-shell{ grid-template-columns:var(--shell) minmax(0,1fr);
+  background:var(--n-25); }
+
+.plan-b .rail{
+  position:sticky; top:0; height:100dvh; padding:var(--s-5) var(--s-4) var(--s-4);
+  display:flex; flex-direction:column; gap:var(--s-5);
+  background:var(--forest); border-right:0;
+  /* The faintest vertical lift, so the rail reads as behind the page rather
+     than beside it. */
+  background-image:linear-gradient(180deg,rgba(255,255,255,.035),transparent 180px); }
+
+/* The mark is drawn in deep green and gold. On the forest rail that is invisible, and
+   filtering it would be recolouring somebody's logo — so it keeps its own ivory plate. */
+.plan-b .rail-brand{ background:var(--n-0); border:0; border-radius:var(--r-md);
+  padding:var(--s-3) var(--s-4); justify-content:center; box-shadow:var(--e-1); }
+.plan-b .rail-brand .brand img{ width:142px; }
+.plan-b .rail-brand .brand-home{ background:none; border:0; padding:0; cursor:pointer; }
+
+.plan-b .rail-nav{ gap:2px; margin-top:var(--s-1); }
+.plan-b .rail-nav button{
+  display:flex; align-items:center; gap:var(--s-3);
+  width:100%; min-height:40px; padding:0 var(--s-3); border:0; border-radius:var(--r-sm);
+  background:transparent; color:rgba(236,242,236,.72);
+  font:550 var(--t-sub)/1 var(--font); letter-spacing:-.005em; text-align:left;
+  transition:background-color var(--m-fast) var(--ease), color var(--m-fast) var(--ease); }
+.plan-b .rail-nav button svg{ color:rgba(236,242,236,.5);
+  transition:color var(--m-fast) var(--ease); }
+.plan-b .rail-nav button:hover{ background:rgba(255,255,255,.06); color:#F2F6F1; }
+.plan-b .rail-nav button:hover svg{ color:rgba(242,246,241,.85); }
+
+/* The current page: a filled pill, and the one gold mark in the rail. */
+.plan-b .rail-nav button.is-current{
+  background:rgba(255,255,255,.1); color:#FFFFFF; font-weight:650; position:relative; }
+.plan-b .rail-nav button.is-current svg{ color:var(--gold-pure); }
+.plan-b .rail-nav button.is-current::before{
+  content:""; position:absolute; left:-var(--s-4); left:calc(var(--s-4) * -1); top:50%;
+  transform:translateY(-50%); width:3px; height:18px; border-radius:0 2px 2px 0;
+  background:var(--gold-pure); }
+
+.plan-b .rail-foot{ margin-top:auto; padding:var(--s-4) var(--s-3) 0;
+  border-top:1px solid rgba(255,255,255,.1); display:grid; gap:var(--s-1); }
+.plan-b .rail-clinic{ font:650 var(--t-sub)/1.3 var(--font); color:#FFFFFF; }
+.plan-b .rail-sub{ font:450 var(--t-tiny)/1.4 var(--font); color:rgba(236,242,236,.55);
+  letter-spacing:0; text-transform:none; }
+.plan-b .rail-signout{
+  display:flex; align-items:center; gap:var(--s-3); margin-top:var(--s-3);
+  min-height:38px; padding:0 var(--s-3); border:0; border-radius:var(--r-sm);
+  background:transparent; color:rgba(236,242,236,.62); font:550 var(--t-sub)/1 var(--font);
+  transition:background-color var(--m-fast) var(--ease), color var(--m-fast) var(--ease); }
+.plan-b .rail-signout:hover{ background:rgba(255,255,255,.07); color:#FFFFFF; }
+
+.plan-b.portal-shell>main{ padding:0 var(--s-10) var(--s-16); }
+
+/* On a phone the rail is a bar across the top, scrolling sideways. The tabs
+   wrapping into a block pushed the page below the fold. */
+@media (max-width:900px){
+  .plan-b.portal-shell{ grid-template-columns:minmax(0,1fr); }
+  .plan-b .rail{ position:sticky; top:0; z-index:40; height:auto;
+    flex-direction:column; gap:var(--s-3); padding:var(--s-3) 0 0; }
+  .plan-b .rail-brand{ margin:0 var(--s-4); padding:var(--s-2) var(--s-3); }
+  .plan-b .rail-brand .brand img{ width:116px; }
+  .plan-b .rail-nav{ flex-direction:row; flex-wrap:nowrap; overflow-x:auto;
+    gap:var(--s-1); padding:0 var(--s-4) var(--s-2); margin:0;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .plan-b .rail-nav::-webkit-scrollbar{ display:none; }
+  .plan-b .rail-nav button{ flex:0 0 auto; width:auto; min-height:36px;
+    padding:0 var(--s-3); border-radius:var(--r-pill); }
+  .plan-b .rail-nav button.is-current::before{ display:none; }
+  .plan-b .rail-foot{ display:none; }
+  .plan-b.portal-shell>main{ padding:0 var(--s-4) var(--s-12); }
+}
+
+/* Signing out has to stay reachable on a phone, so it moves to the page foot. */
+@media (max-width:900px){
+  .plan-b .report-footer{ flex-direction:column; align-items:flex-start; gap:var(--s-3); }
+}
+
+/* ── PRIMITIVES ─────────────────────────────────────────────────────────── */
+
+/* One card. Everything that is a card uses it. */
+.plan-b .dash-tile,.plan-b .ra-stop,.plan-b .ab-row,.plan-b .gv-panel,
+.plan-b .vh-row,.plan-b .dash-figure,.plan-b .vh-totals>div{
+  background:var(--n-0); border:1px solid var(--n-200); border-radius:var(--r-md);
+  box-shadow:var(--e-1); }
+
+/* One button. Three weights of it. */
+.plan-b .dash-btn,.plan-b .network-back,.plan-b .ab-more{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s-2);
+  min-height:38px; padding:0 var(--s-4); border-radius:var(--r-pill);
+  border:1px solid var(--n-300); background:var(--n-0); color:var(--n-900);
+  font:600 var(--t-sub)/1 var(--font); text-decoration:none; white-space:nowrap;
+  box-shadow:var(--e-1);
+  transition:background-color var(--m-fast) var(--ease), border-color var(--m-fast) var(--ease),
+             transform var(--m-fast) var(--ease); }
+.plan-b .dash-btn:hover,.plan-b .network-back:hover{ background:var(--n-50); border-color:var(--n-400); }
+.plan-b .dash-btn:active,.plan-b .network-back:active{ transform:translateY(1px); }
+
+.plan-b .gv-go,.plan-b .dash-btn-solid,.plan-b .signin-button{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s-2);
+  min-height:44px; padding:0 var(--s-5); border-radius:var(--r-pill);
+  border:1px solid var(--forest); background:var(--forest); color:#FFFFFF;
+  font:650 var(--t-body)/1 var(--font); box-shadow:var(--e-2);
+  transition:background-color var(--m-fast) var(--ease), transform var(--m-fast) var(--ease),
+             box-shadow var(--m-fast) var(--ease); }
+.plan-b .gv-go:hover:not(:disabled),.plan-b .dash-btn-solid:hover{
+  background:var(--forest-3); border-color:var(--forest-3); box-shadow:var(--e-3); }
+.plan-b .gv-go:active:not(:disabled){ transform:translateY(1px); box-shadow:var(--e-1); }
+.plan-b .gv-go:disabled{ background:var(--n-300); border-color:var(--n-300);
+  color:var(--n-0); box-shadow:none; opacity:1; }
+
+.plan-b .dash-primary{
+  min-height:40px; padding:0 var(--s-4); border-radius:var(--r-pill);
+  background:var(--gold-pure); border:1px solid var(--gold-pure); color:#1B1F23;
+  font:650 var(--t-sub)/1 var(--font); box-shadow:var(--e-1); }
+.plan-b .dash-primary:hover{ background:#A67F33; border-color:#A67F33; }
+
+.plan-b .dash-link{
+  font:600 var(--t-sub)/1 var(--font); color:var(--gold-ink); background:none; border:0;
+  padding:var(--s-1) 0; text-decoration:none;
+  border-bottom:1px solid transparent; transition:border-color var(--m-fast) var(--ease); }
+.plan-b .dash-link:hover{ border-bottom-color:var(--gold-line); }
+
+/* One status pill. */
+.plan-b .dash-pill{
+  display:inline-flex; align-items:center; padding:3px var(--s-2); border-radius:6px;
+  font:650 var(--t-tiny)/1.6 var(--font); letter-spacing:.04em; text-transform:uppercase;
+  border:1px solid; white-space:nowrap; }
+.plan-b .dash-pill-good{ background:var(--good-fill); border-color:var(--good-line); color:var(--good-ink); }
+.plan-b .dash-pill-warn{ background:var(--warn-fill); border-color:var(--warn-line); color:var(--warn-ink); }
+.plan-b .dash-pill-neutral{ background:var(--n-50); border-color:var(--n-200); color:var(--n-600); }
+.plan-b .dash-pill-quiet{ background:var(--n-50); border-color:var(--n-200); color:var(--n-500); }
+
+/* Focus is one ring, on everything. */
+.plan-b :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--forest-2); outline-offset:2px; }
+
+/* ── PAGE HEADS ─────────────────────────────────────────────────────────── */
+
+.plan-b .network-head{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:var(--s-5);
+  padding:var(--s-10) 0 var(--s-5); margin-bottom:var(--s-5);
+  border-bottom:1px solid var(--n-200); }
+.plan-b .network-head h1{ font-size:var(--t-display); font-weight:680; line-height:1.1; }
+@media (max-width:760px){
+  .plan-b .network-head{ flex-direction:column; align-items:flex-start; gap:var(--s-3);
+    padding-top:var(--s-6); }
+  .plan-b .network-head h1{ font-size:1.75rem; }
+}
+
+/* ── THE DASHBOARD ──────────────────────────────────────────────────────────
+   Reads in one order: who and when, the round, the four numbers, then the two
+   lists. The round is the only dark thing on the page, which is how it stops
+   being one card among five and becomes the thing the screen is about. */
+
+.plan-b .dash{ display:flex; flex-direction:column; gap:var(--s-5); }
+
+.plan-b .dash-welcome{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s-5);
+  padding:var(--s-10) 0 var(--s-2); border:0; }
+.plan-b .dash-welcome-eyebrow{
+  font:500 var(--t-body)/1.2 var(--font); color:var(--n-500); letter-spacing:-.01em; }
+.plan-b .dash-welcome h2{
+  margin-top:var(--s-1); font:680 var(--t-display)/1.08 var(--font); letter-spacing:-.03em;
+  color:var(--n-900); }
+.plan-b .dash-welcome-sub{
+  margin-top:var(--s-2); font:500 var(--t-sub)/1.4 var(--font); color:var(--n-500); }
+.plan-b .dash-datepill{
+  display:inline-flex; align-items:center; gap:var(--s-2); min-height:34px;
+  padding:0 var(--s-3); border:1px solid var(--n-200); border-radius:var(--r-pill);
+  background:var(--n-0); color:var(--n-600); font:550 var(--t-sub)/1 var(--font);
+  box-shadow:var(--e-1); white-space:nowrap; }
+.plan-b .dash-datepill svg{ color:var(--n-400); }
+
+/* The round. */
+.plan-b .dash-hero{ margin:0; padding:0; border-radius:0; background:none; overflow:visible; }
+.plan-b .dash-hero::after{ display:none; }
+
+.plan-b .dash-next{
+  position:relative; overflow:hidden; display:flex; align-items:flex-end;
+  justify-content:space-between; gap:var(--s-6); flex-wrap:wrap;
+  margin:0; padding:var(--s-6) var(--s-6) var(--s-5); border:0;
+  border-radius:var(--r-lg); background:var(--forest); color:#EAF0E9;
+  box-shadow:var(--e-2);
+  background-image:
+    radial-gradient(ellipse 60% 140% at 92% -30%, rgba(184,144,63,.26), transparent 60%),
+    radial-gradient(circle at 8% 130%, rgba(255,255,255,.06), transparent 52%); }
+/* The route orb's ring, turned down until it is texture rather than a picture. */
+.plan-b .dash-next::after{
+  content:""; position:absolute; right:-70px; top:-110px; width:360px; height:360px;
+  border-radius:50%; border:1px solid rgba(234,240,233,.13);
+  box-shadow:0 0 0 44px rgba(234,240,233,.04); pointer-events:none; }
+.plan-b .dash-next>*{ position:relative; z-index:1; }
+
+.plan-b .dash-next-tag{
+  display:inline-block; padding:4px var(--s-2); border-radius:6px;
+  background:rgba(184,144,63,.18); color:var(--gold-line);
+  font:700 var(--t-tiny)/1.5 var(--font); letter-spacing:.1em; text-transform:uppercase; }
+.plan-b .dash-next h3{
+  margin-top:var(--s-3); font:680 1.9rem/1.08 var(--font); letter-spacing:-.03em; color:#FFFFFF; }
+
+.plan-b .dash-next-facts{
+  list-style:none; display:flex; flex-wrap:wrap; gap:var(--s-5);
+  margin:var(--s-4) 0 0; padding:0; }
+.plan-b .dash-next-facts li{
+  display:inline-flex; align-items:center; gap:var(--s-2);
+  font:550 var(--t-sub)/1 var(--font); color:rgba(234,240,233,.86); }
+.plan-b .dash-next-facts svg{ color:rgba(234,240,233,.5); }
+
+.plan-b .dash-next-progress{ display:flex; align-items:center; gap:var(--s-3); margin-top:var(--s-5); }
+.plan-b .dash-next-bar{
+  flex:0 1 220px; height:5px; border-radius:var(--r-pill);
+  background:rgba(234,240,233,.16); overflow:hidden; }
+.plan-b .dash-next-bar i{
+  display:block; height:100%; border-radius:var(--r-pill); background:var(--gold-pure);
+  transition:width var(--m-slow) var(--ease); }
+.plan-b .dash-next-progress>span:last-child{
+  font:550 var(--t-sub)/1 var(--font); color:rgba(234,240,233,.7); white-space:nowrap; }
+
+.plan-b .dash-next-go{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s-2);
+  min-height:46px; padding:0 var(--s-5); border:0; border-radius:var(--r-pill);
+  background:var(--gold-pure); color:#17200F; font:650 var(--t-body)/1 var(--font);
+  box-shadow:0 6px 18px rgba(0,0,0,.2);
+  transition:background-color var(--m-fast) var(--ease), transform var(--m-fast) var(--ease); }
+.plan-b .dash-next-go:hover{ background:#CBA254; }
+.plan-b .dash-next-go:active{ transform:translateY(1px); }
+
+@media (max-width:760px){
+  .plan-b .dash-welcome{ flex-direction:column; gap:var(--s-3); padding-top:var(--s-6); }
+  .plan-b .dash-welcome h2{ font-size:1.75rem; }
+  .plan-b .dash-next{ padding:var(--s-5); gap:var(--s-4); }
+  .plan-b .dash-next h3{ font-size:1.5rem; }
+  .plan-b .dash-next-facts{ gap:var(--s-3) var(--s-4); }
+  .plan-b .dash-next-actions,.plan-b .dash-next-go{ width:100%; }
+}
+
+/* The four numbers. Equal weight, no lead card: one of them being dark made it
+   look more important than the figure next to it, which it is not. */
+.plan-b .dash-figures{
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--s-3);
+  margin:0; background:none; border:0; }
+.plan-b .dash-figure{
+  padding:var(--s-5); border-radius:var(--r-md);
+  transition:border-color var(--m-base) var(--ease), box-shadow var(--m-base) var(--ease); }
+.plan-b .dash-figure:hover{ border-color:var(--n-300); box-shadow:var(--e-2); transform:none; }
+.plan-b .dash-figure::after{ display:none; }
+.plan-b .dash-figure.is-lead{ background:var(--n-0); border-color:var(--n-200); box-shadow:var(--e-1); }
+.plan-b .dash-figure-icon{
+  width:34px; height:34px; border-radius:var(--r-sm);
+  background:var(--n-50); color:var(--n-600); border:1px solid var(--n-200);
+  display:inline-grid; place-items:center; margin-bottom:var(--s-4); }
+.plan-b .dash-figure.is-lead .dash-figure-icon{
+  background:var(--gold-fill); border-color:var(--gold-line); color:var(--gold-ink); }
+.plan-b .dash-figure dt{
+  order:2; font:550 var(--t-sub)/1.3 var(--font); color:var(--n-600);
+  letter-spacing:0; text-transform:none; }
+.plan-b .dash-figure dd{
+  order:1; margin:0 0 var(--s-1); font:700 var(--t-figure)/1 var(--font);
+  letter-spacing:-.03em; color:var(--n-900); font-variant-numeric:tabular-nums; }
+.plan-b .dash-figure.is-lead dd{ color:var(--n-900); }
+.plan-b .dash-figure p{ order:3; margin-top:var(--s-2);
+  font:450 var(--t-sub)/1.4 var(--font); color:var(--n-500); }
+.plan-b .dash-figure.is-lead p{ color:var(--n-500); }
+.plan-b .dash-figure-go{ display:flex; flex-direction:column; align-items:flex-start;
+  width:100%; background:none; border:0; padding:0; text-align:left; }
+.plan-b .dash-figure-cue{ order:4; margin-top:var(--s-3);
+  font:600 var(--t-sub)/1 var(--font); color:var(--gold-ink); }
+.plan-b .dash-figure.is-lead .dash-figure-cue{ color:var(--gold-ink); }
+@media (max-width:980px){ .plan-b .dash-figures{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:520px){ .plan-b .dash-figures{ grid-template-columns:1fr; } }
+
+/* The lists. */
+.plan-b .dash-grid{ gap:var(--s-3); margin:0; }
+.plan-b .dash-tile{ padding:var(--s-5); }
+.plan-b .dash-tile-head{ display:flex; align-items:baseline; justify-content:space-between;
+  gap:var(--s-4); margin-bottom:var(--s-1); }
+.plan-b .dash-tile h3{ font:650 var(--t-head)/1.3 var(--font); letter-spacing:-.018em; }
+.plan-b .dash-tile-note{ font:450 var(--t-sub)/1.5 var(--font); color:var(--n-500);
+  margin-bottom:var(--s-4); }
+.plan-b .dash-list{ list-style:none; margin:0; padding:0; }
+.plan-b .dash-list>li{ padding:var(--s-3) 0; border-bottom:1px solid var(--n-100); }
+.plan-b .dash-list>li:last-child{ border-bottom:0; padding-bottom:0; }
+.plan-b .dash-list>li:first-child{ padding-top:0; }
+.plan-b .dash-row-main strong{ font:600 var(--t-body)/1.35 var(--font); color:var(--n-900); }
+.plan-b .dash-row-main span{ font:450 var(--t-sub)/1.4 var(--font); color:var(--n-500);
+  margin-top:3px; }
+.plan-b .dash-empty{ padding:var(--s-5); border:1px dashed var(--n-300); border-radius:var(--r-md);
+  background:var(--n-50); font:450 var(--t-sub)/1.6 var(--font); color:var(--n-500); }
+
+/* Next stops: a numbered list that goes somewhere. */
+.plan-b .dash-stops{ list-style:none; margin:0; padding:0; display:flex;
+  flex-direction:column; gap:var(--s-2); }
+.plan-b .dash-stops li{ display:flex; align-items:center; gap:var(--s-3);
+  padding:var(--s-2) 0; }
+.plan-b .dash-stop-n{
+  flex:none; display:grid; place-items:center; width:30px; height:30px;
+  border-radius:var(--r-sm); background:var(--n-50); border:1px solid var(--n-200);
+  font:650 var(--t-sub)/1 var(--font); color:var(--n-600); font-variant-numeric:tabular-nums; }
+.plan-b .dash-stop-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.plan-b .dash-stop-body strong{ font:600 var(--t-body)/1.3 var(--font); color:var(--n-900); }
+.plan-b .dash-stop-body span{ font:450 var(--t-sub)/1.3 var(--font); color:var(--n-500); }
+
+/* ── GUIDED VISIT ───────────────────────────────────────────────────────────
+   Somebody is standing outside a door holding a phone. Every decision here is
+   downstream of that: one thing per step, the next action always the largest
+   target and pinned where a thumb already is, and the words that get said out
+   loud set apart from the words that are only context. */
+
+.plan-b .gv{ max-width:980px; gap:var(--s-4); padding-bottom:var(--s-16); }
+
+.plan-b .gv-head{ padding:var(--s-8) 0 var(--s-2); gap:var(--s-4); }
+
+/* The three steps, as a progress rail rather than three equal chips. */
+.plan-b .gv-steps{ gap:var(--s-1); }
+.plan-b .gv-steps li{
+  gap:var(--s-2); padding:var(--s-2) var(--s-3); border:1px solid var(--n-200);
+  border-radius:var(--r-pill); background:var(--n-0); color:var(--n-500);
+  font:600 var(--t-sub)/1 var(--font); box-shadow:var(--e-1); }
+.plan-b .gv-steps li span{
+  width:19px; height:19px; border-radius:50%; background:var(--n-100); color:var(--n-600);
+  font:650 var(--t-tiny)/1 var(--font); }
+.plan-b .gv-steps li.is-here{ background:var(--forest); border-color:var(--forest); color:#FFFFFF; }
+.plan-b .gv-steps li.is-here span{ background:rgba(255,255,255,.22); color:#FFFFFF; }
+.plan-b .gv-steps li.is-done{ background:var(--good-fill); border-color:var(--good-line);
+  color:var(--good-ink); }
+.plan-b .gv-steps li.is-done span{ background:#C9E0CE; color:var(--good-ink); }
+
+/* Who you are about to walk in on. */
+.plan-b .gv-who{
+  padding:var(--s-5) var(--s-6); border:1px solid var(--n-200); border-radius:var(--r-lg);
+  background:var(--n-0); box-shadow:var(--e-2); }
+.plan-b .gv-who h2{ font:680 1.6rem/1.15 var(--font); letter-spacing:-.028em; }
+.plan-b .gv-who>p{ margin-top:var(--s-2); font:450 var(--t-sub)/1.5 var(--font); color:var(--n-500); }
+.plan-b .gv-who-actions{ margin-top:var(--s-4); gap:var(--s-2); }
+.plan-b .gv-stage{
+  padding:var(--s-2) var(--s-3); border-radius:var(--r-pill); background:var(--n-50);
+  border:1px solid var(--n-200); color:var(--n-600); font:600 var(--t-sub)/1 var(--font); }
+.plan-b .gv-stage.is-partner{ background:var(--good-fill); border-color:var(--good-line); color:var(--good-ink); }
+.plan-b .gv-stage.is-interested,.plan-b .gv-stage.is-follow-up{
+  background:var(--warn-fill); border-color:var(--warn-line); color:var(--warn-ink); }
+
+.plan-b .gv-panel{ padding:var(--s-5) var(--s-6); }
+.plan-b .gv-panel h3{
+  font:700 var(--t-tiny)/1.4 var(--font); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--n-500); }
+.plan-b .gv-prose{ margin-top:var(--s-3); font:450 var(--t-body)/1.65 var(--font);
+  color:var(--n-600); max-width:62ch; }
+.plan-b .gv-meta{ font:450 var(--t-sub)/1.5 var(--font); color:var(--n-500); }
+.plan-b .gv-empty{ font:450 var(--t-body)/1.65 var(--font); color:var(--n-500); }
+
+/* The script: a rail of parts, and one part at a time beside it. */
+.plan-b .gv-script{
+  display:grid; grid-template-columns:184px minmax(0,1fr); gap:var(--s-4);
+  align-items:start; }
+.plan-b .gv-parts{ display:flex; flex-direction:column; gap:2px; position:sticky; top:var(--s-4); }
+.plan-b .gv-parts button{
+  display:flex; align-items:center; gap:var(--s-3); width:100%; min-height:40px;
+  padding:0 var(--s-3); border:0; border-radius:var(--r-sm); background:transparent;
+  color:var(--n-600); font:550 var(--t-sub)/1 var(--font); text-align:left;
+  transition:background-color var(--m-fast) var(--ease), color var(--m-fast) var(--ease); }
+.plan-b .gv-parts button:hover{ background:var(--n-100); }
+.plan-b .gv-parts button.is-here{ background:var(--n-0); border:1px solid var(--n-200);
+  color:var(--n-900); font-weight:650; box-shadow:var(--e-1); }
+.plan-b .gv-part-n{
+  flex:none; display:grid; place-items:center; width:20px; height:20px; border-radius:50%;
+  background:var(--n-100); color:var(--n-600); font:650 var(--t-tiny)/1 var(--font); }
+.plan-b .gv-parts button.is-here .gv-part-n{ background:var(--forest); color:#FFFFFF; }
+
+.plan-b .gv-script-body{
+  padding:var(--s-5) var(--s-6) var(--s-5); border:1px solid var(--n-200);
+  border-radius:var(--r-md); background:var(--n-0); box-shadow:var(--e-1); min-height:240px; }
+.plan-b .gv-script-head{ display:flex; align-items:center; justify-content:space-between;
+  gap:var(--s-4); margin-bottom:var(--s-3); }
+.plan-b .gv-script-head h3{
+  font:650 var(--t-head)/1.3 var(--font); letter-spacing:-.018em; color:var(--n-900);
+  text-transform:none; }
+.plan-b .gv-copy{ min-height:32px; padding:0 var(--s-3); font-size:var(--t-tiny);
+  letter-spacing:.04em; text-transform:uppercase; }
+
+/* The line that gets said. Bigger than everything round it, on its own ground. */
+.plan-b .gv-quote{
+  margin:0; padding:var(--s-4) var(--s-5); border-radius:var(--r-md);
+  border-left:3px solid var(--gold-pure); background:var(--gold-fill);
+  font:450 1.0625rem/1.7 var(--font); color:var(--n-900); max-width:60ch; }
+.plan-b .gv-say{ border-color:var(--gold-line); background:var(--n-0); }
+
+.plan-b .gv-objections{ gap:var(--s-4); margin-top:var(--s-1); }
+.plan-b .gv-objections dt{ font:650 var(--t-body)/1.4 var(--font); color:var(--n-900); }
+.plan-b .gv-objections dd{ margin-top:var(--s-1); font:450 var(--t-body)/1.65 var(--font);
+  color:var(--n-600); max-width:62ch; }
+
+.plan-b .gv-script-move{ display:flex; gap:var(--s-2); justify-content:space-between;
+  margin-top:var(--s-5); padding-top:var(--s-4); border-top:1px solid var(--n-100); }
+.plan-b .gv-script-move:has(button:only-child){ justify-content:flex-end; }
+
+.plan-b .gv-returning{
+  padding:var(--s-3) var(--s-4); border:1px solid var(--gold-line); border-radius:var(--r-md);
+  background:var(--gold-fill); color:var(--gold-ink); font:500 var(--t-sub)/1.55 var(--font); }
+
+/* What happened last time. */
+.plan-b .gv-history{ gap:var(--s-4); margin-top:var(--s-4); }
+.plan-b .gv-history li{ padding-left:var(--s-4); border-left:2px solid var(--n-200); }
+.plan-b .gv-history-top strong{ font:650 var(--t-body)/1.3 var(--font); }
+.plan-b .gv-history-top time{ font:450 var(--t-sub)/1 var(--font); color:var(--n-500); }
+.plan-b .gv-note{ margin-top:var(--s-2); font:450 var(--t-body)/1.6 var(--font);
+  color:var(--n-600); font-style:italic; }
+
+/* The form. */
+.plan-b .gv-pair input,.plan-b .gv-line input,.plan-b .gv-count input,.plan-b .notes-field{
+  border:1px solid var(--n-300); border-radius:var(--r-sm); background:var(--n-0);
+  font:450 var(--t-body)/1.5 var(--font); color:var(--n-900);
+  transition:border-color var(--m-fast) var(--ease), box-shadow var(--m-fast) var(--ease); }
+.plan-b .gv-pair input:focus,.plan-b .gv-line input:focus,.plan-b .gv-count input:focus,
+.plan-b .notes-field:focus{
+  border-color:var(--forest-2); box-shadow:0 0 0 3px rgba(28,58,44,.1); outline:none; }
+.plan-b .gv-pair label,.plan-b .gv-line,.plan-b .gv-count{
+  font:600 var(--t-sub)/1 var(--font); color:var(--n-600); text-transform:none;
+  letter-spacing:0; }
+.plan-b .gv-outcomes button{
+  border:1px solid var(--n-200); border-radius:var(--r-md); background:var(--n-0);
+  box-shadow:var(--e-1);
+  transition:border-color var(--m-fast) var(--ease), background-color var(--m-fast) var(--ease); }
+.plan-b .gv-outcomes button:hover{ border-color:var(--n-400); background:var(--n-50); }
+.plan-b .gv-outcomes button.is-picked{
+  background:var(--forest); border-color:var(--forest); box-shadow:var(--e-2); }
+
+/* The action bar. Sticky on a phone, where the thumb already is. */
+.plan-b .gv-foot{ gap:var(--s-3); margin-top:var(--s-2); }
+@media (max-width:900px){
+  .plan-b .gv-script{ grid-template-columns:1fr; }
+  .plan-b .gv-parts{ position:static; flex-direction:row; overflow-x:auto; gap:var(--s-1);
+    padding-bottom:var(--s-2); scrollbar-width:none; }
+  .plan-b .gv-parts::-webkit-scrollbar{ display:none; }
+  .plan-b .gv-parts button{ flex:0 0 auto; width:auto; border-radius:var(--r-pill);
+    padding:0 var(--s-3); }
+  .plan-b .gv-head{ padding-top:var(--s-5); }
+  .plan-b .gv-who{ padding:var(--s-4) var(--s-5); }
+  .plan-b .gv-who h2{ font-size:1.3rem; }
+  .plan-b .gv-panel,.plan-b .gv-script-body{ padding:var(--s-4) var(--s-5); }
+  .plan-b .gv-quote{ font-size:1rem; padding:var(--s-3) var(--s-4); }
+  .plan-b .gv-foot{
+    position:fixed; left:0; right:0; bottom:0; z-index:40; margin:0;
+    padding:var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom));
+    background:rgba(252,252,250,.94); -webkit-backdrop-filter:blur(10px);
+    backdrop-filter:blur(10px); border-top:1px solid var(--n-200); }
+  .plan-b .gv-foot .gv-go{ flex:1 1 auto; }
+  .plan-b .gv-foot-done{ position:static; background:none; border:0; padding:0;
+    backdrop-filter:none; }
+}
+
+.plan-b .gv-done{ padding:var(--s-12) var(--s-6) var(--s-8); border-radius:var(--r-lg);
+  border:1px solid var(--n-200); background:var(--n-0); box-shadow:var(--e-2); }
+.plan-b .gv-tick{ width:56px; height:56px; background:var(--good-fill); color:var(--good-ink);
+  border:1px solid var(--good-line); }
+.plan-b .gv-done h3{ font:680 1.35rem/1.2 var(--font); letter-spacing:-.025em; }
+.plan-b .gv-done-out{ font:650 var(--t-body)/1 var(--font); color:var(--good-ink); }

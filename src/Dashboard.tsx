@@ -118,23 +118,23 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
   const todayLabel = new Date(`${today}T12:00:00Z`)
     .toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
+  // The greeting reads the clock. A rep opening this at seven in the morning and a rep opening
+  // it after lunch are in different parts of their day, and the screen can say so for free.
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return <div className={`dash ${plan === 'b' ? 'dash-lean' : ''}`}>
-    {/* The greeting and the one thing waiting are the same statement, so they share one panel.
-        Split across two cards they read as two unrelated announcements. */}
-    <div className="dash-hero">
     <header className="dash-welcome">
       <div>
-        <p className="dash-welcome-eyebrow">Welcome back,</p>
+        <p className="dash-welcome-eyebrow">{greeting},</p>
         <h2>{staff ?? clinicName}</h2>
         {staff && <p className="dash-welcome-sub">{clinicName}</p>}
       </div>
       <div className="dash-welcome-actions">
-        <span className="dash-datepill"><Icon name="calendar" size={16}/>{todayLabel}</span>
-        <button className="dash-primary" onClick={() => onGo('network')}>
-          <Icon name="route" size={16}/>Plan a new route
-        </button>
+        <span className="dash-datepill"><Icon name="calendar" size={15}/>{todayLabel}</span>
       </div>
     </header>
+    <div className="dash-hero">
     {plan === 'a' && <header className="dash-head">
       <div>
         <p className="dash-eyebrow">{monthLabel(today)}</p>
@@ -175,7 +175,14 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
         </dl>}
 
     <div className="dash-grid">
-      <Tile
+      {onOutreach && booked && <Tile
+        title="Next stops"
+        note="The order Alexis is going in."
+        action={<button className="dash-link" onClick={() => onGo('agenda')}>View all</button>}>
+        <NextStops round={booked} visits={work!.visits} clinic={work!.clinic} today={today} onGo={onGo}/>
+      </Tile>}
+
+      {!(onOutreach && booked) && <Tile
         title={onOutreach ? 'Not contacted yet' : 'New businesses'}
         note={onOutreach
           ? 'Assigned to you, and nobody has been yet.'
@@ -215,7 +222,7 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
             : placesOff
               ? <p className="dash-empty">Google Places isn’t configured on this server, so nothing nearby has been looked up. Nothing is invented here.</p>
               : <p className="dash-empty">No new businesses met the bar this month. A short list beats a padded one.</p>}
-      </Tile>
+      </Tile>}
 
 
       <Tile
@@ -253,8 +260,20 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
       <Tile
         title="Participating"
         note="Businesses a staff member recorded as having agreed to take part."
-        action={partners.length ? <button className="dash-link" onClick={() => onGo('drivers')}>See all</button> : undefined}>
-        {!month.hasLog
+        action={<button className="dash-link" onClick={() => onGo(onOutreach ? 'businesses' : 'drivers')}>See all</button>}>
+        {onOutreach
+          ? (work!.businesses.filter(b => b.stage === 'partner').length
+              ? <ul className="dash-list">{work!.businesses.filter(b => b.stage === 'partner').slice(0, 6).map(business => <li key={business.id}>
+                  <div className="dash-row">
+                    <div className="dash-row-main">
+                      <strong>{business.name}{business.demo === 1 && <span className="sample-tag">Sample</span>}</strong>
+                      <span>{business.category}</span>
+                    </div>
+                    <Pill tone="good">Partner</Pill>
+                  </div>
+                </li>)}</ul>
+              : <p className="dash-empty">Nobody has agreed to take part yet. A business appears here when a visit records that it said yes.</p>)
+          : !month.hasLog
           ? <p className="dash-empty">No field log yet. Visits appear here once your team starts recording them.</p>
           : !partners.length
             ? <p className="dash-empty">Nobody has agreed yet. A business only appears here when your staff records that it said yes.</p>
@@ -272,6 +291,28 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
   </div>;
 }
 
+/** The next three stops, in order, each one a way straight into the visit. */
+function NextStops({ round, visits, clinic, today, onGo }: {
+  round: Round; visits: Visit[]; clinic: { lat: number; lng: number } | null;
+  today: string; onGo: (view: View) => void;
+}) {
+  const plan = layOutRound(clinic, round, visits, { today });
+  const next = plan.stops.filter(stop => !stop.done).slice(0, 3);
+  if (!next.length) return <p className="dash-empty">Every stop on this round has been recorded.</p>;
+
+  return <ol className="dash-stops">
+    {next.map(stop => <li key={stop.business.id}>
+      <span className="dash-stop-n">{stop.index + 1}</span>
+      <span className="dash-stop-body">
+        <strong>{stop.business.name}</strong>
+        <span>{stop.business.category}
+          {stop.located ? ` · ${clockOf(stop.arriveAt)}` : ''}</span>
+      </span>
+      <button className="dash-btn" onClick={() => onGo('agenda')}>Start visit</button>
+    </li>)}
+  </ol>;
+}
+
 /**
  * The round that is actually booked. Laid out by the same function the agenda uses, so the
  * two screens cannot report different days, different stop counts or different durations.
@@ -281,26 +322,33 @@ function BookedRound({ round, visits, clinic, today, onGo }: {
   today: string; onGo: (view: View) => void;
 }) {
   const plan = layOutRound(clinic, round, visits, { today });
-  const left = plan.stops.length - plan.completed;
+  const total = plan.stops.length;
+  const done = plan.completed === total && total > 0;
+  const through = total ? Math.round((plan.completed / total) * 100) : 0;
+
   return <section className="dash-next" aria-labelledby="next-title">
-    <div>
-      <p className="dash-eyebrow">{round.date === today ? 'Today' : 'Next'}</p>
-      <h3 id="next-title">
-        {plan.completed === plan.stops.length && plan.stops.length > 0
-          ? `${dayLabel(round.date)} is done — all ${plan.stops.length} stops recorded.`
-          : `A round is booked for ${dayLabel(round.date)}.`}
-      </h3>
-      <p className="dash-next-note">{[
-        `${plan.stops.length} ${plan.stops.length === 1 ? 'stop' : 'stops'}`,
-        round.staff,
-        `from ${clockOf(plan.startsAt)}`,
-        `about ${durationLabel(plan.totalMinutes)}`,
-        plan.completed ? `${plan.completed} done, ${left} to go` : null,
-      ].filter(Boolean).join(' · ')}</p>
+    <div className="dash-next-body">
+      <p className="dash-next-tag">{round.date === today ? 'Today’s round' : 'Next round'}</p>
+      <h3 id="next-title">{dayLabel(round.date)}</h3>
+
+      <ul className="dash-next-facts">
+        <li><Icon name="pin" size={15}/>{total} {total === 1 ? 'stop' : 'stops'}</li>
+        <li><Icon name="clock" size={15}/>{durationLabel(plan.totalMinutes)}</li>
+        <li><Icon name="calendar" size={15}/>{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</li>
+      </ul>
+
+      <div className="dash-next-progress">
+        <span className="dash-next-bar"><i style={{ width: `${through}%` }}/></span>
+        <span>{plan.completed} of {total} completed</span>
+      </div>
     </div>
-    <button className="dash-btn dash-btn-solid" onClick={() => onGo('agenda')}>
-      {plan.completed ? 'Open the round' : 'Open the agenda'}
-    </button>
+
+    <div className="dash-next-actions">
+      <button className="dash-next-go" onClick={() => onGo('agenda')}>
+        {done ? 'See the round' : plan.completed ? 'Continue round' : 'Start round'}
+        <Icon name="arrow" size={17}/>
+      </button>
+    </div>
   </section>;
 }
 

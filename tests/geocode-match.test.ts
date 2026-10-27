@@ -122,8 +122,8 @@ test('filtering changes the set, not the order within it', () => {
   const sampleOnly = flat(bestFifteen(everything.filter(isSample)));
 
   // Each filtered list is the full list with the other kind removed — same relative order.
-  assert.deepEqual(verified, all.filter(name => name.startsWith('Real')));
-  assert.deepEqual(sampleOnly, all.filter(name => name.startsWith('Invented')));
+  assert.deepEqual(verified, all.filter(name => (name ?? "").startsWith("Real")));
+  assert.deepEqual(sampleOnly, all.filter(name => (name ?? "").startsWith("Invented")));
 });
 
 test('the sample marker cannot be mistaken for a Google place id', () => {
