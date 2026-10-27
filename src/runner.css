@@ -91,20 +91,15 @@
 /* ── The page ──────────────────────────────────────────────────────────── */
 .rr-wrap{ max-width:1500px; margin:auto; padding:33px 27px 56px }
 .rr-eyebrow{ color:#c1d1c5; font-size:11px; letter-spacing:.18em; font-weight:750; text-transform:uppercase }
-.rr-title{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin:10px 0 23px }
-.rr-title h1{ font-size:clamp(32px,4vw,56px); letter-spacing:-.065em; line-height:1; margin:0; font-weight:680 }
+.rr-title{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 10px }
+.rr-title h1{ font-size:clamp(27px,3vw,38px); letter-spacing:-.05em; line-height:1; margin:0; font-weight:680 }
 .rr-title h1 span{ color:var(--gold) }
-.rr-title p{ font-size:14px; color:#b3c8b9; margin:12px 0 0; max-width:62ch; line-height:1.55 }
-.rr-title-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
-.rr-title-actions .rr-btn{ font-size:12px }
 
-.rr-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:27px }
-.rr-chip{ background:rgba(255,255,255,.075); border:1px solid rgba(244,240,223,.12); border-radius:13px;
-  padding:14px 17px; display:flex; gap:12px; align-items:center; min-width:0 }
-.rr-chip-icon{ width:34px; height:34px; background:rgba(234,208,143,.14); color:var(--gold-2);
-  border-radius:10px; display:grid; place-items:center; flex:0 0 auto }
-.rr-chip span{ display:block; color:#bcd0c2; font-size:11px; margin-bottom:3px }
-.rr-chip strong{ font-size:16px; font-weight:700; letter-spacing:-.025em; white-space:nowrap }
+/* The whole day in one line, where four cards used to stand. */
+.rr-line{ display:flex; flex-wrap:wrap; gap:7px 18px; margin:0 0 20px; font-size:13px; color:#c3d4c7 }
+.rr-line span{ display:inline-flex; gap:5px; align-items:baseline }
+.rr-line b{ color:var(--cream); font-weight:750 }
+.rr-line span + span::before{ content:'·'; color:#6d8a79; margin-right:13px; margin-left:-13px }
 
 /* ── The week ──────────────────────────────────────────────────────────── */
 .rr-week{ margin-bottom:22px }
@@ -154,10 +149,35 @@
 .rr-tag-gray{ background:#eff1ef; color:#64756a }
 .rr-tag-red{ background:#fbece8; color:#a24838 }
 
-.rr-headline{ padding:21px 24px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap }
-.rr-facts{ display:flex; gap:15px; flex-wrap:wrap; font-size:12px; color:#566b5e; margin:0; padding:0; list-style:none }
-.rr-facts li{ display:flex; gap:6px; align-items:center }
+.rr-headline{ padding:18px 24px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.rr-facts{ font-size:12px; color:#566b5e; font-weight:650 }
 .rr-actions{ display:flex; gap:7px; flex-wrap:wrap }
+
+/* Quiet things. A link, not a button competing with the one that matters. */
+.rr .rr-link{ background:none; color:#4a6a57; font-size:11px; font-weight:700; text-decoration:underline;
+  text-underline-offset:3px; padding:0 }
+.rr .rr-link:hover{ color:var(--forest) }
+.rr-details{ font-size:12px; color:#66796b }
+.rr-details summary{ cursor:pointer; font-weight:700; color:#4a6a57; padding:9px 0; list-style:none }
+.rr-details summary::-webkit-details-marker{ display:none }
+.rr-details summary::before{ content:'›'; display:inline-block; margin-right:7px; transition:transform var(--m-fast,140ms) }
+.rr-details[open] summary::before{ transform:rotate(90deg) }
+.rr-details ul{ margin:0 0 6px; padding:0 0 0 2px; display:flex; flex-direction:column; gap:5px; list-style:none }
+.rr-details li{ line-height:1.5 }
+.rr-stop-details{ margin-top:8px; border-top:1px solid #eef1ea }
+.rr-stop-details summary{ font-size:11px }
+.rr-inferred{ color:#7a5e1f }
+
+/* What to bring: given, picked up, dropped, left — four numbers and no prose. */
+.rr-bring{ width:100%; border-collapse:collapse; font-size:12px; padding:0 }
+.rr-bring th,.rr-bring td{ padding:9px 6px; text-align:right }
+.rr-bring thead th{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#86988c;
+  font-weight:800; border-bottom:1px solid var(--line) }
+.rr-bring tbody th{ text-align:left; font-weight:700; color:var(--ink); padding-left:21px }
+.rr-bring td{ color:#6d8074 }
+.rr-bring tr td:last-child{ padding-right:21px }
+.rr-bring tr th:first-child{ padding-left:21px }
+.rr-bring-left{ font-weight:850; color:#245d42; font-size:14px }
 .rr-progress-wrap{ padding:0 24px 18px }
 .rr-progress{ width:100%; background:#e5eade; height:7px; border-radius:8px; overflow:hidden }
 .rr-progress i{ display:block; background:var(--green); height:100%; border-radius:8px; transition:width var(--m-base,180ms) }
@@ -169,12 +189,16 @@
 .rr-stop.is-pickup{ background:#fffbf2; border-color:#eddbb4 }
 .rr-stop.is-done{ background:#f2f7f1 }
 .rr-stop.is-origin{ background:#f3f6f1 }
-.rr-stop.is-dragging{ opacity:.55; border-style:dashed }
+.rr-stop{ transition:box-shadow var(--m-fast,140ms),transform var(--m-fast,140ms),border-color var(--m-fast,140ms) }
+.rr-stop.is-dragging{ border-style:dashed; border-color:var(--gold); transform:scale(1.015);
+  box-shadow:0 14px 30px rgba(2,38,19,.17); position:relative; z-index:2 }
 .rr-stop.is-target{ box-shadow:0 -4px 0 var(--gold); border-color:var(--gold) }
-.rr .rr-grip{ width:30px; min-width:30px; height:40px; background:#f2f4ee; color:#7b9181; border-radius:8px;
-  display:grid; place-items:center; touch-action:none; cursor:grab }
-.rr-grip:active{ cursor:grabbing }
-.rr-grip:disabled{ cursor:not-allowed }
+.rr .rr .rr-grip{ width:34px; min-width:34px; height:46px; background:#eaefe6; color:#51705c;
+  border:1px solid #dde4d8; border-radius:9px; display:grid; place-items:center;
+  touch-action:none; cursor:grab; transition:background var(--m-fast,140ms),color var(--m-fast,140ms) }
+.rr .rr-grip:hover:not(:disabled){ background:#dde7d8; color:var(--forest) }
+.rr .rr-grip:active{ cursor:grabbing; background:#d3e0cd }
+.rr .rr-grip:disabled{ background:#f4f5f1; color:#b4c0b6; cursor:not-allowed }
 .rr .rr-index{ height:30px; width:30px; min-width:30px; background:#deeadf; color:var(--forest);
   border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:12px }
 .rr-stop.is-pickup .rr-index{ background:#efd9a1 }
@@ -193,8 +217,8 @@
 .rr-empty svg{ width:35px; height:35px; color:var(--green); margin-bottom:12px }
 .rr-empty h3{ margin:5px 0 }
 .rr-empty p{ margin:6px auto 0; max-width:46ch; line-height:1.6 }
-.rr-footnote{ padding:12px 22px; font-size:11px; color:#687d70; background:#f3f5ef;
-  border-top:1px solid var(--line); line-height:1.5 }
+.rr-footnote{ padding:11px 22px; font-size:11px; color:#687d70; background:#f3f5ef;
+  border-top:1px solid var(--line); line-height:1.5; display:flex; gap:14px; flex-wrap:wrap; align-items:center }
 
 .rr-side{ display:flex; flex-direction:column; gap:17px }
 .rr-supplies{ padding:12px 21px }
@@ -296,6 +320,16 @@
 .rr-visit{ background:var(--paper); color:var(--ink); border-radius:var(--r); box-shadow:var(--lift);
   padding:4px 20px 26px; max-width:860px }
 
+/* The next stop, pinned, on a phone only. */
+.rr-next-bar{ display:none }
+@media (max-width:850px){
+  .rr-next-bar{ display:block; position:fixed; left:0; right:0; bottom:0; z-index:30;
+    padding:11px 15px calc(11px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,rgba(7,34,25,.97) 70%,rgba(7,34,25,0)) }
+  .rr-next-bar .rr-btn{ width:100%; padding:14px; font-size:15px; border-radius:13px }
+  .rr-wrap{ padding-bottom:96px }
+}
+
 /* ── Smaller screens. This is a phone screen first ─────────────────────── */
 @media (min-width:1100px){ .rr-topinner{ padding-left:32px; padding-right:32px } }
 @media (max-width:1150px){
@@ -309,13 +343,12 @@
   .rr-wrap{ padding:26px 17px 38px }
   .rr-topinner{ padding:10px 17px; min-height:65px }
   .rr-nav{ padding:0 17px }
-  .rr-strip{ grid-template-columns:repeat(2,minmax(0,1fr)) }
   .rr-work{ grid-template-columns:1fr }
   .rr-side{ display:grid; grid-template-columns:1fr 1fr }
   .rr-week-grid{ grid-auto-columns:minmax(185px,42%) }
+  .rr-day{ min-height:148px }
   .rr-pill{ display:none }
-  .rr-title{ align-items:flex-start; flex-direction:column }
-  .rr-title p{ margin-top:8px }
+  .rr-title{ align-items:center }
 }
 @media (max-width:620px){
   .rr-topinner{ gap:8px }
@@ -330,13 +363,9 @@
   .rr-toptools .rr-btn{ display:none }
   .rr-avatar{ width:31px; height:31px }
   .rr-wrap{ padding:24px 13px 36px }
-  .rr-title h1{ font-size:37px }
-  .rr-title-actions{ width:100%; justify-content:flex-start }
-  .rr-title-actions .rr-btn{ padding:9px 12px }
-  .rr-strip{ gap:8px }
-  .rr-chip{ padding:10px 11px; gap:8px }
-  .rr-chip-icon{ width:29px; height:29px }
-  .rr-chip strong{ font-size:14px }
+  .rr-title h1{ font-size:28px }
+  .rr-line{ gap:5px 14px; font-size:12px }
+  .rr-line span + span::before{ margin-right:9px; margin-left:-9px }
   .rr-week-grid{ grid-auto-columns:minmax(185px,72%); gap:9px }
   .rr-week-head h2{ font-size:20px }
   .rr-week-nav .rr-btn{ padding:8px }
@@ -363,15 +392,13 @@
 }
 @media print{
   .rr{ background:#fff; color:#000 }
-  .rr-top,.rr-nav,.rr-title-actions,.rr-week,.rr-side,.rr-tools,.rr-drawer,.rr-backdrop,
+  .rr-top,.rr-nav,.rr-week,.rr-side,.rr-tools,.rr-drawer,.rr-backdrop,
   .rr-toast,.rr-modal-backdrop,.rr-move,.rr-grip,.rr-stop-actions,.rr-actions,.rr-pill{ display:none !important }
   .rr-work{ display:block }
   .rr-panel{ box-shadow:none; border:1px solid #aaa }
   .rr-stop{ break-inside:avoid }
   .rr-wrap{ padding:0 }
-  .rr-title h1,.rr-chip strong,.rr-chip span{ color:#000 }
-  .rr-strip{ display:flex }
-  .rr-chip{ border:1px solid #ddd }
+  .rr-title h1,.rr-line,.rr-line b{ color:#000 }
 }
 
 /* The three materials counts, on the guided visit's own panel. */

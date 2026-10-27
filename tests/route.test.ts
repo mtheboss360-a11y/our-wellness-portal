@@ -82,7 +82,7 @@ test('a visit belongs to the round it names, and to no other', () => {
   const friday = { id: 'fri', date: '2026-10-30', start: '09:00', items: [stop('A')] };
   const onFriday = visit('A', '2026-10-30', 'fri');
   const attributed = attributeVisits([tuesday, friday], [onFriday]);
-  assert.equal(attributed.get(onFriday.id), 'fri');
+  assert.deepEqual(attributed.get(onFriday.id), { roundId: 'fri', basis: 'recorded' });
 
   // Friday's conversation is not Tuesday's progress, even though Tuesday came first.
   const tue = planRoute(tuesday, [onFriday], { attributed });
@@ -98,16 +98,31 @@ test('a visit with no round on it goes to the last round that could have produce
 
   // Recorded on the Tuesday: Tuesday's.
   const early = visit('A', '2026-10-28');
-  assert.equal(attributeVisits(rounds, [early]).get(early.id), 'tue');
+  assert.deepEqual(attributeVisits(rounds, [early]).get(early.id), { roundId: 'tue', basis: 'inferred' });
   // Recorded on the Friday: Friday's, and Tuesday stays unfinished rather than both closing.
   const late = visit('A', '2026-10-31');
   const attributed = attributeVisits(rounds, [late]);
-  assert.equal(attributed.get(late.id), 'fri');
+  assert.deepEqual(attributed.get(late.id), { roundId: 'fri', basis: 'inferred' });
   assert.equal(planRoute(tuesday, [late], { attributed }).completed, 0);
   assert.equal(planRoute(friday, [late], { attributed }).completed, 1);
   // Recorded before either was booked: neither.
   const before = visit('A', '2026-10-01');
   assert.equal(attributeVisits(rounds, [before]).get(before.id), undefined);
+});
+
+test('a guess is marked as a guess, and the record itself is untouched', () => {
+  const tuesday = { id: 'tue', date: '2026-10-27', start: '09:00', items: [stop('A'), stop('B')] };
+  const told = visit('A', '2026-10-27', 'tue');
+  const guessed = visit('B', '2026-10-27');
+  const attributed = attributeVisits([tuesday], [told, guessed]);
+  assert.equal(attributed.get(told.id)?.basis, 'recorded');
+  assert.equal(attributed.get(guessed.id)?.basis, 'inferred');
+  assert.equal(guessed.roundId, null, 'nothing was written back onto the visit');
+
+  const plan = planRoute(tuesday, [told, guessed], { attributed });
+  assert.equal(plan.items[0].attribution, 'recorded');
+  assert.equal(plan.items[1].attribution, 'inferred', 'the screen can say which is which');
+  assert.equal(plan.completed, 2);
 });
 
 test('a visit naming a round we are not showing counts toward nothing here', () => {
