@@ -135,3 +135,41 @@ test('the not-contacted list only holds businesses nobody has visited', () => {
   assert.deepEqual(left.map(b => b.name).sort(), ['Salon Fluxx', 'Yoga Cave']);
   store.close();
 });
+
+test('the month comparison is a real count, and overdue is not the same as due', () => {
+  const store = world();
+  const id = ids(store);
+  // Two visits last month, one this month.
+  for (const [on, mats] of [['2026-09-05', 10], ['2026-09-19', 14], ['2026-10-02', 6]] as const) {
+    store.outreach.recordVisit('hyline', {
+      businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: on, spokeWith: 'Dana',
+      contactRole: 'Owner', outcome: 'materials', materials: mats, note: '', nextAction: '',
+      followUpOn: null, clientRef: `ref${on.replace(/-/g, '')}`,
+    });
+  }
+  const month = staffMonth(store.outreach.visits('hyline'), [], '2026-10-20');
+  assert.equal(month.visits, 1);
+  assert.equal(month.visitsLastMonth, 2, 'September, not everything before October');
+  assert.equal(month.materials, 6);
+  assert.equal(month.materialsLastMonth, 24);
+  store.close();
+});
+
+test('a follow-up due today is due but not yet overdue', () => {
+  const store = world();
+  const id = ids(store);
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-01', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'follow-up', materials: 0, note: '', nextAction: '',
+    followUpOn: '2026-10-20',
+  });
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Yoga Cave'], staff: 'Alexis', visitedOn: '2026-10-01', spokeWith: 'Jo',
+    contactRole: 'Owner', outcome: 'follow-up', materials: 0, note: '', nextAction: '',
+    followUpOn: '2026-10-10',
+  });
+  const month = staffMonth(store.outreach.visits('hyline'), [], '2026-10-20');
+  assert.equal(month.followUpsDue, 2, 'both have arrived');
+  assert.equal(month.overdue, 1, 'only the one whose date has passed');
+  store.close();
+});

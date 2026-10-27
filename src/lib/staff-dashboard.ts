@@ -27,6 +27,12 @@ export function nextRound(rounds: Round[], today: string): Round | null {
 
 const monthOf = (iso: string) => iso.slice(0, 7);
 
+/** The calendar month before this one, as YYYY-MM. */
+const monthBefore = (ym: string) => {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+};
+
 /**
  * What happened this calendar month, and what is waiting. Counted from saved visits and the
  * stage each business has reached — never from a round, because a booked stop is an intention.
@@ -42,9 +48,19 @@ export function staffMonth(visits: Visit[], businesses: Business[], today: strin
     visit.followUpOn <= today &&
     !visits.some(later => later.businessId === visit.businessId && later.id !== visit.id && later.visitedOn >= visit.followUpOn!));
 
+  // Last month, for the one comparison a rep actually makes. Absolute, not a percentage:
+  // three visits against one is "two more", and calling it "+200%" would be theatre.
+  const previous = visits.filter(visit => monthOf(visit.visitedOn) === monthBefore(month));
+
+  // Overdue is not the same as due: a follow-up dated today has not been missed yet.
+  const overdue = due.filter(visit => visit.followUpOn! < today);
+
   return {
     visits: mine.length,
+    visitsLastMonth: previous.length,
     materials: mine.reduce((total, visit) => total + visit.materials, 0),
+    materialsLastMonth: previous.reduce((total, visit) => total + visit.materials, 0),
+    overdue: overdue.length,
     conversations: mine.filter(visit => visit.spokeWith.trim() !== '').length,
     followUpsDue: due.length,
     due,

@@ -38,15 +38,32 @@ const Pill = ({ tone, children }: { tone: string; children: React.ReactNode }) =
  * Where there are records behind it, the whole tile is the way to them — a count you cannot
  * open is a claim you cannot check.
  */
-function Figure({ value, label, note, unknown, go, goLabel, icon, lead }: {
+/**
+ * A figure, its label, and one line underneath saying what to make of it.
+ *
+ * `trend` is a real comparison with last month, never a percentage: three visits against one
+ * is "2 more than last month", and calling that "+200%" would be theatre on numbers this
+ * small. A figure with nothing to compare against simply does not show a trend.
+ */
+function Figure({ value, label, note, unknown, go, goLabel, icon, lead, trend, alert }: {
   value: number; label: string; note?: string; unknown?: boolean;
   go?: () => void; goLabel?: string; icon?: IconName; lead?: boolean;
+  trend?: { from: number; word: string } | null;
+  alert?: string | null;
 }) {
+  const change = trend ? value - trend.from : 0;
   const body = <>
-    {icon && <span className="dash-figure-icon" aria-hidden="true"><Icon name={icon} size={19}/></span>}
-    <dt>{label}</dt>
+    <span className="dash-figure-top">
+      <dt>{label}</dt>
+      {icon && <span className="dash-figure-icon" aria-hidden="true"><Icon name={icon} size={17}/></span>}
+    </span>
     <dd>{unknown ? <span className="dash-unrecorded">Not recorded</span> : value}</dd>
-    {note && !unknown && <p>{note}</p>}
+    {!unknown && trend && <p className={`dash-trend is-${change > 0 ? 'up' : change < 0 ? 'down' : 'flat'}`}>
+      {change !== 0 && <Icon name={change > 0 ? 'up' : 'down'} size={14}/>}
+      {change === 0 ? `Same as ${trend.word}` : `${Math.abs(change)} ${change > 0 ? 'more' : 'fewer'} than ${trend.word}`}
+    </p>}
+    {!unknown && !trend && alert && <p className="dash-trend is-alert">{alert}</p>}
+    {!unknown && !trend && !alert && note && <p>{note}</p>}
   </>;
   const klass = `dash-figure ${lead ? 'is-lead' : ''}`;
   if (unknown || !go) return <div className={klass}>{body}</div>;
@@ -165,13 +182,17 @@ export default function Dashboard({ clinicName, today, plan, userName, onGo }: P
 
     {onOutreach && staff6
       ? <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
-          <Figure value={staff6.notContacted} label="Not contacted" note={`of ${staff6.assigned} assigned`} icon="clinic" lead
+          <Figure value={staff6.notContacted} label="Not contacted" note={`of ${staff6.assigned} assigned`} icon="shop" lead
             go={() => onGo('businesses')} goLabel="See them"/>
-          <Figure value={staff6.visits} label="Visits recorded" note="This month" icon="check"
+          <Figure value={staff6.visits} label="Visits recorded" icon="check"
+            trend={{ from: staff6.visitsLastMonth, word: 'last month' }}
             go={() => onGo('history')} goLabel="See the history"/>
-          <Figure value={staff6.followUpsDue} label="Follow-ups due" note="Nobody has been back" icon="calendar"
+          <Figure value={staff6.followUpsDue} label="Follow-ups due" icon="calendar"
+            note="Nobody has been back"
+            alert={staff6.overdue ? `${staff6.overdue} overdue` : null}
             go={() => onGo('history')} goLabel="See who is owed a call"/>
-          <Figure value={staff6.materials} label="Materials dropped" note="This month" icon="sparkle"
+          <Figure value={staff6.materials} label="Materials dropped" icon="sparkle"
+            trend={{ from: staff6.materialsLastMonth, word: 'last month' }}
             go={() => onGo('performance')} goLabel="See performance"/>
         </dl>
       : <dl className="dash-figures" aria-label={`This month: ${monthLabel(today)}`}>
