@@ -231,3 +231,43 @@ test('removing a login takes the login and nothing else', () => {
   assert.equal(store.signIn('keeper', 'pw', '1.2.3.4').ok, true, 'the remaining login still works');
   store.close();
 });
+
+test('re-planning a day collapses every round already booked on it', () => {
+  const store = world();
+  const id = ids(store, 'hyline');
+  // What the earlier version of plan-round left behind: two rounds, same day, same person.
+  store.outreach.planRound('hyline', { date: '2026-10-27', start: '09:00', staff: 'Alexis', businessIds: [id['Karve Pilates']] });
+  store.outreach.planRound('hyline', { date: '2026-10-27', start: '09:00', staff: 'Alexis', businessIds: [id['Yoga Cave'], id['Salon Fluxx']] });
+  assert.equal(store.outreach.rounds('hyline').filter(r => r.date === '2026-10-27').length, 2);
+
+  const [keep, ...extra] = store.outreach.rounds('hyline').filter(r => r.date === '2026-10-27' && r.staff === 'Alexis');
+  for (const round of extra) store.outreach.removeRound('hyline', round.id);
+  store.outreach.planRound('hyline', {
+    id: keep.id, date: '2026-10-27', start: '09:00', staff: 'Alexis',
+    businessIds: [id['Karve Pilates'], id['Yoga Cave'], id['Salon Fluxx']],
+  });
+
+  const left = store.outreach.rounds('hyline').filter(r => r.date === '2026-10-27');
+  assert.equal(left.length, 1, 'one round for the day');
+  assert.equal(left[0].stops.length, 3);
+  store.close();
+});
+
+test('a removed round takes its stops and nothing else', () => {
+  const store = world();
+  const id = ids(store, 'hyline');
+  const round = store.outreach.planRound('hyline', {
+    date: '2026-10-27', start: '09:00', staff: 'Alexis', businessIds: [id['Karve Pilates']],
+  });
+  store.outreach.recordVisit('hyline', {
+    businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27', spokeWith: 'Dana',
+    contactRole: 'Owner', outcome: 'interested', materials: 9, note: '', nextAction: '', followUpOn: null,
+  });
+
+  store.outreach.removeRound('hyline', round.id);
+  assert.equal(store.outreach.rounds('hyline').length, 0);
+  assert.equal(store.outreach.businesses('hyline').length, 3, 'the businesses stayed');
+  assert.equal(store.outreach.visits('hyline').length, 1, 'the visit stayed');
+  assert.throws(() => store.outreach.removeRound('other', round.id), /not yours/);
+  store.close();
+});

@@ -62,11 +62,19 @@ try {
 
   // Re-planning the same person's round on the same day replaces it. Booking a second one for
   // the same date left both in the portal's day picker with no way to tell them apart.
-  const already = store.outreach.rounds(clinicId).find(r => r.date === date && r.staff === staff);
-  if (already && !values.another) console.log(`Replacing the round already booked for ${staff} on ${date}.`);
+  //
+  // All of them, not just the first: an earlier version of this script booked duplicates, and
+  // replacing one of those left the others behind for somebody to find later.
+  const existing = values.another ? [] : store.outreach.rounds(clinicId).filter(r => r.date === date && r.staff === staff);
+  const [already, ...duplicates] = existing;
+  if (already) {
+    console.log(`Replacing the round already booked for ${staff} on ${date}.`);
+    for (const extra of duplicates) store.outreach.removeRound(clinicId, extra.id);
+    if (duplicates.length) console.log(`  Also removed ${duplicates.length} duplicate ${duplicates.length === 1 ? 'round' : 'rounds'} for that day.`);
+  }
 
   const round = store.outreach.planRound(clinicId, {
-    id: already && !values.another ? already.id : undefined,
+    id: already?.id,
     date, start, staff, businessIds: chosen.map(b => b.id), note: values.note ?? '', demo: values.demo === true,
   });
 

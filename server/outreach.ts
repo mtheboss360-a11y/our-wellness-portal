@@ -436,6 +436,13 @@ export function openOutreach(db: DatabaseSync) {
     return rounds(clinicId).find(r => r.id === id)!;
   }
 
+  /** Delete a round and its stops. The businesses and any visits recorded stay. */
+  function removeRound(clinicId: string, roundId: string) {
+    const changed = db.prepare('DELETE FROM rounds WHERE id=? AND clinic_id=?').run(roundId, clinicId);
+    if (!changed.changes) throw new Error('That round is not yours.');
+    db.prepare('DELETE FROM round_stops WHERE round_id=? AND clinic_id=?').run(roundId, clinicId);
+  }
+
   /** Put the stops in a different order. Only the ones already on the round. */
   function reorderRound(clinicId: string, roundId: string, businessIds: string[]) {
     const round = rounds(clinicId).find(r => r.id === roundId);
@@ -461,5 +468,5 @@ export function openOutreach(db: DatabaseSync) {
         id: string; name: string; released_at: number; released_by: string; size: number }>;
   }
 
-  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation, rounds, planRound, reorderRound };
+  return { businesses, business, script, saveScript, visits, recordVisit, editVisit, release, releases, setLocation, rounds, planRound, reorderRound, removeRound };
 }
