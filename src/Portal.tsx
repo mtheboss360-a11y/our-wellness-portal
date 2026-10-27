@@ -12,6 +12,7 @@ import OwnerDashboard from './OwnerDashboard';
 import RouteNotes from './RouteNotes';
 import OutreachReport from './OutreachReport';
 import PageStage from './PageStage';
+import { isFreshSignIn, endSession, startAt } from './lib/landing';
 import { Icon, type IconName } from './Icons';
 import AssignedBusinesses from './AssignedBusinesses';
 import RoundAgenda from './RoundAgenda';
@@ -87,10 +88,13 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   // A new section starts at the top of itself. PageStage does it, in a layout effect, so the
   // reset lands before the browser paints rather than a frame after it.
 
-  // Back and Forward move between sections rather than leaving the portal.
+  // Back and Forward move between sections rather than leaving the portal — but a fresh
+  // sign-in starts at this role's landing screen rather than wherever the last one stopped.
   useEffect(() => {
-    const open = new URLSearchParams(window.location.search).get('v');
-    if (open && open !== view) setView(open as typeof view);
+    if (isFreshSignIn()) { startAt('home'); setView('home'); } else {
+      const open = new URLSearchParams(window.location.search).get('v');
+      if (open && open !== view) setView(open as typeof view);
+    }
     const onPop = () => {
       const next = new URLSearchParams(window.location.search).get('v');
       setView((next as typeof view) || 'home');
@@ -114,6 +118,8 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     return () => { document.removeEventListener('visibilitychange', refresh); window.clearInterval(interval); };
   }, [router]);
   async function leave() {
+    // The next sign-in starts at its own landing screen, not on this one's last page.
+    endSession();
     setSigningOut(true); setError('');
     try { await logout(); router.clearCache(); await router.invalidate(); }
     catch { setError('We couldn’t sign you out. Please try again.'); }
@@ -122,6 +128,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
   const tabs: Array<{ id: typeof view; label: string; icon: IconName }> = [
     { id: 'home', label: 'Dashboard', icon: 'home' },
     ...(plan === 'b' && data.role !== 'owner' ? [{ id: 'agenda' as typeof view, label: "Today's round", icon: 'sunrise' as IconName }] : []),
+    ...(data.role === 'owner' && plan !== 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'shop' as IconName }] : []),
     ...(plan === 'b' ? [{ id: 'businesses' as typeof view, label: 'Your businesses', icon: 'shop' as IconName }] : []),
     { id: 'report', label: 'Your report', icon: 'chart' },
     { id: 'drivers', label: plan === 'b' ? 'Routes' : 'Drivers & routes', icon: 'route' },
@@ -161,11 +168,13 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
       : view === 'history' ? <VisitHistory onClose={() => setView('home')}/>
       : view === 'performance' ? <Performance today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
       : view === 'businesses' ? <AssignedBusinesses today={data.today} staffName={data.user?.name ?? null} onClose={() => setView('home')}/>
-      : view === 'home' ? (plan === 'b'
-          ? (data.role === 'owner'
-              ? <OwnerDashboard clinicName={data.clinic?.name ?? data.config.name} today={data.today}
-                  ownerName={data.user?.name ?? null} onGo={setView}/>
-              : <Overview clinicName={data.clinic?.name ?? data.config.name} today={data.today}
+      // THE ROLE DECIDES THE SCREEN, NOT THE PLAN. An owner on the full-service plan is still
+      // an owner; gating this on 'b' gave a role=owner account the old campaign dashboard.
+      : view === 'home' ? (data.role === 'owner'
+          ? <OwnerDashboard clinicName={data.clinic?.name ?? data.config.name} today={data.today}
+              ownerName={data.user?.name ?? null} onGo={setView}/>
+          : plan === 'b'
+          ? (<Overview clinicName={data.clinic?.name ?? data.config.name} today={data.today}
                   staffName={data.user?.name ?? null} onGo={setView}/>)
           : <DashboardHome clinicName={data.clinic?.name ?? data.config.name} today={data.today} plan={plan} userName={data.user?.name ?? null} onGo={setView}/>)
       : view === 'bakeries' ? <BakeryNetwork onClose={() => setView('home')}/> : view === 'network' ? <NetworkMap onClose={() => setView('home')}/> : view === 'drivers' ? <Drivers today={data.today} plan={plan} onClose={() => setView('home')}/> : <>

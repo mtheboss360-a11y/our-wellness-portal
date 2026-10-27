@@ -11,6 +11,7 @@ import { getRunnerHistory, logout, type Visit } from './lib/api';
 import type { PortalSnapshot } from '../data/portal-data';
 import { Icon, type IconName } from './Icons';
 import MyRoutes from './MyRoutes';
+import { isFreshSignIn, endSession, startAt } from './lib/landing';
 
 type View = 'routes' | 'history' | 'help' | 'profile';
 
@@ -28,7 +29,10 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
   const router = useRouter();
   // The place the URL names, read once as the state is created: a link to ?v=history has to open
   // there, and an effect that set it afterwards raced the effect below that writes it back.
+  // A fresh sign-in starts on My routes, whatever the last session left in the URL. A refresh
+  // or a shared link still opens the section it names.
   const [view, setView] = useState<View>(() => {
+    if (isFreshSignIn()) { startAt('routes'); return 'routes'; }
     const open = new URLSearchParams(window.location.search).get('v');
     return TABS.some(tab => tab.id === open) ? open as View : 'routes';
   });
@@ -60,6 +64,8 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
   }, [router]);
 
   async function leave() {
+    // The next sign-in starts at its own landing screen, not on this one's last page.
+    endSession();
     setSigningOut(true);
     try { await logout(); router.clearCache(); await router.invalidate(); }
     finally { setSigningOut(false); }
