@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput, recordVisitInput, editVisitInput, saveScriptInput } from './validation';
 import { packedInput, pickupActionInput, pickupInput, reorderRouteInput, runnerVisitInput } from './validation';
 import { RoundConflict, SUPPLY_KEYS, type RunnerRound, type Supplies } from './runner';
+import { attributeVisits } from '../src/lib/route-math';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
@@ -140,7 +141,10 @@ export function createPortalServer(options: Options) {
               return;
             }
             const message = error instanceof Error ? error.message : 'That change could not be saved.';
-            json(response, /not assigned to you|fixed in place/.test(message) ? 403 : 400, { error: message });
+            // "Not yours", "fixed by the office" and "already finished" are all the same kind of
+            // answer — you may not move that — so they get the same status.
+            json(response, /not assigned to you|fixed in place|already finished/.test(message) ? 403 : 400,
+              { error: message });
           };
 
           const readBody = async () => { try { return await body(request); } catch { return null; } };
@@ -197,7 +201,15 @@ export function createPortalServer(options: Options) {
             const input = reorderRouteInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That new order could not be read.' }); return; }
             try {
-              const completed = new Set(store.outreach.visits(clinic.id).map(v => v.businessId));
+              // A business may appear on more than one round. A visit to it on an older
+              // round must not freeze the same business when assigned as a follow-up later.
+              // Match each visit to exactly one round, using the same logic as the planner.
+              const myRounds = runner.assignedRounds(clinic.id, who);
+              const visits = store.outreach.visits(clinic.id);
+              const assigned = attributeVisits(myRounds, visits);
+              const completed = new Set(visits
+                .filter(v => assigned.get(v.id)?.roundId === input.data.roundId)
+                .map(v => v.businessId));
               sendRoute(runner.reorder(clinic.id, input.data.roundId, input.data.order, who, {
                 revision: input.data.revision, completed,
               }));

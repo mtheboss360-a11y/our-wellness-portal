@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './Icons';
 import { clockOf, durationLabel, itemName, type PlannedItem } from './lib/route-math';
 import type { RunnerItem, RunnerRoute } from './lib/api';
+import { runnerOutcomeLabel } from './lib/runner-outcomes';
 
 export type DayPlan = {
   route: RunnerRoute;
@@ -36,17 +37,18 @@ function noteFor(entry: PlannedItem) {
     if (entry.item.pickup.status === 'collected') return 'Picked up';
     return `Window ${entry.item.pickup.windowStart}–${entry.item.pickup.windowEnd}`;
   }
-  if (entry.done) return entry.visit?.outcomeLabel ?? 'Visited';
+  if (entry.done) return entry.visit ? runnerOutcomeLabel(entry.visit.outcome, entry.visit.outcomeLabel) : 'Visited';
   if (entry.item.locked) return 'Fixed by your office';
   return null;
 }
 
-export function StopCard({ entry, roundId, dragging, busy, onOpen, onMove, large }: {
+export function StopCard({ entry, roundId, dragging, busy, onOpen, onQuick, onMove, large }: {
   entry: PlannedItem;
   roundId: string;
   dragging: boolean;
   busy: boolean;
   onOpen: () => void;
+  onQuick: () => void;
   /** Where to put it: one place up, one place down, or anywhere a drag lands. */
   onMove: (by: -1 | 1) => void;
   large?: boolean;
@@ -75,15 +77,28 @@ export function StopCard({ entry, roundId, dragging, busy, onOpen, onMove, large
       </span>
     </button>
 
-    <button className="rr-card-menu" aria-label={`More for ${name}`} aria-expanded={menu}
-      onClick={event => { event.stopPropagation(); setMenu(open => !open); }}>
-      <Icon name="grip" size={14}/>
-    </button>
+    <div className="rr-card-actions">
+      {entry.done
+        ? <span className="rr-card-done" role="img" aria-label={`${name}: completed`} title="Checked off">
+            <Icon name="check" size={16}/>
+          </span>
+        : <button type="button" className="rr-card-check" onClick={onQuick}
+            disabled={busy} aria-label={`Check off ${name}`} title={`Check off ${name}`}>
+            <Icon name="check" size={16}/>
+          </button>}
+      <button className="rr-card-menu" aria-label={`More for ${name}`} aria-expanded={menu}
+        onClick={event => { event.stopPropagation(); setMenu(open => !open); }}>
+        <Icon name="grip" size={14}/>
+      </button>
+    </div>
 
     {menu && <div className="rr-menu" role="menu" onMouseLeave={() => setMenu(false)}>
       <button role="menuitem" onClick={() => { setMenu(false); onOpen(); }}>
         <Icon name="arrow" size={15}/>Open
       </button>
+      {!entry.done && <button role="menuitem" onClick={() => { setMenu(false); onQuick(); }}>
+        <Icon name="check" size={15}/>Check off stop
+      </button>}
       <button role="menuitem" disabled={fixed || busy} onClick={() => { setMenu(false); onMove(-1); }}>
         <Icon name="up" size={15}/>Move up
       </button>
@@ -95,13 +110,14 @@ export function StopCard({ entry, roundId, dragging, busy, onOpen, onMove, large
 }
 
 /** The stops of one round, with the line that shows where a dragged card would land. */
-export function RoundStops({ plan, label, dragKey, dropAt, busy, onOpen, onMove, large }: {
+export function RoundStops({ plan, label, dragKey, dropAt, busy, onOpen, onQuick, onMove, large }: {
   plan: DayPlan;
   label: string | null;
   dragKey: string | null;
   dropAt: number | null;
   busy: boolean;
   onOpen: (entry: PlannedItem) => void;
+  onQuick: (entry: PlannedItem) => void;
   /** Put this stop at that index within its round. */
   onMove: (roundId: string, key: string, toIndex: number) => void;
   large?: boolean;
@@ -113,6 +129,7 @@ export function RoundStops({ plan, label, dragKey, dropAt, busy, onOpen, onMove,
       <StopCard entry={entry} roundId={plan.route.id} large={large}
         dragging={dragKey === refOf(entry.item)} busy={busy}
         onOpen={() => onOpen(entry)}
+        onQuick={() => onQuick(entry)}
         onMove={by => onMove(plan.route.id, refOf(entry.item), index + by)}/>
     </div>)}
     {dropAt === plan.items.length && <div className="rr-drop-line"/>}
@@ -123,7 +140,7 @@ export function RoundStops({ plan, label, dragKey, dropAt, busy, onOpen, onMove,
  * The seven columns. Everything about a drag lives here: which card is held, and where it would
  * land. Dropping is refused across rounds, so a stop cannot change the day it was assigned to.
  */
-export default function RunnerWeek({ days, today, liveDay, plansFor, busy, onOpenDay, onOpen, onMove, practice }: {
+export default function RunnerWeek({ days, today, liveDay, plansFor, busy, onOpenDay, onOpen, onQuick, onMove, practice }: {
   days: string[];
   today: string;
   /** The day worth looking at. Where the columns scroll sideways, this is the one in view. */
@@ -132,6 +149,7 @@ export default function RunnerWeek({ days, today, liveDay, plansFor, busy, onOpe
   busy: boolean;
   onOpenDay: (day: string) => void;
   onOpen: (roundId: string, entry: PlannedItem) => void;
+  onQuick: (roundId: string, entry: PlannedItem) => void;
   /** Put this stop at that index within its round. The page writes it. */
   onMove: (roundId: string, key: string, toIndex: number) => void;
   practice: string;
@@ -215,6 +233,7 @@ export default function RunnerWeek({ days, today, liveDay, plansFor, busy, onOpe
                 dropAt={drop?.roundId === plan.route.id ? drop.index : null}
                 busy={busy}
                 onOpen={entry => onOpen(plan.route.id, entry)}
+                onQuick={entry => onQuick(plan.route.id, entry)}
                 onMove={onMove}/>)}
         </div>
 

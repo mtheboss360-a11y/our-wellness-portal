@@ -415,12 +415,18 @@ export function openRunner(db: DatabaseSync) {
       }
     }
 
+    // A FINISHED STOP KEEPS ITS PLACE, exactly — the same rule as a locked one. It used to be
+    // enough that the finished stops kept their order relative to each other, which let a single
+    // visited stop slide, and let an unvisited stop be dragged in front of stops already driven.
+    // A day that has partly happened is a record, and time only runs one way through it.
     const done = options.completed ?? new Set<string>();
     const finished = current.filter(item =>
       (item.kind === 'business' && done.has(item.business.id)) ||
-      (item.kind === 'pickup' && item.pickup.status === 'collected')).map(key);
-    if (finished.join('|') !== sent.filter(k => finished.includes(k)).join('|')) {
-      throw new Error('A stop you have already finished cannot be moved out of the order it happened in.');
+      (item.kind === 'pickup' && item.pickup.status === 'collected'));
+    for (const item of finished) {
+      if (sent.indexOf(key(item)) !== current.findIndex(c => key(c) === key(item))) {
+        throw new Error('A stop you have already finished cannot be moved out of the order it happened in.');
+      }
     }
 
     begin();

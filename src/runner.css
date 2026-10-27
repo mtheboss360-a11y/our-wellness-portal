@@ -318,3 +318,28 @@ textarea.rr-input{ min-height:84px; resize:vertical }
   .rr-day{ background:transparent !important; border:1px solid #ccc; min-height:0 }
   .rr-card{ break-inside:avoid; box-shadow:none; border:1px solid #ddd }
 }
+
+/* ── Quick stop check-off ────────────────────────────────────────────────── */
+.rr-card-actions{ display:flex; flex-direction:column; gap:3px; align-items:center; width:26px }
+.rr .rr-card-check,.rr .rr-card-done{ width:26px; height:26px; flex-shrink:0; display:flex;
+  align-items:center; justify-content:center; border-radius:7px; color:#2b5a40 }
+.rr .rr-card-check{ border:1px solid #bdd2c2; background:#eaf3e9 }
+.rr .rr-card-check:hover:not(:disabled){ background:#d5e8d8; color:#123f2a }
+.rr .rr-card-check:focus-visible{ outline:2px solid #b38e43; outline-offset:2px }
+.rr .rr-card-done{ background:#286247; color:#fff }
+.rr .rr-card-check:disabled{ opacity:.5; cursor:default }
+.rr-quick-results{ display:flex; flex-direction:column; gap:9px }
+.rr .rr-quick-choice{ display:flex; align-items:center; gap:12px; width:100%; min-height:66px;
+  border:1px solid rgba(255,255,255,.24); border-radius:12px; padding:10px 12px;
+  text-align:left; background:rgba(255,255,255,.09); color:#fff }
+.rr .rr-quick-choice:hover{ background:rgba(255,255,255,.16) }
+.rr .rr-quick-choice.is-picked{ border-color:var(--gold); background:rgba(232,214,168,.2) }
+.rr-quick-choice:focus-visible{ outline:2px solid var(--gold); outline-offset:2px }
+.rr-quick-choice strong{ display:block; font-size:15px; font-weight:650 }
+.rr-quick-choice small{ display:block; color:var(--sage); font-size:12px; line-height:1.45; margin-top:2px }
+.rr-quick-dot{ width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.15);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0 }
+.rr-quick-choice.is-picked .rr-quick-dot{ background:var(--gold); color:var(--gold-ink) }
+.rr-quick-supplies{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; padding:12px 0 }
+.rr-quick-supplies .rr-field-label{ font-size:11px; color:var(--sage) }
+@media (max-width:380px){ .rr-quick-supplies{ grid-template-columns:1fr } }

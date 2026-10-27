@@ -22,11 +22,13 @@ import {
 import { Icon } from './Icons';
 import GuidedVisit, { type VisitSubmission } from './GuidedVisit';
 import RunnerWeek, { RoundStops, refOf, type DayPlan } from './RunnerWeek';
-import { CollectDrawer, PickupDrawer, StopDrawer, SuppliesDrawer } from './RunnerDrawers';
+import { CollectDrawer, PickupDrawer, StopDrawer, SuppliesDrawer, QuickResultDrawer } from './RunnerDrawers';
 import { useFocusTrap } from './lib/focus-trap';
+import { runnerOutcomeLabel } from './lib/runner-outcomes';
 
 type Drawer =
   | { kind: 'stop'; roundId: string; key: string }
+  | { kind: 'quick'; roundId: string; key: string }
   | { kind: 'collect'; roundId: string; key: string }
   | { kind: 'pickup'; roundId: string; pickupId?: string }
   | { kind: 'supplies'; roundId: string };
@@ -184,6 +186,13 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
     else setDrawer({ kind: 'collect', roundId, key });
   }, []);
 
+  /** The checkmark saves a real visit outcome; a pickup keeps its collection workflow. */
+  const checkStop = useCallback((roundId: string, entry: PlannedItem) => {
+    if (entry.done) return;
+    if (entry.item.kind === 'pickup') { openStop(roundId, entry); return; }
+    setDrawer({ kind: 'quick', roundId, key: refOf(entry.item) });
+  }, [openStop]);
+
   /** Where to go now: the next unfinished stop of the day being run. */
   const goNext = useCallback(() => {
     if (!running || !runningRoute) return;
@@ -279,6 +288,7 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
           practice={data.practice}
           onOpenDay={day => setFocus(day)}
           onOpen={openStop}
+          onQuick={checkStop}
           onMove={(roundId, key, index) => void move(roundId, key, index)}/>
       </>}
 
@@ -287,6 +297,7 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
         plans={plansFor(focus)} fullPlanOf={fullPlanOf}
         onBack={() => setFocus(null)}
         onOpen={openStop}
+        onQuick={checkStop}
         onMove={(roundId, key, index) => void move(roundId, key, index)}
         onSupplies={roundId => setDrawer({ kind: 'supplies', roundId })}
         onAddPickup={roundId => setDrawer({ kind: 'pickup', roundId })}
@@ -311,11 +322,42 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
           return entry ? <StopDrawer roundId={drawer.roundId} entry={entry}
             materials={drawerRoute.supplies.packed ?? drawerRoute.supplies.planned}
             onClose={closeDrawer}
+            onQuick={() => { if (!entry.done) setDrawer({ kind: 'quick', roundId: drawer.roundId, key: drawer.key }); }}
             onStart={() => {
               if (entry.item.kind !== 'business') return;
               setDrawer(null);
               setVisiting({ roundId: drawer.roundId, businessId: entry.item.business.id });
             }}/> : null;
+        })()}
+
+        {drawer.kind === 'quick' && (() => {
+          const entry = entryOf(drawer.roundId, drawer.key);
+          if (!entry || entry.item.kind !== 'business' || entry.done) return null;
+          const routeId = drawer.roundId;
+          const businessId = entry.item.business.id;
+          return <QuickResultDrawer entry={entry} today={today} busy={busy}
+            remaining={drawerRoute.remaining} packed={drawerRoute.supplies.packed !== null}
+            onDirty={() => { unsaved.current = true; }} onClose={closeDrawer}
+            onSave={async quick => {
+              setBusy(true);
+              try {
+                const saved = await recordRunnerVisit({
+                  roundId: routeId, businessId, visitedOn: today,
+                  spokeWith: quick.spokeWith, contactRole: '', outcome: quick.outcome,
+                  dropped: quick.dropped, note: quick.note, nextAction: quick.nextAction,
+                  followUpOn: quick.followUpOn, clientRef: quick.clientRef,
+                });
+                setData(current => current && ({
+                  ...current,
+                  routes: saved.route ? current.routes.map(route => route.id === saved.route!.id ? saved.route! : route) : current.routes,
+                  visits: current.visits.some(visit => visit.id === saved.visit.id)
+                    ? current.visits : [saved.visit, ...current.visits],
+                }));
+                unsaved.current = false;
+                setDrawer(null);
+                say(`Checked off: ${runnerOutcomeLabel(saved.visit.outcome, saved.visit.outcomeLabel)}.`);
+              } finally { setBusy(false); }
+            }}/>
         })()}
 
         {drawer.kind === 'collect' && (() => {
@@ -386,13 +428,14 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
 }
 
 /** ONE DAY, FULL WIDTH — the same cards, bigger, for a runner who is actually out. */
-function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onOpen, onMove,
+function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onOpen, onQuick, onMove,
   onSupplies, onAddPickup, onNext }: {
   day: string; today: string; practice: string; busy: boolean;
   plans: DayPlan[];
   fullPlanOf: (route: RunnerRoute) => ReturnType<typeof planRoute>;
   onBack: () => void;
   onOpen: (roundId: string, entry: PlannedItem) => void;
+  onQuick: (roundId: string, entry: PlannedItem) => void;
   onMove: (roundId: string, key: string, index: number) => void;
   onSupplies: (roundId: string) => void;
   onAddPickup: (roundId: string) => void;
@@ -452,6 +495,7 @@ function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onO
               label={plans.length > 1 ? `Round ${index + 1} · ${clockOf(plan.startsAt)}` : null}
               dragKey={null} dropAt={null} busy={busy}
               onOpen={entry => onOpen(plan.route.id, entry)}
+              onQuick={entry => onQuick(plan.route.id, entry)}
               onMove={onMove}/>)}
           </div>
         </>}

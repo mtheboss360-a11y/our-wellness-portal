@@ -10,6 +10,7 @@ import { getRunnerHistory, logout, type Visit } from './lib/api';
 import type { PortalSnapshot } from '../data/portal-data';
 import { Icon, type IconName } from './Icons';
 import MyRoutes from './MyRoutes';
+import { runnerOutcomeLabel } from './lib/runner-outcomes';
 import { isFreshSignIn, endSession, startAt } from './lib/landing';
 
 type View = 'routes' | 'history' | 'help' | 'profile';
@@ -152,7 +153,7 @@ function History() {
                 <strong>{visit.businessName}</strong>
                 <time dateTime={visit.visitedOn}>{dayLabel(visit.visitedOn)}</time>
               </div>
-              <p>{visit.outcomeLabel}{visit.materials ? ` · ${visit.materials} materials dropped` : ''}</p>
+              <p>{runnerOutcomeLabel(visit.outcome, visit.outcomeLabel)}{visit.materials ? ` · ${visit.materials} materials dropped` : ''}</p>
               <details className="rr-fold">
                 <summary>Details</summary>
                 <div className="rr-fold-body">

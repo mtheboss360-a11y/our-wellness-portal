@@ -4,12 +4,14 @@
 //
 // Four of them: a business stop, a pickup being written, a pickup being collected, and the
 // supplies. Each is a leaf — it holds its own form state and hands finished values back.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icons';
 import {
   getRunnerBusiness, type Business, type PickupDraft, type PickupKind, type RunnerRoute,
   type Script, type Supplies, type Visit,
 } from './lib/api';
+import { QUICK_RESULTS, quickOutcomeFor, defaultReturnDate, runnerOutcomeLabel, type QuickResult } from './lib/runner-outcomes';
+import type { Outcome } from './lib/api';
 import { clockOf, itemAddress, itemName, type PlannedItem } from './lib/route-math';
 
 export const SUPPLIES: Array<{ key: keyof Supplies; label: string }> = [
@@ -44,11 +46,11 @@ export function SheetHead({ kicker, title, onClose }: { kicker: string; title: s
 }
 
 /** A BUSINESS STOP. What it is, then the way in. Everything else is folded away. */
-export function StopDrawer({ roundId, entry, materials, onClose, onStart }: {
+export function StopDrawer({ roundId, entry, materials, onClose, onStart, onQuick }: {
   roundId: string; entry: PlannedItem;
   /** What the office assigned to this route, for the "what am I carrying" line. */
   materials: Supplies;
-  onClose: () => void; onStart: () => void;
+  onClose: () => void; onStart: () => void; onQuick: () => void;
 }) {
   const business = entry.item.kind === 'business' ? entry.item.business : null;
   const [detail, setDetail] = useState<{ script: Script | null; visits: Visit[] } | null>(null);
@@ -102,7 +104,7 @@ export function StopDrawer({ roundId, entry, materials, onClose, onStart }: {
           {detail === null ? <p>Opening…</p>
             : !detail.visits.length ? <p>Nobody has visited yet. This is the first conversation.</p>
             : detail.visits.slice(0, 5).map(visit => <p key={visit.id}>
-                <b>{visit.outcomeLabel}</b> · {dayLabel(visit.visitedOn)}
+                <b>{runnerOutcomeLabel(visit.outcome, visit.outcomeLabel)}</b> · {dayLabel(visit.visitedOn)}
                 {visit.spokeWith ? ` · spoke with ${visit.spokeWith}` : ''}
                 {visit.materials ? ` · ${visit.materials} materials dropped` : ''}
                 {visit.note ? ` — “${visit.note}”` : ''}
@@ -121,8 +123,11 @@ export function StopDrawer({ roundId, entry, materials, onClose, onStart }: {
         ? `${business.lat},${business.lng}` : business.address)} target="_blank" rel="noreferrer noopener">
         <Icon name="map" size={16}/>Directions
       </a>
-      <button className="rr-btn rr-btn-primary" onClick={onStart}>
-        {entry.done ? 'Open the visit' : 'Start visit'}<Icon name="arrow" size={16}/>
+      {!entry.done && <button className="rr-btn rr-btn-primary" onClick={onQuick}>
+        <Icon name="check" size={16}/>Check off stop
+      </button>}
+      <button className="rr-btn rr-btn-outline" onClick={onStart}>
+        {entry.done ? 'Open the visit' : 'Guided visit'}<Icon name="arrow" size={16}/>
       </button>
     </div>
   </>;
@@ -389,3 +394,111 @@ export function SuppliesDrawer({ route, busy, onClose, onSave, onDirty }: {
 }
 
 export { itemName, itemAddress };
+
+/**
+ * CHECK OFF A BUSINESS IN ONE SHORT FORM. These are three outcomes of a real visit, not a
+ * separate local checkbox or a change of the business's stage without a visit record.
+ * The caller writes through the normal /api/runner/visit endpoint; the resulting saved visit
+ * is the authority that turns the stop green across every device.
+ */
+export function QuickResultDrawer({ entry, today, remaining, packed, busy, onDirty, onClose, onSave }: {
+  entry: PlannedItem; today: string; remaining: Supplies; packed: boolean; busy: boolean;
+  onDirty: () => void; onClose: () => void;
+  onSave: (draft: {
+    outcome: Outcome; spokeWith: string; note: string; nextAction: string;
+    followUpOn: string | null; dropped: Supplies; clientRef: string;
+  }) => Promise<void>;
+}) {
+  const business = entry.item.kind === 'business' ? entry.item.business : null;
+  const [picked, setPicked] = useState<QuickResult | null>(null);
+  const [spokeWith, setSpokeWith] = useState('');
+  const [note, setNote] = useState('');
+  const [followUpOn, setFollowUpOn] = useState(() => defaultReturnDate(today));
+  const [dropped, setDropped] = useState<Record<keyof Supplies, string>>({ flyers: '0', treats: '0', cards: '0' });
+  const [error, setError] = useState('');
+  const ref = useRef(`quick_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 11)}`);
+  if (!business) return null;
+  const selected = picked ? quickOutcomeFor(picked) : null;
+
+  const save = async () => {
+    if (!selected || busy) return;
+    if (selected === 'follow-up' && (!/^\d{4}-\d{2}-\d{2}$/.test(followUpOn) || followUpOn < today)) {
+      setError('Choose a return date on or after today.'); return;
+    }
+    const quantities = { flyers: Number(dropped.flyers), treats: Number(dropped.treats), cards: Number(dropped.cards) };
+    for (const item of SUPPLIES) {
+      const amount = quantities[item.key];
+      if (!Number.isSafeInteger(amount) || amount < 0 || (packed && amount > remaining[item.key])) {
+        setError(`Please enter a valid ${item.label.toLowerCase()} count within what you have.`);
+        return;
+      }
+      if (!packed && amount > 0) {
+        setError('Confirm your supplies before recording any materials dropped.'); return;
+      }
+    }
+    setError('');
+    try {
+      await onSave({
+        outcome: selected, spokeWith: spokeWith.trim(), note: note.trim(),
+        nextAction: selected === 'follow-up' ? 'Return for another conversation' : '',
+        followUpOn: selected === 'follow-up' ? followUpOn : null,
+        dropped: quantities, clientRef: ref.current,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save. Your answers are still here.');
+    }
+  };
+
+  return <>
+    <SheetHead kicker="Check off stop" title={business.name} onClose={onClose}/>
+    <div className="rr-sheet-body">
+      <p className="rr-sheet-note">Choose what actually happened. Saving records your visit and checks this stop off the route.</p>
+      <div className="rr-quick-results" role="group" aria-label="Visit result">
+        {QUICK_RESULTS.map(result => <button key={result.key} type="button"
+          className={`rr-quick-choice ${picked === result.key ? 'is-picked' : ''}`}
+          aria-pressed={picked === result.key}
+          onClick={() => { setPicked(result.key); setError(''); onDirty(); }}>
+          <span className="rr-quick-dot"><Icon name={picked === result.key ? 'check' : 'shop'} size={15}/></span>
+          <span><strong>{result.label}</strong><small>{result.detail}</small></span>
+        </button>)}
+      </div>
+      {selected === 'follow-up' && <div className="rr-field">
+        <label htmlFor="rr-quick-date">Come back on</label>
+        <input id="rr-quick-date" type="date" className="rr-input" value={followUpOn} min={today}
+          onChange={e => { setFollowUpOn(e.target.value); onDirty(); }}/>
+      </div>}
+      <div className="rr-field">
+        <label htmlFor="rr-quick-person">Spoke with (optional)</label>
+        <input id="rr-quick-person" className="rr-input" autoComplete="off" maxLength={120}
+          placeholder="Owner, manager, front desk name" value={spokeWith}
+          onChange={e => { setSpokeWith(e.target.value); onDirty(); }}/>
+      </div>
+      <div className="rr-field">
+        <label htmlFor="rr-quick-notes">Notes (optional)</label>
+        <textarea id="rr-quick-notes" className="rr-input" maxLength={4000}
+          placeholder="What happened, or what to remember next time" value={note}
+          onChange={e => { setNote(e.target.value); onDirty(); }}/>
+      </div>
+      <details className="rr-fold">
+        <summary>Materials Dropped (optional)</summary>
+        <div className="rr-quick-supplies">
+          {SUPPLIES.map(field => <label key={field.key} className="rr-field">
+            <span className="rr-field-label">{field.label} · {packed ? `${remaining[field.key]} available` : 'load not confirmed'}</span>
+            <input className="rr-input" type="number" inputMode="numeric" min={0}
+              max={packed ? remaining[field.key] : 0} disabled={!packed}
+              value={dropped[field.key]}
+              onChange={e => { setDropped(prev => ({ ...prev, [field.key]: e.target.value })); onDirty(); }}/>
+          </label>)}
+        </div>
+        {!packed && <p className="rr-sheet-note">Confirm your load in Supplies before entering materials dropped.</p>}
+      </details>
+      {error && <p className="rr-sheet-error" role="alert">{error}</p>}
+    </div>
+    <div className="rr-sheet-foot">
+      <button className="rr-btn rr-btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+      <button className="rr-btn rr-btn-primary" onClick={() => void save()} disabled={busy || !selected}>
+        {busy ? 'Saving…' : 'Save & check off'}<Icon name="check" size={16}/>
+      </button>
+    </div>
+  </>;
+}

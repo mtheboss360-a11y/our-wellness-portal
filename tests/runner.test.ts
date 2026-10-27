@@ -282,10 +282,52 @@ test('a visit already recorded cannot be reordered out of the sequence it happen
   const items = store.runner.round('hyline', round)!.items.map(i => ({ kind: i.kind, id: i.id }));
   assert.throws(() => store.runner.reorder('hyline', round, [items[1], items[0], items[2]], me, { completed }),
     /already finished/);
-  // The stop that has not happened yet is still free to move.
-  const ok = store.runner.reorder('hyline', round, [items[2], items[0], items[1]], me, { completed });
-  assert.equal(ok.items[0].id, items[2].id);
+  // Nor can an unvisited stop be put in front of ones already driven: the two finished stops
+  // hold positions one and two, and the only stop still to do is the one that can move.
+  assert.throws(() => store.runner.reorder('hyline', round, [items[2], items[0], items[1]], me, { completed }),
+    /already finished/);
+  // Where nothing on the round is finished, the same move is fine.
+  const fresh = booked(store, ['Karve Pilates', 'Yoga Cave', 'Salon Fluxx'], 'Alexis', '2026-11-03');
+  const open = store.runner.round('hyline', fresh)!.items.map(i => ({ kind: i.kind, id: i.id }));
+  const moved = store.runner.reorder('hyline', fresh, [open[2], open[0], open[1]], me);
+  assert.equal(moved.items[0].id, open[2].id);
   store.close();
+});
+
+test('a business visited on an earlier round can still be moved on a later one', async () => {
+  // The reorder guard treated ANY visit to a business as a finished stop, on every round. A
+  // follow-up round holding the same business was frozen before it had been visited at all.
+  const store = world();
+  const tuesday = booked(store, ['Karve Pilates', 'Yoga Cave'], 'Alexis', '2026-10-27');
+  const friday = booked(store, ['Karve Pilates', 'Salon Fluxx'], 'Alexis', '2026-10-30');
+  store.runner.assignRound('hyline', tuesday, userId(store, 'alexis'));
+  store.runner.assignRound('hyline', friday, userId(store, 'alexis'));
+  recorded(store, tuesday, 'Karve Pilates', 'Alexis', '2026-10-27');
+
+  const server = createPortalServer({ store, origin: 'http://portal.test', secure: false, root: process.cwd() });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const signIn = store.signIn('alexis', 'runner-pw', '127.0.0.1');
+  const headers = { Cookie: `owo-local-session=${signIn.token}`, Origin: 'http://portal.test', 'Content-Type': 'application/json' };
+  try {
+    const round = store.runner.round('hyline', friday)!;
+    const order = [round.items[1], round.items[0]].map(item => ({ kind: item.kind, id: item.id }));
+    const response = await fetch(base + '/api/runner/order', { method: 'POST', headers,
+      body: JSON.stringify({ roundId: friday, order, revision: round.revision }) });
+    assert.equal(response.status, 200, 'Friday has not been visited, so its stops still move');
+    assert.deepEqual(store.runner.round('hyline', friday)!.items.map(i =>
+      i.kind === 'business' ? i.business.name : ''), ['Salon Fluxx', 'Karve Pilates']);
+
+    // Tuesday's own finished stop is still held in place.
+    const tue = store.runner.round('hyline', tuesday)!;
+    const swap = [tue.items[1], tue.items[0]].map(item => ({ kind: item.kind, id: item.id }));
+    const refused = await fetch(base + '/api/runner/order', { method: 'POST', headers,
+      body: JSON.stringify({ roundId: tuesday, order: swap, revision: tue.revision }) });
+    assert.equal(refused.status, 403);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    store.close();
+  }
 });
 
 test('a pickup goes onto a route, moves within it, and never becomes a business', () => {
