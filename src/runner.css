@@ -49,10 +49,8 @@
 .rr-topinner{ max-width:1500px; margin:auto; min-height:76px; padding:13px 27px;
   display:flex; gap:16px; align-items:center; justify-content:space-between }
 .rr-brand{ display:flex; align-items:center; gap:12px; min-width:0 }
-/* The logo's own ground. The mark is dark ink and gold and needs a light one to read on. */
-.rr-plate{ display:inline-flex; align-items:center; background:var(--cream); border-radius:10px;
-  padding:7px 12px; flex:0 0 auto }
-.rr-mark{ height:26px; width:auto; display:block }
+/* White and gold: it reads on the dark bar with nothing behind it. */
+.rr-mark{ height:30px; width:auto; display:block; flex:0 0 auto }
 .rr-brand-sub{ font-size:10px; letter-spacing:.17em; font-weight:750; color:#b7cabc;
   text-transform:uppercase; white-space:nowrap }
 .rr-toptools{ display:flex; gap:8px; align-items:center }
@@ -354,8 +352,7 @@
   .rr-topinner{ gap:8px }
   .rr-brand{ gap:9px }
   .rr-brand-sub{ display:none }
-  .rr-plate{ padding:6px 9px }
-  .rr-mark{ height:21px }
+  .rr-mark{ height:24px }
   .rr-person-text{ display:none }
   .rr-person{ padding-left:8px }
   /* On a phone the bar is the brand and who you are. Signing out lives on Profile, a tap away,

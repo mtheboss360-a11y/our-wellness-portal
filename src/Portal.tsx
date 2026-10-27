@@ -23,8 +23,15 @@ import RunnerPortal from './RunnerPortal';
 
 
 // The logo goes home: the website from the sign-in screen, the report once signed in.
-function Brand({ name, centered = false, onHome }: { name: string; centered?: boolean; onHome?: () => void }) {
-  const logo = <img src="/assets/owo-logo.png" alt={name} width="1579" height="574"/>;
+// `mark` is the symbol on its own in white and gold, for the dark rail. The full logo is ink
+// and gold with the wordmark under it, and it needs a light ground — so it stays on the
+// sign-in screen and the loading screen, which have one.
+function Brand({ name, centered = false, onHome, mark = false }: {
+  name: string; centered?: boolean; onHome?: () => void; mark?: boolean;
+}) {
+  const logo = mark
+    ? <img src="/assets/own-mark.png" alt={name} width="1156" height="308"/>
+    : <img src="/assets/owo-logo.png" alt={name} width="1579" height="574"/>;
   return <div className={`brand ${centered ? 'brand-centered' : ''}`}>{onHome
     ? <button type="button" className="brand-home" onClick={onHome} aria-label={`${name}: back to your report`}>{logo}</button>
     : <a className="brand-home" href="https://www.ouroptimization.com" aria-label={`${name}: home`}>{logo}</a>}</div>;
@@ -140,7 +147,7 @@ function Dashboard({ data }: { data: PortalSnapshot }) {
     <a className="skip-link" href="#report">Skip to the page</a>
     {/* The rail. On a phone it lies down under the brand and scrolls sideways. */}
     <aside className="rail">
-      <div className="rail-brand"><Brand name={data.config.name} onHome={() => setView('home')}/></div>
+      <div className="rail-brand"><Brand name={data.config.name} mark onHome={() => setView('home')}/></div>
       <nav className="rail-nav" aria-label="Your portal">
         {tabs.map(tab => <button key={tab.id}
           className={view === tab.id ? 'is-current' : ''}

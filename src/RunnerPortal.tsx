@@ -75,12 +75,11 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
       <div className="rr-topinner">
         {/* The logo carries the name, so the name is not set beside it a second time. It sits on
             an ivory plate because the mark is dark ink and gold: on the forest bar on its own it
-            is a smudge, and the brand is not something to show badly. */}
+            is a smudge, and the brand is not something to show badly. The mark is white and
+            gold, so it sits straight on the dark bar with nothing behind it. */}
         <div className="rr-brand">
-          <span className="rr-plate">
-            <img className="rr-mark" src="/assets/owo-logo.png" alt="Our Wellness Network"
-              width="1579" height="574"/>
-          </span>
+          <img className="rr-mark" src="/assets/own-mark.png" alt="Our Wellness Network"
+            width="1156" height="308"/>
           <span className="rr-brand-sub">Route runner</span>
         </div>
         <div className="rr-toptools">

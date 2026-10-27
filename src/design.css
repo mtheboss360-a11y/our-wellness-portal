@@ -112,9 +112,10 @@
 
 /* The mark is drawn in deep green and gold. On the forest rail that is invisible, and
    filtering it would be recolouring somebody's logo — so it keeps its own ivory plate. */
-.plan-b .rail-brand{ background:var(--n-0); border:0; border-radius:var(--r-md);
-  padding:var(--s-3) var(--s-4); justify-content:center; box-shadow:var(--e-1); }
-.plan-b .rail-brand .brand img{ width:142px; }
+/* No card behind it: the mark is white and gold and sits straight on the rail. */
+.plan-b .rail-brand{ background:none; border:0; padding:var(--s-2) var(--s-3);
+  justify-content:center; box-shadow:none; }
+.plan-b .rail-brand .brand img{ width:132px; }
 .plan-b .rail-brand .brand-home{ background:none; border:0; padding:0; cursor:pointer; }
 
 .plan-b .rail-nav{ gap:2px; margin-top:var(--s-1); }
@@ -159,7 +160,7 @@
   .plan-b .rail{ position:sticky; top:0; z-index:40; height:auto;
     flex-direction:column; gap:var(--s-3); padding:var(--s-3) 0 0; }
   .plan-b .rail-brand{ margin:0 var(--s-4); padding:var(--s-2) var(--s-3); }
-  .plan-b .rail-brand .brand img{ width:116px; }
+  .plan-b .rail-brand .brand img{ width:108px; }
   .plan-b .rail-nav{ flex-direction:row; flex-wrap:nowrap; overflow-x:auto;
     gap:var(--s-1); padding:0 var(--s-4) var(--s-2); margin:0;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
