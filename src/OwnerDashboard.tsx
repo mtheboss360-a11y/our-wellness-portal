@@ -11,12 +11,13 @@
 //     in its network, not a league table of them.
 //   - No visit script. The API does not even send one to this role.
 //   - Nothing invented. No route, no QR code, no NFC link. A missing field reads "Not added".
+//   - No bubble graph. The practice asked for it off this screen; the network is still a page
+//     of its own in the sidebar, and the connections list below is the same businesses by name.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getRounds, getBusinesses, type Business, type Round, type Visit } from './lib/api';
 import { planRound, clockOf, durationLabel, milesFrom } from './lib/round-math';
 import { staffMonth, owedACall, activitySeries } from './lib/staff-dashboard';
 import { Icon, type IconName } from './Icons';
-import ReferralBubbles from './ReferralBubbles';
 
 type View = 'home' | 'network' | 'history' | 'performance' | 'businesses';
 
@@ -122,18 +123,6 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
 
     <StatSwap which={focus} businesses={data.businesses} visits={data.visits}
       rounds={scheduled} clinic={data.clinic} month={month} today={today}/>
-
-    <section className="own-panel own-network" aria-labelledby="own-net">
-      <div className="own-panel-head">
-        <div>
-          <h2 id="own-net">Your referral network</h2>
-          <p>Your practice at the centre · matched businesses around it</p>
-        </div>
-        <span className="own-kicker">Within {radius} miles</span>
-      </div>
-      <ReferralBubbles practice={clinicName}
-        connections={connections.within.map(b => ({ id: b.id, name: b.name, demo: b.demo === 1 }))}/>
-    </section>
 
     <div className="own-two">
       <section className="own-panel" aria-labelledby="own-conn">
