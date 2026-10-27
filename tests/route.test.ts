@@ -4,7 +4,9 @@
 // the server will accept.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planRoute, moveItem, mondayOf, addDays, weekLabel, TRAVEL_ALLOWANCE } from '../src/lib/route-math.ts';
+import {
+  planRoute, moveItem, attributeVisits, mondayOf, addDays, weekLabel, TRAVEL_ALLOWANCE,
+} from '../src/lib/route-math.ts';
 import type { RunnerItem } from '../server/runner.ts';
 import type { Business, Visit } from '../server/outreach.ts';
 
@@ -22,10 +24,11 @@ const pickup = (id: string, windowStart: string, windowEnd: string, minutes = 10
     windowStart, windowEnd, minutes, items: '', reference: '', note: '',
     supplies: { flyers: 0, treats: 0, cards: 0 }, status, collectedAt: null, position: 0 },
 });
-const visit = (businessId: string, visitedOn: string): Visit => ({
-  id: `v_${businessId}`, businessId, businessName: businessId, staff: 'Alexis', visitedOn,
+const visit = (businessId: string, visitedOn: string, roundId: string | null = null): Visit => ({
+  id: `v_${businessId}_${visitedOn}`, businessId, businessName: businessId, staff: 'Alexis', visitedOn,
   spokeWith: '', contactRole: '', outcome: 'interested', outcomeLabel: 'Interested',
   materials: 0, note: '', nextAction: '', followUpOn: null, createdAt: 0, edited: false,
+  roundId, recordedBy: 'u1', dropped: null,
 });
 // A Tuesday, when the practice opens at 09:00.
 const round = (items: RunnerItem[], start = '09:00', date = '2026-10-27') => ({ id: 'r', date, start, items });
@@ -71,6 +74,47 @@ test('the round starts when the practice opens, never before it', () => {
   const closed = planRoute(round([stop('A')], '09:00', '2026-10-25'), []); // a Sunday
   assert.equal(closed.opening.closed, true);
   assert.match(closed.warnings.join(' '), /day the practice is closed/);
+});
+
+test('a visit belongs to the round it names, and to no other', () => {
+  const tuesday = { id: 'tue', date: '2026-10-27', start: '09:00', items: [stop('A'), stop('B')] };
+  const friday = { id: 'fri', date: '2026-10-30', start: '09:00', items: [stop('A')] };
+  const onFriday = visit('A', '2026-10-30', 'fri');
+  const attributed = attributeVisits([tuesday, friday], [onFriday]);
+  assert.equal(attributed.get(onFriday.id), 'fri');
+
+  // Friday's conversation is not Tuesday's progress, even though Tuesday came first.
+  const tue = planRoute(tuesday, [onFriday], { attributed });
+  const fri = planRoute(friday, [onFriday], { attributed });
+  assert.equal(tue.completed, 0);
+  assert.equal(fri.completed, 1);
+});
+
+test('a visit with no round on it goes to the last round that could have produced it', () => {
+  const tuesday = { id: 'tue', date: '2026-10-27', start: '09:00', items: [stop('A')] };
+  const friday = { id: 'fri', date: '2026-10-30', start: '09:00', items: [stop('A')] };
+  const rounds = [tuesday, friday];
+
+  // Recorded on the Tuesday: Tuesday's.
+  const early = visit('A', '2026-10-28');
+  assert.equal(attributeVisits(rounds, [early]).get(early.id), 'tue');
+  // Recorded on the Friday: Friday's, and Tuesday stays unfinished rather than both closing.
+  const late = visit('A', '2026-10-31');
+  const attributed = attributeVisits(rounds, [late]);
+  assert.equal(attributed.get(late.id), 'fri');
+  assert.equal(planRoute(tuesday, [late], { attributed }).completed, 0);
+  assert.equal(planRoute(friday, [late], { attributed }).completed, 1);
+  // Recorded before either was booked: neither.
+  const before = visit('A', '2026-10-01');
+  assert.equal(attributeVisits(rounds, [before]).get(before.id), undefined);
+});
+
+test('a visit naming a round we are not showing counts toward nothing here', () => {
+  const tuesday = { id: 'tue', date: '2026-10-27', start: '09:00', items: [stop('A')] };
+  const elsewhere = visit('A', '2026-10-27', 'somebody-elses-round');
+  const attributed = attributeVisits([tuesday], [elsewhere]);
+  assert.equal(attributed.get(elsewhere.id), undefined);
+  assert.equal(planRoute(tuesday, [elsewhere], { attributed }).completed, 0);
 });
 
 test('a stop is finished by a visit recorded on the day or after it, never before', () => {

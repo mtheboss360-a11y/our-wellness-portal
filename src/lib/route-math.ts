@@ -69,6 +69,48 @@ export type RoutePlan = {
   unlocated: string[];
 };
 
+/**
+ * WHICH ROUND EACH VISIT BELONGS TO.
+ *
+ * A visit recorded from the planner names its round, so it belongs to that one and to no other:
+ * the same business can sit on a round this week and a follow-up round next week, and a
+ * conversation at one is not progress on the other.
+ *
+ * A visit with no round on it was recorded before the planner could say which — or away from a
+ * round altogether. Those are attributed to the LAST round on or before the day they happened
+ * that had that business on it, which is the only round that could have produced them. Before
+ * this, any visit on or after a round's date counted toward it, so one conversation next Friday
+ * marked this Tuesday's round complete as well.
+ */
+export function attributeVisits(
+  rounds: Array<{ id: string; date: string; items: RunnerItem[] }>,
+  visits: Visit[],
+): Map<string, string> {
+  const known = new Set(rounds.map(r => r.id));
+  const byBusiness = new Map<string, Array<{ id: string; date: string }>>();
+  for (const round of rounds) {
+    for (const item of round.items) {
+      if (item.kind !== 'business') continue;
+      const list = byBusiness.get(item.business.id) ?? [];
+      list.push({ id: round.id, date: round.date });
+      byBusiness.set(item.business.id, list);
+    }
+  }
+  for (const list of byBusiness.values()) list.sort((a, b) => a.date.localeCompare(b.date));
+
+  const attributed = new Map<string, string>();
+  for (const visit of visits) {
+    if (visit.roundId) {
+      if (known.has(visit.roundId)) attributed.set(visit.id, visit.roundId);
+      continue; // a visit that names a round we are not showing belongs to that one, not to these
+    }
+    const candidates = (byBusiness.get(visit.businessId) ?? []).filter(r => r.date <= visit.visitedOn);
+    const latest = candidates.at(-1);
+    if (latest) attributed.set(visit.id, latest.id);
+  }
+  return attributed;
+}
+
 const toMinutes = (clock: string) => {
   const [h, m] = clock.split(':').map(Number);
   return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 9 * 60;
@@ -96,6 +138,8 @@ export function planRoute(
   options: {
     clinic?: Where; today?: string; nowMinutes?: number;
     assumptions?: Partial<Assumptions>; hours?: OpeningHours; allowance?: number;
+    /** Which round each visit belongs to, from `attributeVisits`. */
+    attributed?: Map<string, string>;
   } = {},
 ): RoutePlan {
   const as = { ...DEFAULTS, ...options.assumptions };
@@ -107,11 +151,14 @@ export function planRoute(
   const startsAt = opens === null ? booked : Math.max(booked, toMinutes(opens));
   const opening = { weekday, opens, closed: opens === null, heldBack: opens !== null && startsAt > booked };
 
-  // A visit counts toward this round if it was recorded on its date or after — a round run a day
-  // late still shows its progress. Anything recorded before the round was booked is history.
+  // A visit counts toward THIS round and no other. `attributeVisits` decides which round each
+  // one belongs to; without that map — a caller laying out a single round in isolation — the
+  // older rule applies, where a visit on or after the round's date counts toward it.
   const onThisRound = new Map<string, Visit>();
   for (const visit of [...visits].sort((a, b) => a.visitedOn.localeCompare(b.visitedOn))) {
-    if (visit.visitedOn < round.date) continue;
+    if (options.attributed) {
+      if (options.attributed.get(visit.id) !== round.id) continue;
+    } else if (visit.visitedOn < round.date) continue;
     if (!onThisRound.has(visit.businessId)) onThisRound.set(visit.businessId, visit);
   }
 

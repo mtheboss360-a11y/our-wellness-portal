@@ -7,7 +7,7 @@
 // convenience rather than the thing keeping them out.
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from './lib/session';
-import { getRunnerHistory, logout, type Supplies, type Visit } from './lib/api';
+import { getRunnerHistory, logout, type Visit } from './lib/api';
 import type { PortalSnapshot } from '../data/portal-data';
 import { Icon, type IconName } from './Icons';
 import MyRoutes from './MyRoutes';
@@ -106,7 +106,7 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
 
 /** Their own work: the visits they recorded, newest first. Saved records only, never a forecast. */
 function History() {
-  const [data, setData] = useState<{ visits: Visit[]; materials: Record<string, Supplies> } | null>(null);
+  const [data, setData] = useState<{ visits: Visit[]; rounds: Record<string, string> } | null>(null);
   const [error, setError] = useState('');
   const load = useCallback(() => {
     setError('');
@@ -130,12 +130,14 @@ function History() {
     {!error && data && (!data.visits.length
       ? <div className="rr-state">
           <h2>Nothing recorded yet.</h2>
-          <p>When you finish a visit it appears here — who you spoke to, how it went, and what you
-            dropped. Nothing is filled in for you.</p>
+          <p>When you finish a visit it appears here — who you spoke to, how it went, what you
+            dropped and which route it was on. These are the visits you recorded; your practice
+            keeps its own record of every visit, which your office can see.</p>
         </div>
       : <ol className="rr-history">
           {data.visits.map(visit => {
-            const dropped = data.materials[visit.id];
+            const dropped = visit.dropped;
+            const on = visit.roundId ? data.rounds[visit.roundId] : null;
             return <li key={visit.id}>
               <div className="rr-history-top">
                 <strong>{visit.businessName}</strong>
@@ -145,6 +147,7 @@ function History() {
                 {visit.spokeWith ? ` · spoke with ${visit.spokeWith}${visit.contactRole ? `, ${visit.contactRole}` : ''}` : ''}
                 {visit.materials ? ` · ${visit.materials} materials dropped` : ''}
                 {dropped ? ` (${dropped.flyers} flyers, ${dropped.treats} treats, ${dropped.cards} cards)` : ''}
+                {on ? ` · on your ${dayLabel(on)} route` : ''}
                 {visit.edited ? ' · corrected' : ''}</p>
               {visit.note && <p>“{visit.note}”</p>}
               {visit.followUpOn && <p>Follow up on {dayLabel(visit.followUpOn)}.</p>}

@@ -27,8 +27,8 @@ import {
   type Supplies, type Visit,
 } from './lib/api';
 import {
-  addDays, clockOf, durationLabel, isoOf, itemAddress, itemName, longDate, mondayOf, planRoute,
-  shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE, type PlannedItem,
+  addDays, attributeVisits, clockOf, durationLabel, isoOf, itemAddress, itemName, longDate,
+  mondayOf, planRoute, shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE, type PlannedItem,
 } from './lib/route-math';
 import { Icon, type IconName } from './Icons';
 import GuidedVisit, { type VisitSubmission } from './GuidedVisit';
@@ -98,12 +98,18 @@ export default function MyRoutes({ today }: { today: string }) {
   const route = data?.routes.find(r => r.date === selected) ?? null;
   const items = pending && route && pending.roundId === route.id ? pending.items : route?.items ?? [];
 
+  // Which round each recorded visit belongs to. Worked out across every route at once, because
+  // the same business can be on more than one of them and a visit belongs to exactly one.
+  const attributed = useMemo(
+    () => attributeVisits(data?.routes ?? [], data?.visits ?? []),
+    [data]);
+
   const plan = useMemo(() => route
     ? planRoute({ ...route, items }, data?.visits ?? [], {
-        clinic: data?.clinic ?? null, today,
+        clinic: data?.clinic ?? null, today, attributed,
         nowMinutes: new Date().getHours() * 60 + new Date().getMinutes(),
       })
-    : null, [route, items, data, today]);
+    : null, [route, items, data, today, attributed]);
 
   const done = useMemo(() => new Set((plan?.items ?? []).filter(i => i.done).map(i => refOf(i.item))), [plan]);
 
@@ -149,6 +155,7 @@ export default function MyRoutes({ today }: { today: string }) {
     const nextId = after && after.item.kind === 'business' ? after.item.business.id : null;
     const save = async (draft: VisitSubmission) => {
       const result = await recordRunnerVisit({
+        roundId: route.id,
         businessId: draft.businessId, visitedOn: draft.visitedOn, spokeWith: draft.spokeWith,
         contactRole: draft.contactRole, outcome: draft.outcome,
         dropped: draft.dropped ?? { flyers: 0, treats: 0, cards: 0 },
@@ -164,7 +171,7 @@ export default function MyRoutes({ today }: { today: string }) {
           businessId={visiting}
           today={today}
           staffName={data?.runner.name ?? null}
-          load={getRunnerBusiness}
+          load={id => getRunnerBusiness(route.id, id)}
           save={save}
           materials={{ remaining: route.remaining, confirmed: route.supplies.packed !== null }}
           onClose={() => { setVisiting(null); void load(); }}
@@ -242,7 +249,7 @@ export default function MyRoutes({ today }: { today: string }) {
         <div className="rr-week-grid">
           {days.map(day => <Day key={day} day={day} today={today} current={day === selected}
             route={data.routes.find(r => r.date === day) ?? null}
-            visits={data.visits}
+            visits={data.visits} attributed={attributed}
             onPick={() => { setSelected(day); setPicked(true); }}/>)}
         </div>
       </section>
@@ -455,10 +462,11 @@ function Chip({ icon, label, value }: { icon: IconName; label: string; value: st
 }
 
 /** One day in the week strip. Touch-friendly, and it says what is on the day without opening it. */
-function Day({ day, today, current, route, visits, onPick }: {
-  day: string; today: string; current: boolean; route: RunnerRoute | null; visits: Visit[]; onPick: () => void;
+function Day({ day, today, current, route, visits, attributed, onPick }: {
+  day: string; today: string; current: boolean; route: RunnerRoute | null; visits: Visit[];
+  attributed: Map<string, string>; onPick: () => void;
 }) {
-  const plan = route ? planRoute(route, visits, { today }) : null;
+  const plan = route ? planRoute(route, visits, { today, attributed }) : null;
   return <button type="button" className={`rr-day ${current ? 'is-current' : ''}`}
     aria-pressed={current} onClick={onPick}>
     <span className="rr-day-top">

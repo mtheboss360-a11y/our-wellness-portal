@@ -192,6 +192,8 @@ export const packedInput = z.object({
  * three counts up, so `visits.materials` and the breakdown behind it cannot disagree.
  */
 export const runnerVisitInput = z.object({
+  /** The round the screen opened this visit from. Checked against the caller's own rounds. */
+  roundId: z.string().min(1).max(80),
   businessId: z.string().min(1).max(80),
   visitedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   spokeWith: z.string().trim().max(120).default(''),

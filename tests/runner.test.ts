@@ -52,12 +52,24 @@ const ids = (store: Store, clinic: string) =>
   Object.fromEntries(store.outreach.businesses(clinic).map(b => [b.name, b.id]));
 const who = (store: Store, username: string, displayName: string) => ({ id: userId(store, username), displayName });
 
-function booked(store: Store, names: string[], staff = 'Alexis', date = '2026-10-27') {
+function booked(store: Store, names: string[], staff = 'Alexis', date = '2026-10-27',
+  assignTo: string | null = 'alexis') {
   const id = ids(store, 'hyline');
   const round = store.outreach.planRound('hyline', {
     date, start: '09:00', staff, businessIds: names.map(n => id[n]),
   });
+  if (assignTo) store.runner.assignRound('hyline', round.id, userId(store, assignTo));
   return round.id;
+}
+
+/** Record a visit the way the planner does: on a named round, by a named login. */
+function recorded(store: Store, roundId: string, business: string, by: string, on: string,
+  dropped?: { flyers: number; treats: number; cards: number }) {
+  return store.outreach.recordVisit('hyline', {
+    businessId: ids(store, 'hyline')[business], staff: by, visitedOn: on, spokeWith: '',
+    contactRole: '', outcome: 'interested', materials: 0, note: '', nextAction: '',
+    followUpOn: null, roundId, recordedBy: userId(store, by.toLowerCase()), dropped,
+  });
 }
 
 test('a runner is allowed their own endpoints and refused everything else', () => {
@@ -121,13 +133,41 @@ test('a runner sees the rounds assigned to them and nobody else’s', () => {
   store.close();
 });
 
-test('an unassigned round falls back to the name it was booked under, and only a real name', () => {
+test('a round booked under a matching name is nobody’s until it is claimed', () => {
   const store = world();
-  const round = booked(store, ['Karve Pilates'], 'Alexis');
+  // Two people called Alexis at the same practice. A name is not an identity, so neither of
+  // them is handed a round booked under "Alexis" by the name alone.
+  store.createClient('hyline', 'Hyline Dental', 'alexis2', 'runner-pw', 'b', false,
+    { displayName: 'Alexis', role: 'route_runner' });
+  const round = booked(store, ['Karve Pilates'], 'Alexis', '2026-10-27', null);
+  for (const login of ['alexis', 'alexis2']) {
+    assert.deepEqual(store.runner.assignedRounds('hyline', who(store, login, 'Alexis')), [],
+      `${login} was handed a round by name`);
+  }
+
+  // It is offered to whoever is looking, and only assigning it hands it over.
+  assert.deepEqual(store.runner.claimableRounds('hyline', 'Alexis').map(r => r.id), [round]);
+  store.runner.assignRound('hyline', round, userId(store, 'alexis'));
   assert.deepEqual(store.runner.assignedRounds('hyline', who(store, 'alexis', 'Alexis')).map(r => r.id), [round]);
-  assert.deepEqual(store.runner.assignedRounds('hyline', who(store, 'jordan', 'Jordan')), []);
-  // An account with no name on it inherits nothing, however many rounds have no runner.
-  assert.deepEqual(store.runner.assignedRounds('hyline', { id: userId(store, 'hylinedental'), displayName: '' }), []);
+  assert.deepEqual(store.runner.assignedRounds('hyline', who(store, 'alexis2', 'Alexis')), [],
+    'the other Alexis still has nothing');
+  assert.deepEqual(store.runner.claimableRounds('hyline', 'Alexis'), [], 'and it is no longer claimable');
+  store.close();
+});
+
+test('a visit belongs to the round it was recorded on, not to every round with that business', () => {
+  const store = world();
+  const tuesday = booked(store, ['Karve Pilates', 'Yoga Cave'], 'Alexis', '2026-10-27');
+  const friday = booked(store, ['Karve Pilates'], 'Alexis', '2026-10-30');
+  const visit = recorded(store, friday, 'Karve Pilates', 'Alexis', '2026-10-30',
+    { flyers: 5, treats: 0, cards: 0 });
+
+  assert.equal(visit.visit.roundId, friday);
+  assert.equal(visit.visit.materials, 5, 'the total is the sum of the breakdown');
+  assert.deepEqual(visit.visit.dropped, { flyers: 5, treats: 0, cards: 0 });
+  // The materials went to Friday's round and to no other.
+  assert.deepEqual(store.runner.droppedOnRound('hyline', friday), { flyers: 5, treats: 0, cards: 0 });
+  assert.deepEqual(store.runner.droppedOnRound('hyline', tuesday), { flyers: 0, treats: 0, cards: 0 });
   store.close();
 });
 
@@ -304,12 +344,7 @@ test('what is left in the car is the confirmed load, plus pickups, less what was
   const added = store.runner.addPickup('hyline', round, PICKUP, me);
   store.runner.collectPickup('hyline', round, added.items.find(i => i.kind === 'pickup')!.id, me);
 
-  const visit = store.outreach.recordVisit('hyline', {
-    businessId: ids(store, 'hyline')['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27',
-    spokeWith: 'Owner', contactRole: 'Owner', outcome: 'interested', materials: 14,
-    note: '', nextAction: '', followUpOn: null,
-  });
-  store.runner.saveVisitMaterials('hyline', visit.visit.id, round, { flyers: 10, treats: 4, cards: 0 });
+  recorded(store, round, 'Karve Pilates', 'Alexis', '2026-10-27', { flyers: 10, treats: 4, cards: 0 });
 
   const packed = store.runner.round('hyline', round)!.supplies.packed;
   assert.deepEqual(store.runner.droppedOnRound('hyline', round), { flyers: 10, treats: 4, cards: 0 });
@@ -322,11 +357,7 @@ test('confirming fewer supplies than have already been dropped is refused', () =
   const round = booked(store, ['Karve Pilates']);
   const me = who(store, 'alexis', 'Alexis');
   store.runner.confirmPacked('hyline', round, { flyers: 40, treats: 0, cards: 0 }, me);
-  const visit = store.outreach.recordVisit('hyline', {
-    businessId: ids(store, 'hyline')['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27',
-    spokeWith: '', contactRole: '', outcome: 'materials', materials: 30, note: '', nextAction: '', followUpOn: null,
-  });
-  store.runner.saveVisitMaterials('hyline', visit.visit.id, round, { flyers: 30, treats: 0, cards: 0 });
+  recorded(store, round, 'Karve Pilates', 'Alexis', '2026-10-27', { flyers: 30, treats: 0, cards: 0 });
   assert.throws(() => store.runner.confirmPacked('hyline', round, { flyers: 5, treats: 0, cards: 0 }, me,
     { dropped: store.runner.droppedOnRound('hyline', round) }), /already recorded 30 flyers/);
   store.close();
@@ -345,6 +376,7 @@ test('the planner records one visit, with the total it adds up to, and a retry a
   const signIn = store.signIn('alexis', 'runner-pw', '127.0.0.1');
   const headers = { Cookie: `owo-local-session=${signIn.token}`, Origin: 'http://portal.test', 'Content-Type': 'application/json' };
   const draft = {
+    roundId: round,
     businessId: ids(store, 'hyline')['Karve Pilates'], visitedOn: '2026-10-27', spokeWith: 'Dana',
     contactRole: 'Manager', outcome: 'interested', dropped: { flyers: 6, treats: 2, cards: 1 },
     note: 'Keen on a card holder', nextAction: 'Drop more cards', followUpOn: null,
@@ -370,11 +402,33 @@ test('the planner records one visit, with the total it adds up to, and a retry a
     assert.match((await greedy.json() as { error: string }).error, /34 flyers left/);
     assert.equal(store.outreach.visits('hyline').length, 1);
 
-    // A business on nobody's route is refused outright.
+    // A business that is not on the named route is refused outright, even though it is on this
+    // practice's list and even though the route is the runner's own.
     const elsewhere = await fetch(base + '/api/runner/visit', { method: 'POST', headers, body: JSON.stringify({
       ...draft, businessId: ids(store, 'hyline')['Upscale Male'], clientRef: 'qqqq2222wwww',
       dropped: { flyers: 0, treats: 0, cards: 0 } }) });
     assert.equal(elsewhere.status, 403);
+
+    // A round belonging to somebody else is refused whatever business is named.
+    const theirs = store.outreach.planRound('hyline', {
+      date: '2026-10-29', start: '09:00', staff: 'Jordan',
+      businessIds: [ids(store, 'hyline')['Karve Pilates']],
+    });
+    store.runner.assignRound('hyline', theirs.id, userId(store, 'jordan'));
+    const borrowed = await fetch(base + '/api/runner/visit', { method: 'POST', headers, body: JSON.stringify({
+      ...draft, roundId: theirs.id, clientRef: 'mmmm3333nnnn',
+      dropped: { flyers: 0, treats: 0, cards: 0 } }) });
+    assert.equal(borrowed.status, 403);
+
+    // And the history is what this login recorded, not what happened at businesses it visits.
+    store.outreach.recordVisit('hyline', {
+      businessId: ids(store, 'hyline')['Yoga Cave'], staff: 'Somebody else', visitedOn: '2026-10-27',
+      spokeWith: '', contactRole: '', outcome: 'materials', materials: 0, note: '',
+      nextAction: '', followUpOn: null, roundId: round, recordedBy: userId(store, 'jordan'),
+    });
+    const history = await (await fetch(base + '/api/runner/history', { headers })).json() as { visits: Array<{ businessName: string }> };
+    assert.deepEqual(history.visits.map(v => v.businessName), ['Karve Pilates'],
+      'only the visits this login recorded');
   } finally {
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     store.close();
