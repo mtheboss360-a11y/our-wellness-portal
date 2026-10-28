@@ -3,7 +3,7 @@ import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { z } from 'zod';
 import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput, recordVisitInput, editVisitInput, saveScriptInput } from './validation';
-import { packedInput, pickupActionInput, pickupInput, reorderRouteInput, runnerVisitInput } from './validation';
+import { packedInput, pickupActionInput, pickupInput, reorderRouteInput, runnerVisitInput, assignRoundInput } from './validation';
 import { RoundConflict, SUPPLY_KEYS, type RunnerRound, type Supplies } from './runner';
 import { attributeVisits } from '../src/lib/route-math';
 import { DEFAULT_RADIUS_MILES } from './network/config';
@@ -409,7 +409,41 @@ export function createPortalServer(options: Options) {
               rounds: store.outreach.rounds(clinic.id),
               visits: store.outreach.visits(clinic.id),
               clinic: where ? { lat: where.lat, lng: where.lng, label: where.label } : null,
+              // Who this practice could send a round to. Names and ids only — no password
+              // material, and nobody from another practice, because the clinic is the session's.
+              runners: store.db.prepare(
+                `SELECT id, COALESCE(NULLIF(display_name,''),email) AS name FROM users
+                 WHERE clinic_id=? AND role='route_runner' ORDER BY name`).all(clinic.id),
             });
+            return;
+          }
+          // SEND A ROUND TO A RUNNER. The office's call, which is why it sits behind
+          // mayOwnPractice: a route runner reaching this endpoint is refused, so nobody can
+          // hand themselves somebody else's day by posting to it.
+          if (url.pathname === '/api/outreach/round/assign' && request.method === 'POST') {
+            if (!store.mayOwnPractice(role)) { refuse('send a round to a runner'); return; }
+            let input;
+            try { input = assignRoundInput.safeParse(await body(request)); }
+            catch { json(response, 400, { error: 'That request could not be read.' }); return; }
+            if (!input.success) { json(response, 400, { error: 'That round could not be sent.' }); return; }
+            // assignRound checks the round and the login both belong to this clinic. The role
+            // is checked here as well, because assigning a round to an owner would put it on a
+            // planner nobody opens and read to the office as though it had been sent.
+            if (input.data.runnerId) {
+              const runner = store.db.prepare('SELECT role FROM users WHERE id=? AND clinic_id=?')
+                .get(input.data.runnerId, clinic.id) as { role: string | null } | undefined;
+              if (!runner) { json(response, 404, { error: 'That login is not on your practice.' }); return; }
+              if (runner.role !== 'route_runner') {
+                json(response, 400, { error: 'That login is not a route runner, so the round would not reach a planner.' });
+                return;
+              }
+            }
+            try {
+              store.runner.assignRound(clinic.id, input.data.roundId, input.data.runnerId);
+              // Deliberately not the round itself: the runner's shape carries the visit
+              // scripts, and this is an owner. The screen refetches its own view instead.
+              json(response, 200, { ok: true });
+            } catch (error) { json(response, 400, { error: error instanceof Error ? error.message : 'That round could not be sent.' }); }
             return;
           }
           if (url.pathname === '/api/outreach/visits' && request.method === 'GET') {

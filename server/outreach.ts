@@ -492,13 +492,19 @@ export function openOutreach(db: DatabaseSync) {
 
   /** One day's work: the stops in order, with everything the agenda needs to lay them out. */
   function rounds(clinicId: string) {
-    const rows = db.prepare(`SELECT id,on_date,start_at,staff,status,note,demo FROM rounds
-      WHERE clinic_id=? ORDER BY on_date DESC`).all(clinicId) as Array<{
+    // The runner is joined in so the office can see at a glance which rounds are still sitting
+    // with nobody. `staff` is a name typed when the round was booked; `runner_id` is the login
+    // that actually holds it, and only the second one puts it on somebody's planner.
+    const rows = db.prepare(`SELECT r.id,r.on_date,r.start_at,r.staff,r.status,r.note,r.demo,r.runner_id,
+        COALESCE(NULLIF(u.display_name,''),u.email,'') AS runner_name
+      FROM rounds r LEFT JOIN users u ON u.id=r.runner_id
+      WHERE r.clinic_id=? ORDER BY r.on_date DESC`).all(clinicId) as Array<{
         id: string; on_date: string; start_at: string; staff: string; status: string;
-        note: string; demo: number | null }>;
+        note: string; demo: number | null; runner_id: string | null; runner_name: string }>;
     return rows.map(r => ({
       id: r.id, date: r.on_date, start: r.start_at, staff: r.staff,
       status: r.status as 'scheduled' | 'done' | 'draft', note: r.note, demo: r.demo,
+      runnerId: r.runner_id, runnerName: r.runner_name,
       stops: (db.prepare(`SELECT ${BUSINESS_COLUMNS.split(',').map(c => 'b.' + c).join(',')}
           FROM round_stops s JOIN businesses b ON b.id=s.business_id
           WHERE s.round_id=? AND s.clinic_id=? ORDER BY s.position`)

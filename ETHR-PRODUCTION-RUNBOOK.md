@@ -26,8 +26,8 @@ npm run list-logins
 Pick a real password and type it in place of the dots. Do not reuse one of yours.
 
 ```
-INITIAL_PASSWORD='…' npm run create-client -- --clinic ethr-lab --name "ETHR LAB" --username yelena --plan b
-npm run set-role -- --username yelena --role owner
+INITIAL_PASSWORD='…' npm run create-client -- --clinic ethr-lab --name "ETHR LAB" --username ethradmin --plan b
+npm run set-role -- --username ethradmin --role owner
 ```
 
 ## 2. Where ETHR is

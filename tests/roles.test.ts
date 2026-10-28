@@ -215,3 +215,103 @@ test('a business name too long for a bubble is cut, not spilled', async () => {
   assert.ok(second && second.length <= 18, `the second line is cut, got ${second?.length}`);
   assert.ok(second!.endsWith('…'), 'and says it was cut');
 });
+
+// ── SENDING A ROUND TO A RUNNER ────────────────────────────────────────────
+// The office's call. These drive the endpoint rather than the store for the reason at the top
+// of this file: hiding the button would leave the fetch behind it open to anybody.
+
+/** A route runner, a second practice, and a booked round to send. */
+async function withRound() {
+  const p = await portal();
+  p.store.createClient('hyline', 'Hyline Dental', 'runner', 'pw-runner-123', 'b', false, { displayName: 'Jo' });
+  p.store.setRole('runner', 'route_runner');
+  p.store.createClient('rival', 'Rival Rooms', 'rival', 'pw-rival-1234', 'b');
+  p.store.outreach.release('rival', 'r1', 'Release 1', 't', [{
+    name: 'Someone Else’s Studio', category: 'Pilates studio', address: '9 Other Road, Aurora, IL',
+    script: script(),
+  }], false);
+
+  const round = p.store.outreach.planRound('hyline', {
+    date: '2026-11-04', start: '09:00', staff: 'Jo', businessIds: [p.businessId],
+  });
+  const theirs = p.store.outreach.planRound('rival', {
+    date: '2026-11-04', start: '09:00', staff: 'Someone', businessIds: [p.store.outreach.businesses('rival')[0].id],
+  });
+  const runnerId = (p.store.db.prepare('SELECT id FROM users WHERE email=?').get('runner') as { id: string }).id;
+  return { ...p, roundId: round.id, otherClinicRoundId: theirs.id, runnerId };
+}
+
+test('an owner sends a round and it lands on that runner’s planner', async () => {
+  const p = await withRound();
+  const owner = await p.signIn('owner', 'pw-owner-1234');
+
+  const before = await (await p.get('/api/outreach/rounds', owner)).json();
+  assert.equal(before.rounds[0].runnerId, null, 'it starts with nobody holding it');
+  assert.deepEqual(before.runners.map((r: { name: string }) => r.name), ['Jo'], 'the owner is offered their own runner');
+
+  const res = await p.post('/api/outreach/round/assign', owner, { roundId: p.roundId, runnerId: p.runnerId });
+  assert.equal(res.status, 200);
+
+  const after = await (await p.get('/api/outreach/rounds', owner)).json();
+  assert.equal(after.rounds[0].runnerId, p.runnerId);
+  assert.equal(after.rounds[0].runnerName, 'Jo', 'and the office can read who has it');
+
+  // The point of the button: the runner now sees it when they sign in.
+  const runner = await p.signIn('runner', 'pw-runner-123');
+  const routes = await (await p.get('/api/runner/routes', runner)).json();
+  assert.equal(routes.routes.length, 1, 'the round reached the planner');
+  assert.equal(routes.routes[0].id, p.roundId);
+  await p.close();
+});
+
+test('sending a round back takes it off the planner again', async () => {
+  const p = await withRound();
+  const owner = await p.signIn('owner', 'pw-owner-1234');
+  await p.post('/api/outreach/round/assign', owner, { roundId: p.roundId, runnerId: p.runnerId });
+  const res = await p.post('/api/outreach/round/assign', owner, { roundId: p.roundId, runnerId: null });
+  assert.equal(res.status, 200);
+
+  const runner = await p.signIn('runner', 'pw-runner-123');
+  const routes = await (await p.get('/api/runner/routes', runner)).json();
+  assert.equal(routes.routes.length, 0, 'it is nobody’s again');
+  await p.close();
+});
+
+test('a route runner cannot send a round to anybody, including themselves', async () => {
+  const p = await withRound();
+  const runner = await p.signIn('runner', 'pw-runner-123');
+  const res = await p.post('/api/outreach/round/assign', runner, { roundId: p.roundId, runnerId: p.runnerId });
+  assert.equal(res.status, 403);
+
+  const owner = await p.signIn('owner', 'pw-owner-1234');
+  const after = await (await p.get('/api/outreach/rounds', owner)).json();
+  assert.equal(after.rounds[0].runnerId, null, 'and nothing was written');
+  await p.close();
+});
+
+test('a round cannot be sent to a login that is not a route runner', async () => {
+  const p = await withRound();
+  const owner = await p.signIn('owner', 'pw-owner-1234');
+  const repId = (p.store.db.prepare('SELECT id FROM users WHERE email=?').get('rep') as { id: string }).id;
+  const res = await p.post('/api/outreach/round/assign', owner, { roundId: p.roundId, runnerId: repId });
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /not a route runner/);
+  await p.close();
+});
+
+test('an owner cannot send another practice’s round, nor send to another practice’s login', async () => {
+  const p = await withRound();
+  const owner = await p.signIn('owner', 'pw-owner-1234');
+
+  const borrowed = await p.post('/api/outreach/round/assign', owner,
+    { roundId: p.otherClinicRoundId, runnerId: p.runnerId });
+  assert.equal(borrowed.status, 400, 'a round id from another practice is not theirs to send');
+
+  const rivalId = (p.store.db.prepare('SELECT id FROM users WHERE email=?').get('rival') as { id: string }).id;
+  const stranger = await p.post('/api/outreach/round/assign', owner, { roundId: p.roundId, runnerId: rivalId });
+  assert.equal(stranger.status, 404, 'and a login from another practice is not found');
+
+  const rivalRounds = p.store.outreach.rounds('rival');
+  assert.equal(rivalRounds[0].runnerId, null, 'the other practice’s round is untouched');
+  await p.close();
+});

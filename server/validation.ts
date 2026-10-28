@@ -122,6 +122,16 @@ export const editVisitInput = z.object({
   followUpOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 }).strict();
 
+/**
+ * THE OFFICE SENDING A ROUND TO SOMEBODY. The clinic is absent on purpose, as everywhere else
+ * here: it is resolved from the session cookie, so a borrowed round id on another practice's
+ * account is simply not found. A null runner takes the round back off the planner.
+ */
+export const assignRoundInput = z.object({
+  roundId: z.string().min(1).max(80),
+  runnerId: z.string().min(1).max(80).nullable(),
+}).strict();
+
 export const saveScriptInput = z.object({
   businessId: z.string().min(1).max(80),
   script: z.object({

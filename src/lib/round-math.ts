@@ -29,6 +29,10 @@ export type RoundStatus = 'scheduled' | 'done' | 'draft';
 export type Round = {
   id: string; date: string; start: string; staff: string;
   status: RoundStatus; note: string; demo: number | null; stops: Business[];
+  /** The login this round was sent to, or null while it is still only booked. */
+  runnerId: string | null;
+  /** That person's name, for the office to read. Empty when nobody holds it. */
+  runnerName: string;
 };
 
 export type PlannedStop = {

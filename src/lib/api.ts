@@ -57,9 +57,16 @@ export const editVisit = (input: { visitId: string } & Partial<VisitDraft>) =>
 // Rounds: a day's work built from the released businesses.
 import type { Round } from './round-math';
 export type { Round };
+export type Runner = { id: string; name: string };
+
 export const getRounds = () => request<{
   rounds: Round[]; visits: Visit[]; clinic: { lat: number; lng: number; label: string } | null;
+  runners: Runner[];
 }>('/api/outreach/rounds');
+
+/** Put a booked round on a runner's planner, or pass null to take it back off. */
+export const assignRound = (roundId: string, runnerId: string | null) =>
+  request<{ ok: true }>('/api/outreach/round/assign', 'POST', { roundId, runnerId });
 
 // THE ROUTE RUNNER'S PLANNER. Every call goes to /api/runner/*, where the server decides which
 // routes are this person's; the browser never sends a clinic, a user or an allocation.

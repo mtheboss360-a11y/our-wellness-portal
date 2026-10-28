@@ -1345,6 +1345,31 @@
 .own-route-main strong{ font:650 var(--t-sub)/1.3 var(--font); color:var(--n-900); }
 .own-route-main span{ font:450 var(--t-tiny)/1.4 var(--font); color:var(--n-500); }
 
+/* Sending a round to a runner. The control sits under the route it belongs to so the two
+   read as one row, which is why the rule between rounds moves to the list item. Indented to
+   the route's text column on a wide screen, flush left on a phone where that margin costs
+   more than the alignment is worth. */
+.own-routes li{ border-bottom:1px solid var(--n-100); }
+.own-routes li:last-child{ border-bottom:0; }
+.own-routes li .own-route{ border-bottom:0; }
+.own-route-send{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--s-2);
+  padding:0 var(--s-2) var(--s-3) calc(34px + var(--s-3) + var(--s-2)); }
+.own-route-with{ display:inline-flex; align-items:center; gap:6px;
+  font:500 var(--t-tiny)/1.4 var(--font); color:var(--forest-3); }
+.own-route-none{ color:var(--n-500); font-weight:450; }
+.own-send{ border:0; border-radius:9px; padding:7px 14px; background:var(--forest-3); color:#fff;
+  font:600 var(--t-tiny)/1 var(--font); }
+.own-send:hover:not(:disabled){ background:var(--forest-2); }
+.own-send-undo{ border:1px solid var(--n-200); border-radius:9px; padding:6px 12px;
+  background:none; color:var(--n-600); font:500 var(--t-tiny)/1 var(--font); }
+.own-send-undo:hover:not(:disabled){ background:var(--n-25); }
+.own-send-pick select{ border:1px solid var(--n-200); border-radius:9px; padding:6px 10px;
+  background:none; color:var(--n-900); font:500 var(--t-tiny)/1 var(--font); }
+.own-send-error{ margin:0 var(--s-4) var(--s-3); padding:var(--s-2) var(--s-3); border-radius:10px;
+  background:var(--stop-fill); border:1px solid var(--stop-line); color:var(--stop-ink);
+  font:500 var(--t-tiny)/1.4 var(--font); }
+@media (max-width:560px){ .own-route-send{ padding-left:var(--s-2); } }
+
 /* ── The orbit ───────────────────────────────────────────────────────────
    Positioned cards over one SVG ring. The stage keeps a fixed aspect so the
    percentage positions hold at any width, and a floor width so a phone pans

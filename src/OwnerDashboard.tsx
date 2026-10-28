@@ -14,7 +14,7 @@
 //   - No bubble graph. A circle big enough to hold a business name is a large circle, and
 //     twenty-five of them crowd. The network here is an orbit of name cards instead.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getRounds, getBusinesses, type Business, type Round, type Visit } from './lib/api';
+import { getRounds, getBusinesses, assignRound, type Business, type Round, type Runner, type Visit } from './lib/api';
 import { planRound, clockOf, durationLabel, milesFrom } from './lib/round-math';
 import { staffMonth, owedACall, activitySeries } from './lib/staff-dashboard';
 import { Icon, type IconName } from './Icons';
@@ -36,18 +36,34 @@ const dayLabel = (iso: string) => new Date(`${iso}T12:00:00Z`)
 export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
   clinicName: string; today: string; ownerName?: string | null; onGo: (view: View) => void;
 }) {
-  const [data, setData] = useState<{ rounds: Round[]; visits: Visit[]; businesses: Business[]; clinic: { lat: number; lng: number } | null } | null>(null);
+  const [data, setData] = useState<{ rounds: Round[]; visits: Visit[]; businesses: Business[]; clinic: { lat: number; lng: number } | null; runners: Runner[] } | null>(null);
   const [error, setError] = useState('');
   const [radius, setRadius] = useState<Radius>(5);
   const [openRoute, setOpenRoute] = useState<string | null>(null);
   const [focus, setFocus] = useState<MetricKey>('accounts');
+  // The round currently being sent, so its own button says so rather than the whole list
+  // going quiet, and a second tap cannot send it twice.
+  const [sending, setSending] = useState<string | null>(null);
+  const [sendError, setSendError] = useState('');
+  // Which runner is chosen per round, only used when a practice has more than one.
+  const [pick, setPick] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
     setError('');
     return Promise.all([getRounds(), getBusinesses()])
-      .then(([r, b]) => setData({ rounds: r.rounds, visits: r.visits, businesses: b.businesses, clinic: r.clinic }))
+      .then(([r, b]) => setData({ rounds: r.rounds, visits: r.visits, businesses: b.businesses, clinic: r.clinic, runners: r.runners }))
       .catch(e => setError(e instanceof Error ? e.message : 'We couldn’t open your dashboard.'));
   }, []);
+
+  // Send a booked round to a runner, or take it back. The server decides whether this account
+  // may do it; this only asks and then reloads from the server rather than guessing the result.
+  const send = useCallback(async (roundId: string, runnerId: string | null) => {
+    setSending(roundId);
+    setSendError('');
+    try { await assignRound(roundId, runnerId); await load(); }
+    catch (e) { setSendError(e instanceof Error ? e.message : 'That round could not be sent.'); }
+    finally { setSending(null); }
+  }, [load]);
   useEffect(() => { void load(); }, [load]);
 
   // Within the radius, by straight-line distance from the practice. A business with no map
@@ -188,6 +204,8 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
           </div>
         </div>
 
+        {sendError && <p className="own-send-error" role="alert">{sendError}</p>}
+
         {scheduled.length === 0
           ? <p className="own-empty">No route is scheduled. When one is booked it appears here, and
               selecting it opens the full route.</p>
@@ -198,6 +216,9 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
                   ? 'Completed'
                   : plan.completed > 0 ? 'In progress'
                   : r.date < today ? 'Not recorded' : 'Scheduled';
+                const runners = data.runners;
+                const chosen = pick[r.id] ?? runners[0]?.id ?? '';
+                const busy = sending === r.id;
                 return <li key={r.id}>
                   <button className="own-route" onClick={() => setOpenRoute(r.id)}>
                     <span className="own-route-icon" aria-hidden="true"><Icon name="route" size={15}/></span>
@@ -208,6 +229,40 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
                     </span>
                     <span className={`dash-pill dash-pill-${state === 'Completed' ? 'good' : state === 'In progress' ? 'warn' : 'neutral'}`}>{state}</span>
                   </button>
+
+                  {/* Sending is its own control beside the route, not inside it: a button
+                      within a button is neither valid nor reachable by keyboard. */}
+                  <div className="own-route-send">
+                    {r.runnerId
+                      ? <>
+                          <span className="own-route-with">
+                            <Icon name="check" size={13}/> On {r.runnerName || 'a runner'}’s planner
+                          </span>
+                          <button type="button" className="own-send-undo" disabled={busy}
+                            onClick={() => void send(r.id, null)}>
+                            {busy ? 'Taking back…' : 'Take back'}
+                          </button>
+                        </>
+                      : runners.length === 0
+                        ? <span className="own-route-with own-route-none">
+                            Nobody to send it to yet — this practice has no route runner login.
+                          </span>
+                        : <>
+                            {runners.length > 1 && <label className="own-send-pick">
+                              <span className="sr-only">Who walks {dayLabel(r.date)}</span>
+                              <select value={chosen} disabled={busy}
+                                onChange={e => setPick(p => ({ ...p, [r.id]: e.target.value }))}>
+                                {runners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                              </select>
+                            </label>}
+                            <button type="button" className="own-send" disabled={busy || !chosen}
+                              onClick={() => void send(r.id, chosen)}>
+                              {busy ? 'Sending…' : runners.length > 1
+                                ? 'Send to planner'
+                                : `Send to ${runners[0].name}`}
+                            </button>
+                          </>}
+                  </div>
                 </li>;
               })}
             </ul>}
