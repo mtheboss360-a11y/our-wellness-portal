@@ -1,0 +1,117 @@
+{
+  "id": "ethr-release-1",
+  "name": "Release 1 — five verified training and performance businesses",
+  "notes": [
+    "Names, addresses and phone numbers come from ~/medspa-crm/ethr-partner-kit/kit.json, the ETHR partner kit Mustafa built and verified. Nothing here was looked up or filled in from memory.",
+    "No websites: the partner kit does not record one for any of these five, so the field is left out rather than guessed.",
+    "No coordinates: lat/lng are left out so geocode-release can resolve them through the portal's Places integration. The portal routes by street address until then.",
+    "All five start at 'new'. None has been walked in on, and no visit, contact or partnership is pre-filled.",
+    "Synaptyx and Core1 are healthcare businesses (healthcare: true in the kit). Every script here names equipment and session length only. Nothing claims what cryotherapy, compression or red light does to a body.",
+    "Nobody is paid per referral. No script offers or implies a commission, a kickback or a fee.",
+    "The offer wording is ETHR's own, unchanged: 'Your first visit for $25: cryotherapy, compression or red light' and 'A free cryotherapy session at ETHR LAB, every month'.",
+    "Equipment wording is taken from the partner kit: a whole-body cryotherapy chamber, about three minutes; a Ballancer Pro compression suit; red light.",
+    "Legacy Physical Therapy is NOT in this release. Mustafa visited it and handed out materials, but the partner kit holds no address or phone for it and a web search found no such business in these towns, so it is left out until he supplies the address rather than released against a guess."
+  ],
+  "businesses": [
+    {
+      "name": "Synaptyx Health and Performance Systems",
+      "category": "Health and performance clinic",
+      "address": "17W755 Butterfield Rd Ste 103, Oakbrook Terrace, IL 60181",
+      "phone": "(630) 320-6932",
+      "talkingPoint": "Nearest neighbour on Butterfield — a recovery room their athletes can walk into for $25, and a free monthly cryotherapy session for the staff.",
+      "script": {
+        "opening": "Hi, I'm here on behalf of ETHR LAB, the wellness and aesthetics studio on Route 83, about a mile from you. We're introducing ourselves to a few training and performance places nearby. Is the owner or whoever handles partnerships around?",
+        "introduction": "ETHR LAB is at 1S550 IL-83, Unit A2, in Oakbrook Terrace. We have a whole-body cryotherapy chamber — a session is about three minutes — a Ballancer Pro compression suit, and red light.",
+        "value": "Your athletes already train seriously, and a lot of them are student athletes who are in and out between practices. We'd like to offer your people their first visit for $25: cryotherapy, compression or red light. And for your staff, a free cryotherapy session at ETHR LAB, every month. We'd point our clients your way too — you're the closest performance clinic to us.",
+        "ask": "Could I leave a few brochures where your athletes will see them, and would the owner be open to a short conversation another day?",
+        "objections": {
+          "busy": "No problem — I'll leave these with you. Is there a quieter time of day to catch the owner?",
+          "notInterested": "Understood, thanks for your time. I'll leave a brochure in case it's ever useful.",
+          "alreadyPartnered": "That's good to hear, and we're not asking you to drop anything. This is just a $25 first visit for your people and a free monthly session for your staff. I'll leave a brochure."
+        },
+        "closing": "Thanks very much. I'll note that we spoke and we'll check back in a few weeks.",
+        "followUp": "Hi, I came by a few weeks ago for ETHR LAB, the studio on Route 83. I wanted to see whether the brochures have been any use, and whether anyone has taken up the $25 first visit yet."
+      }
+    },
+    {
+      "name": "Bellbar Strength Lab",
+      "category": "Strength training gym",
+      "address": "810 Burr Oak Dr, Westmont, IL",
+      "phone": "(630) 866-9107",
+      "talkingPoint": "A strength gym whose lifters and student athletes train hard — $25 first visit for members, free monthly cryotherapy session for the coaches.",
+      "script": {
+        "opening": "Hi, I'm with ETHR LAB over in Oakbrook Terrace. We're a wellness studio and we're introducing ourselves to independent strength gyms around here. Is the owner in?",
+        "introduction": "ETHR LAB is on Route 83 in Oakbrook Terrace. We have a whole-body cryotherapy chamber — about three minutes a session — a Ballancer Pro compression suit, and red light.",
+        "value": "Your members train hard, and plenty of the younger ones are student athletes fitting lifts around a season. We'd like to give your people their first visit for $25: cryotherapy, compression or red light. Your coaches get a free cryotherapy session at ETHR LAB every month. And we'd send our clients to you — we don't do strength work, you do.",
+        "ask": "Could I leave some brochures at the front, and would you be open to us doing the same for you?",
+        "objections": {
+          "busy": "Of course — I'll leave these here. When's the slowest hour to come back?",
+          "notInterested": "That's completely fine. Thanks for hearing me out.",
+          "alreadyPartnered": "Makes sense. Nothing exclusive on our side — it's a $25 first visit for your members and a free monthly session for your coaches. I'll leave a brochure."
+        },
+        "closing": "Appreciate your time. I'll make a note and we'll follow up before long.",
+        "followUp": "Hi, I stopped in a while back for ETHR LAB in Oakbrook Terrace. Just checking whether the brochures are still there and whether the owner has a minute."
+      }
+    },
+    {
+      "name": "Core1 Sports Performance & Physical Therapy",
+      "category": "Sports performance and physical therapy clinic",
+      "address": "1426 Brook Dr, Downers Grove, IL",
+      "phone": "(630) 973-8626",
+      "talkingPoint": "Sports performance and PT under one roof, with student athletes in the building — $25 first visit for their athletes, free monthly cryotherapy for staff.",
+      "script": {
+        "opening": "Hi, I'm here for ETHR LAB, a wellness and aesthetics studio in Oakbrook Terrace. We're introducing ourselves to the sports performance places nearby. Who handles partnerships here?",
+        "introduction": "We're at 1S550 IL-83, Unit A2, in Oakbrook Terrace. What we have is equipment: a whole-body cryotherapy chamber, about three minutes a session, a Ballancer Pro compression suit, and red light.",
+        "value": "You see a lot of student athletes, and we'd like to offer the athletes you work with their first visit for $25 — cryotherapy, compression or red light — and give your staff a free cryotherapy session at ETHR LAB every month. We're not a clinic and we don't do what you do; we'd refer to you.",
+        "ask": "Would it be alright to leave brochures where your athletes and their parents will see them?",
+        "objections": {
+          "busy": "No problem at all — here are the brochures. Is there a better morning to catch whoever handles this?",
+          "notInterested": "Understood, thanks for your time.",
+          "alreadyPartnered": "Good to know. We're not asking to replace anything — just a $25 first visit for your athletes and a free monthly session for your staff."
+        },
+        "closing": "Thank you. I'll record that we spoke and we'll check back in.",
+        "followUp": "Hi, I came by for ETHR LAB a few weeks ago — the studio on Route 83 in Oakbrook Terrace. Wanted to see how the brochures have gone and whether anyone's used the $25 first visit."
+      }
+    },
+    {
+      "name": "Jordan's Athletic Center",
+      "category": "Athletic center",
+      "address": "111 Adell Pl, Elmhurst, IL",
+      "phone": "(224) 456-0575",
+      "talkingPoint": "An athletic centre full of student athletes and their parents — the $25 first visit is an easy thing to hand them, plus a free monthly session for the coaching staff.",
+      "script": {
+        "opening": "Hi, I'm with ETHR LAB, a wellness studio over in Oakbrook Terrace. We're introducing ourselves to the independent athletic centres around here. Is the owner or a coach free for a minute?",
+        "introduction": "ETHR LAB is on Route 83 in Oakbrook Terrace, about fifteen minutes from here. We have a whole-body cryotherapy chamber — a session runs about three minutes — a Ballancer Pro compression suit, and red light.",
+        "value": "Your building is full of student athletes going between school, practice and games. We'd like to give your families their first visit for $25: cryotherapy, compression or red light. Your coaches get a free cryotherapy session at ETHR LAB every month. And we'll point people here when they're looking for somewhere for their kid to train.",
+        "ask": "Could I leave brochures for the parents, and is there a board or a desk where they'd actually get seen?",
+        "objections": {
+          "busy": "Totally understand — I'll leave these at the desk. Is there a slower day I could come back?",
+          "notInterested": "No problem, thanks for your time.",
+          "alreadyPartnered": "Fair enough. Nothing exclusive here — a $25 first visit for your families and a free monthly session for the coaches."
+        },
+        "closing": "Thanks a lot. I'll log that we spoke today.",
+        "followUp": "Hi, I visited a few weeks back for ETHR LAB in Oakbrook Terrace. Just following up to see whether the brochures were useful to the parents."
+      }
+    },
+    {
+      "name": "Ignite Fitness & Athletics",
+      "category": "Fitness and athletics gym",
+      "address": "263 N York St, Elmhurst, IL",
+      "phone": "(630) 915-4027",
+      "talkingPoint": "Fitness and athletics on York Street — members and student athletes get the $25 first visit, trainers get a free cryotherapy session each month.",
+      "script": {
+        "opening": "Hi, I'm here on behalf of ETHR LAB, a wellness and aesthetics studio in Oakbrook Terrace. We're introducing ourselves to independent gyms in Elmhurst. Is the owner around?",
+        "introduction": "We're at 1S550 IL-83, Unit A2, Oakbrook Terrace. We have a whole-body cryotherapy chamber, about three minutes a session, a Ballancer Pro compression suit, and red light.",
+        "value": "Your members and the student athletes training with you can have their first visit for $25 — cryotherapy, compression or red light. Your trainers get a free cryotherapy session at ETHR LAB every month. And we'd refer our clients to you; we don't run training, you do.",
+        "ask": "Could we leave a few brochures at the desk, and would the owner be open to a short chat?",
+        "objections": {
+          "busy": "Of course — I'll leave these. Is there a better time of day?",
+          "notInterested": "No problem at all. Thanks for your time.",
+          "alreadyPartnered": "Fair enough. We're not after anything exclusive — a $25 first visit for your members and a free monthly session for your trainers."
+        },
+        "closing": "Appreciate it. I'll note our conversation and we'll check back in.",
+        "followUp": "Hi, I stopped by for ETHR LAB a few weeks back. Wanted to see whether the brochures have moved and whether the owner is in today."
+      }
+    }
+  ]
+}
