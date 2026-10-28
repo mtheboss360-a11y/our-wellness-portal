@@ -43,6 +43,11 @@
 .rr-wordmark{ display:flex; align-items:center; min-width:0; flex-shrink:0 }
 .rr-mark{ height:26px; width:auto; display:block }
 @media (max-width:520px){ .rr-mark{ height:22px } }
+/* Said on the bar, not buried on a settings page: this account's rounds are illustrative. */
+.rr-pill{ display:inline-flex; align-items:center; gap:6px; border:1px solid #496d58;
+  padding:6px 9px; border-radius:99px; font-size:11px; color:#c9d9cd; white-space:nowrap }
+.rr-pill i{ width:6px; height:6px; background:var(--gold); border-radius:50%; flex:none }
+@media (max-width:760px){ .rr-pill{ display:none } }
 
 .rr-nav{ display:flex; align-items:center; gap:2px; margin-left:6px; min-width:0; overflow-x:auto; scrollbar-width:none }
 .rr-nav::-webkit-scrollbar{ display:none }

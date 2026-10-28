@@ -112,9 +112,10 @@
 
 /* The mark is drawn in deep green and gold. On the forest rail that is invisible, and
    filtering it would be recolouring somebody's logo — so it keeps its own ivory plate. */
-.plan-b .rail-brand{ background:var(--n-0); border:0; border-radius:var(--r-md);
-  padding:var(--s-3) var(--s-4); justify-content:center; box-shadow:var(--e-1); }
-.plan-b .rail-brand .brand img{ width:142px; }
+/* No card behind it: the mark is white and gold and sits straight on the rail. */
+.plan-b .rail-brand{ background:none; border:0; padding:var(--s-2) var(--s-3);
+  justify-content:center; box-shadow:none; }
+.plan-b .rail-brand .brand img{ width:132px; }
 .plan-b .rail-brand .brand-home{ background:none; border:0; padding:0; cursor:pointer; }
 
 .plan-b .rail-nav{ gap:2px; margin-top:var(--s-1); }
@@ -159,7 +160,7 @@
   .plan-b .rail{ position:sticky; top:0; z-index:40; height:auto;
     flex-direction:column; gap:var(--s-3); padding:var(--s-3) 0 0; }
   .plan-b .rail-brand{ margin:0 var(--s-4); padding:var(--s-2) var(--s-3); }
-  .plan-b .rail-brand .brand img{ width:116px; }
+  .plan-b .rail-brand .brand img{ width:108px; }
   .plan-b .rail-nav{ flex-direction:row; flex-wrap:nowrap; overflow-x:auto;
     gap:var(--s-1); padding:0 var(--s-4) var(--s-2); margin:0;
     scrollbar-width:none; -webkit-overflow-scrolling:touch; }
@@ -1232,6 +1233,8 @@
   /* The panel still changes; it just stops moving to do it. */
   .own-metric{ transition:none; }
   .own-swap-body{ animation:none; }
+  /* The cards are simply in place, rather than travelling there. */
+  .orb2-card{ transition:none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1342,37 +1345,55 @@
 .own-route-main strong{ font:650 var(--t-sub)/1.3 var(--font); color:var(--n-900); }
 .own-route-main span{ font:450 var(--t-tiny)/1.4 var(--font); color:var(--n-500); }
 
-/* ── The bubbles ─────────────────────────────────────────────────────────── */
-.bub{ padding:var(--s-2) var(--s-3) var(--s-3); overflow-x:auto; overscroll-behavior-x:contain; }
-.bub svg{ display:block; width:100%; min-width:1040px; height:auto; overflow:visible; }
-.bub-link{ stroke:#D8E2D9; stroke-width:1.6; stroke-dasharray:4 7; stroke-linecap:round; opacity:0;
-  animation:bub-link .45s ease-out forwards; }
-@keyframes bub-link{ to{ opacity:.95; } }
-.bub-node circle{ stroke:#FFFFFF; stroke-width:4;
-  filter:drop-shadow(0 6px 12px rgba(19,41,31,.13)); fill:#E7F0E8; transition:filter .2s ease, stroke-width .2s ease; }
-.bub-node.tone-gold circle{ fill:#F5E9CE; }
-.bub-node.tone-sage circle{ fill:#D8E7DC; }
-.bub-node.tone-blue circle{ fill:#DFEBEE; }
-.bub-node.tone-peach circle{ fill:#F3E4D9; }
-.bub-node:not(.is-hub):hover circle{ stroke-width:6; filter:drop-shadow(0 9px 16px rgba(19,41,31,.19)); }
-.bub-node.is-hub circle{ fill:var(--forest); stroke-width:4;
-  filter:drop-shadow(0 8px 15px rgba(19,41,31,.16)); }
-.bub-initials{ font:800 17px/1 var(--font); fill:var(--forest-3); letter-spacing:-.04em; }
-.bub-name{ font:700 13px/1 var(--font); fill:#32483B; }
-.bub-hub-name{ font:700 16px/1 var(--font); fill:#FFFFFF; letter-spacing:-.02em; }
-.bub-hub-sub{ font:500 10.5px/1 var(--font); fill:rgba(220,233,223,.9); }
-.bub-copy{ opacity:0; animation:bub-copy .4s ease-out forwards; }
-@keyframes bub-copy{ 0%,35%{ opacity:0; } 100%{ opacity:1; } }
-.bub-note{ margin:var(--s-2) 0 0; font:450 var(--t-tiny)/1.5 var(--font); color:var(--n-500); text-align:center; }
-.bub-none{ padding:var(--s-12) var(--s-5); text-align:center; color:var(--n-500); }
-.bub-none strong{ display:block; font:650 var(--t-body)/1.4 var(--font); color:var(--n-900);
-  margin-bottom:var(--s-2); }
-.bub-none p{ font:450 var(--t-sub)/1.6 var(--font); }
+/* ── The orbit ───────────────────────────────────────────────────────────
+   Positioned cards over one SVG ring. The stage keeps a fixed aspect so the
+   percentage positions hold at any width, and a floor width so a phone pans
+   across it rather than crushing the cards together. */
+.orb2{ padding:var(--s-4) var(--s-5) var(--s-5); }
+.orb2-eyebrow{ font:600 var(--t-tiny)/1 var(--font); letter-spacing:.09em;
+  text-transform:uppercase; color:var(--n-400); }
+.orb2-stage{ position:relative; margin-top:var(--s-4); aspect-ratio:1000/620; min-width:960px; }
+.orb2-wrap{ overflow-x:auto; overscroll-behavior-x:contain; }
 
-@media (prefers-reduced-motion:reduce){
-  .bub-copy,.bub-link{ animation:none !important; opacity:1 !important; }
-  .bub animateTransform{ display:none !important; }
-}
+.orb2-ring{ position:absolute; inset:0; width:100%; height:100%; }
+.orb2-ring ellipse{ fill:none; }
+.orb2-ring-wash{ stroke:var(--good-fill); stroke-width:26; opacity:.5; }
+.orb2-ring-line{ stroke:var(--forest-2); stroke-width:1.6; opacity:.55; }
+.orb2-ring-sage{ stroke:#B8CDBC; stroke-width:1.1; opacity:.6; }
+.orb2-ring-faint{ stroke:#C9DACC; stroke-width:1; opacity:.4; }
+
+.orb2-hub{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  display:grid; place-items:center; min-width:180px;
+  padding:var(--s-4) var(--s-5); text-align:center; background:var(--forest);
+  border-radius:var(--r-md); box-shadow:0 10px 26px rgba(19,41,31,.22); }
+.orb2-hub-name{ font:700 var(--t-sub)/1.25 var(--font); letter-spacing:.02em;
+  text-transform:uppercase; color:#FFFFFF; }
+
+.orb2-list{ position:absolute; inset:0; margin:0; padding:0; list-style:none; }
+.orb2-card{ position:absolute; display:flex; align-items:center; gap:9px;
+  /* One width for every card. A flex item that clamps its lines reports its longest WORD as
+     its minimum width, so an auto-sized card collapsed around names like "Harbor Row
+     Fitness". A fixed width also keeps the cards from implying one business matters more. */
+  /* One height as well as one width: a one-line name and a two-line one made the ring
+     ragged, and the cards are meant to read as equals. */
+  width:160px; min-height:52px; padding:9px 14px; justify-content:center; text-align:center;
+  background:var(--n-0);
+  border:1px solid var(--n-200); border-radius:999px; box-shadow:var(--e-2);
+  transform:translate(-50%,-50%) scale(.92); opacity:0;
+  transition:left .62s cubic-bezier(.16,1,.3,1), top .62s cubic-bezier(.16,1,.3,1),
+    transform .62s cubic-bezier(.16,1,.3,1), opacity .38s ease-out; }
+.orb2-card.is-out{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+/* Two lines rather than an ellipsis: a card exists to carry the name, and a clipped name is
+   a card that has stopped doing its job. Anything longer still falls back to the ellipsis,
+   and the whole name is in the connections list below either way. */
+.orb2-name{ font:600 12.5px/1.25 var(--font); color:var(--n-800);
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+  overflow:hidden; text-overflow:ellipsis; }
+.orb2-note{ margin-top:var(--s-4); font:450 var(--t-tiny)/1.5 var(--font);
+  color:var(--n-500); text-align:center; }
+.orb2-none{ padding:var(--s-7) var(--s-5); text-align:center; }
+.orb2-none strong{ display:block; font:650 var(--t-head)/1.3 var(--font); color:var(--n-800); }
+.orb2-none p{ margin-top:6px; font:450 var(--t-sub)/1.5 var(--font); color:var(--n-500); }
 
 /* ── One route, full screen ──────────────────────────────────────────────── */
 .own-detail-head{ display:flex; align-items:center; gap:var(--s-3); padding:var(--s-8) 0 var(--s-2); }
@@ -1433,10 +1454,22 @@
   .own-metric{ min-height:100px; padding:var(--s-3) var(--s-4); }
   .own-metric-value{ font-size:1.5rem; }
   .own-swap-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--s-3); }
+  /* On a phone the ellipse is wider than the screen, so panning it is the only way to read
+     it. The same names as a two-column grid say the same thing without the panning. */
+  .orb2{ padding:var(--s-3) var(--s-4) var(--s-4); }
+  .orb2-wrap{ overflow:visible; }
+  .orb2-stage{ min-width:0; aspect-ratio:auto; display:flex; flex-direction:column; gap:12px; }
+  .orb2-ring{ display:none; }
+  .orb2-hub{ position:relative; left:auto; top:auto; transform:none; align-self:center;
+    min-width:0; width:min(100%,260px); }
+  .orb2-list{ position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .orb2-card,.orb2-card.is-out{ position:relative; left:auto !important; top:auto !important;
+    width:100%; min-height:48px; padding:8px 10px; transform:none !important; opacity:1;
+    border-radius:12px; transition:none; }
+  .orb2-name{ font-size:11.5px; }
   .own-swap-stat dd{ font-size:1.15rem; }
   .own-swap-list li{ flex-direction:column; gap:2px; }
   .own-panel-head{ flex-direction:column; gap:var(--s-3); }
   .own-stop-grid{ grid-template-columns:1fr; margin-left:0; }
   .own-stop-note{ margin-left:0; }
-  .bub svg{ min-width:1040px; }
 }

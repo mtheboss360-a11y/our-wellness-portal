@@ -81,8 +81,8 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
       {/* The mark alone, in white and gold: it reads on the forest bar without a plate behind
           it, and the name is on the sign-in screen rather than said again on every page. */}
       <div className="rr-wordmark">
-        <img className="rr-mark" src="/assets/owo-mark-light.png" alt="Our Wellness Network"
-          width="1156" height="303"/>
+        <img className="rr-mark" src="/assets/own-mark.png" alt="Our Wellness Network"
+          width="1156" height="308"/>
       </div>
 
       <nav className="rr-nav" aria-label="Your account">
@@ -93,6 +93,9 @@ export default function RunnerPortal({ data }: { data: PortalSnapshot }) {
       </nav>
 
       <div className="rr-tools" ref={menuRef} style={{ position: 'relative' }}>
+        {/* An illustrative account says so wherever the runner is, so a demo round is never
+            mistaken for work that happened. */}
+        {data.clinic?.demo && <span className="rr-pill"><i/>Illustrative account</span>}
         <button className="rr-btn rr-btn-ghost" aria-haspopup="menu" aria-expanded={menu}
           onClick={() => setMenu(open => !open)} style={{ gap: 8, paddingLeft: 8, paddingRight: 10 }}>
           <span aria-hidden="true" style={{
