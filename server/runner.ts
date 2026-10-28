@@ -415,12 +415,18 @@ export function openRunner(db: DatabaseSync) {
       }
     }
 
+    // A FINISHED STOP KEEPS ITS PLACE, exactly — the same rule as a locked one. It used to be
+    // enough that the finished stops kept their order relative to each other, which let a single
+    // visited stop slide, and let an unvisited stop be dragged in front of stops already driven.
+    // A day that has partly happened is a record, and time only runs one way through it.
     const done = options.completed ?? new Set<string>();
     const finished = current.filter(item =>
       (item.kind === 'business' && done.has(item.business.id)) ||
-      (item.kind === 'pickup' && item.pickup.status === 'collected')).map(key);
-    if (finished.join('|') !== sent.filter(k => finished.includes(k)).join('|')) {
-      throw new Error('A stop you have already finished cannot be moved out of the order it happened in.');
+      (item.kind === 'pickup' && item.pickup.status === 'collected'));
+    for (const item of finished) {
+      if (sent.indexOf(key(item)) !== current.findIndex(c => key(c) === key(item))) {
+        throw new Error('A stop you have already finished cannot be moved out of the order it happened in.');
+      }
     }
 
     begin();
@@ -522,10 +528,15 @@ export function openRunner(db: DatabaseSync) {
   function collectPickup(clinicId: string, roundId: string, pickupId: string, user: Who,
     options: { revision?: number; collected?: Partial<Supplies> } = {}) {
     const row = assertMine(clinicId, roundId, user);
+    const planned = db.prepare('SELECT supplies,status FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
+      .get(pickupId, roundId, clinicId) as { supplies: string; status: string } | undefined;
+    if (!planned) throw new Error('That pickup is not on this route.');
+    // A SECOND CONFIRMATION OF THE SAME PICKUP is the same intent arriving twice — a tap on a
+    // bad signal, then a retry. It reads back what was saved rather than answering with a
+    // conflict about a revision that moved because of the runner's own first attempt.
+    if (planned.status === 'collected') return round(clinicId, roundId)!;
     check(row, options.revision);
-    const planned = db.prepare('SELECT supplies FROM round_pickups WHERE id=? AND round_id=? AND clinic_id=?')
-      .get(pickupId, roundId, clinicId) as { supplies: string } | undefined;
-    const actual = toSupplies(options.collected ?? planned?.supplies ?? {});
+    const actual = toSupplies(options.collected ?? planned.supplies);
     const changed = db.prepare(`UPDATE round_pickups SET status='collected', collected_at=?, collected=?
       WHERE id=? AND round_id=? AND clinic_id=? AND status<>'collected'`)
       .run(now(), JSON.stringify(actual), pickupId, roundId, clinicId);

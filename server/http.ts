@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { bakeryChoiceInput, bakeryRemoveInput, deviceLocationInput, itemsRequestInput, routeRequestInput, selectionInput, visitNoteInput, recordVisitInput, editVisitInput, saveScriptInput } from './validation';
 import { packedInput, pickupActionInput, pickupInput, reorderRouteInput, runnerVisitInput } from './validation';
 import { RoundConflict, SUPPLY_KEYS, type RunnerRound, type Supplies } from './runner';
+import { attributeVisits } from '../src/lib/route-math';
 import { DEFAULT_RADIUS_MILES } from './network/config';
 import { ensureDiscovery } from './network/map';
 import { bakeryPayload, ensureBakeries } from './network/bakeries';
@@ -140,23 +141,42 @@ export function createPortalServer(options: Options) {
               return;
             }
             const message = error instanceof Error ? error.message : 'That change could not be saved.';
-            json(response, /not assigned to you|fixed in place/.test(message) ? 403 : 400, { error: message });
+            // "Not yours", "fixed by the office" and "already finished" are all the same kind of
+            // answer — you may not move that — so they get the same status.
+            json(response, /not assigned to you|fixed in place|already finished/.test(message) ? 403 : 400,
+              { error: message });
           };
 
           const readBody = async () => { try { return await body(request); } catch { return null; } };
 
-          if (url.pathname === '/api/runner/routes' && request.method === 'GET') {
-            const routes = runner.assignedRounds(clinic.id, who).map(shape);
-            // Only the visits that belong to the businesses on their own routes. A runner has no
-            // reason to read the practice's whole visit log, so they are not sent it.
-            const mine = new Set(routes.flatMap(r => r.items
+          // The planner needs visits recorded against its rounds to work out completion, plus
+          // this runner's own older visits without a round for explicitly labelled inference.
+          // Do not send another employee's unrelated contacts and notes simply because both
+          // employees were assigned the same business on different rounds.
+          const visitsForAssignedRounds = (rounds: RunnerRound[]) => {
+            const allowedRounds = new Set(rounds.map(r => r.id));
+            const allowedBusinesses = new Set(rounds.flatMap(r => r.items
               .filter(item => item.kind === 'business')
-              .map(item => item.kind === 'business' ? item.business.id : '')));
+              .map(item => item.id)));
+            return store.outreach.visits(clinic.id).filter(visit => visit.roundId
+              ? allowedRounds.has(visit.roundId)
+              : allowedBusinesses.has(visit.businessId)
+                && (visit.recordedBy === who.id || visit.recordedBy === null));
+          };
+
+          if (url.pathname === '/api/runner/routes' && request.method === 'GET') {
+            const assigned = runner.assignedRounds(clinic.id, who);
+            const routes = assigned.map(shape);
             const where = store.clinicLocation(clinic.id);
+            const visibleVisits = visitsForAssignedRounds(assigned);
+            const visibleIds = new Set(visibleVisits.map(visit => visit.id));
             json(response, 200, {
               routes,
-              visits: store.outreach.visits(clinic.id).filter(v => mine.has(v.businessId)),
-              materials: runner.visitMaterials(clinic.id),
+              visits: visibleVisits,
+              // Breakdowns are clinic-wide internally. Send only those whose visits this
+              // runner is authorized to see, never another employee's visit ids or counts.
+              materials: Object.fromEntries(Object.entries(runner.visitMaterials(clinic.id))
+                .filter(([visitId]) => visibleIds.has(visitId))),
               clinic: where ? { lat: where.lat, lng: where.lng, label: where.label } : null,
               practice: clinic.name,
               runner: { name: clinic.display_name || null },
@@ -197,7 +217,15 @@ export function createPortalServer(options: Options) {
             const input = reorderRouteInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That new order could not be read.' }); return; }
             try {
-              const completed = new Set(store.outreach.visits(clinic.id).map(v => v.businessId));
+              // A business may appear on more than one round. A visit to it on an older
+              // round must not freeze the same business when assigned as a follow-up later.
+              // Match each visit to exactly one round, using the same logic as the planner.
+              const myRounds = runner.assignedRounds(clinic.id, who);
+              const visits = visitsForAssignedRounds(myRounds);
+              const assigned = attributeVisits(myRounds, visits);
+              const completed = new Set(visits
+                .filter(v => assigned.get(v.id)?.roundId === input.data.roundId)
+                .map(v => v.businessId));
               sendRoute(runner.reorder(clinic.id, input.data.roundId, input.data.order, who, {
                 revision: input.data.revision, completed,
               }));
@@ -260,6 +288,18 @@ export function createPortalServer(options: Options) {
             const round = runner.roundStopFor(clinic.id, draft.roundId, draft.businessId, who);
             if (!round) {
               json(response, 403, { error: 'That business is not on that route of yours.' }); return;
+            }
+            if (draft.visitedOn < round.date) {
+              json(response, 400, { error: 'A visit cannot be recorded before its assigned route date.' }); return;
+            }
+            // One business assignment on one round can be checked off once. A retry with the
+            // same clientRef is allowed, but another submission must not double-count visits
+            // and supplies. Follow-up visits are a NEW assigned round, not a second checkoff.
+            const completedVisit = store.outreach.visits(clinic.id, draft.businessId)
+              .find(visit => visit.roundId === round.id);
+            if (completedVisit && completedVisit.id !== (draft.clientRef ? `v_${draft.clientRef}` : '')) {
+              json(response, 409, { error: 'This stop already has a recorded visit. Ask your office to correct its result rather than checking it off twice.' });
+              return;
             }
             const total = SUPPLY_KEYS.reduce((sum, key) => sum + draft.dropped[key], 0);
             if (total > 0) {

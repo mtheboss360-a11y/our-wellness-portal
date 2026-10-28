@@ -1,84 +1,51 @@
-// MY ROUTES — the route runner's week.
+// MY ROUTES — the week, and the day you are in.
 //
-// This is the whole job on one screen: the days of the week, the day's stops in the order they
-// will be driven, what to bring, and the way into each conversation. It is the standalone
-// planner that was designed for it, rebuilt on the portal's own data: the stops are the
-// businesses the office released and assigned, the scripts are the approved ones, and every
-// change is saved to the database rather than to this browser.
+// The study planner's shape: a compact bar, one heading with the week either side of it, seven
+// columns, and the work as small cards inside the day it belongs to. A day opens full width
+// when a runner is actually driving it. Everything else — the brief, the script, the pickup
+// form, the supplies — is a drawer.
 //
-// What a runner may change here, and nothing else:
-//
-//   - the ORDER of the stops on a day of theirs;
-//   - the PICKUPS they put among them — treats, materials, supplies;
-//   - what they CONFIRM they are carrying, and what they recorded DROPPING.
-//
-// What they cannot: add or remove an assigned business, move one to another date, change the
-// start time the office set, raise their own allocation, or touch anybody else's route. The
-// server refuses each of those whatever this screen sends; the screen simply does not offer them.
-//
-// Times here are arithmetic, not navigation. There is no routing provider behind this portal, so
-// a leg between two known coordinates is estimated from the distance and everything else gets a
-// flat allowance — and the screen says which, every time.
+// What a runner may change is unchanged from the version this replaces: the ORDER of their
+// stops, the PICKUPS among them, what they CONFIRM carrying, and the VISITS they record. The
+// businesses, the date, the start time and the allocation are the office's. The server refuses
+// the rest whatever this screen sends.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   collectPickup, confirmPacked, getRunnerBusiness, getRunnerRoutes, recordRunnerVisit,
   removePickup, reorderRoute, savePickup, RouteChanged,
-  type PickupDraft, type PickupKind, type RunnerItem, type RunnerPayload, type RunnerRoute,
-  type Supplies, type Visit,
+  type PickupDraft, type RunnerItem, type RunnerPayload, type RunnerRoute, type Supplies,
 } from './lib/api';
 import {
-  addDays, attributeVisits, clockOf, durationLabel, isoOf, itemAddress, itemName, longDate,
-  minutesNowIn, mondayOf, planRoute, shortDate, weekLabel, WEEKDAY, TRAVEL_ALLOWANCE,
-  type Attribution, type PlannedItem,
+  addDays, attributeVisits, clockOf, durationLabel, itemName, longDate, minutesNowIn, mondayOf,
+  planRoute, weekLabel, type PlannedItem,
 } from './lib/route-math';
 import { Icon } from './Icons';
-import { useFocusTrap } from './lib/focus-trap';
 import GuidedVisit, { type VisitSubmission } from './GuidedVisit';
-
-const SUPPLIES: Array<{ key: keyof Supplies; label: string }> = [
-  { key: 'flyers', label: 'Flyers' },
-  { key: 'treats', label: 'Treats / food' },
-  { key: 'cards', label: 'Referral cards' },
-];
-
-const PICKUP_LABEL: Record<PickupKind, string> = {
-  treats: 'Treats / food', materials: 'Flyers / marketing materials', other: 'Other supplies',
-};
-
-const refOf = (item: RunnerItem) => `${item.kind}:${item.id}`;
-
-const directionsTo = (item: RunnerItem) => {
-  const destination = item.kind === 'business' && item.business.lat !== null && item.business.lng !== null
-    ? `${item.business.lat},${item.business.lng}`
-    : itemAddress(item);
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
-};
+import RunnerWeek, { RoundStops, refOf, type DayPlan } from './RunnerWeek';
+import { CollectDrawer, PickupDrawer, StopDrawer, SuppliesDrawer, QuickResultDrawer } from './RunnerDrawers';
+import { useFocusTrap } from './lib/focus-trap';
+import { runnerOutcomeLabel } from './lib/runner-outcomes';
 
 type Drawer =
-  | { kind: 'pickup'; pickupId?: string }
-  /** Collecting one, which is a different job from editing it. */
-  | { kind: 'collect'; pickupId: string }
-  | { kind: 'supplies' }
-  | { kind: 'timing' };
+  | { kind: 'stop'; roundId: string; key: string }
+  | { kind: 'quick'; roundId: string; key: string }
+  | { kind: 'collect'; roundId: string; key: string }
+  | { kind: 'pickup'; roundId: string; pickupId?: string }
+  | { kind: 'supplies'; roundId: string };
 
 export default function MyRoutes({ today, timezone }: { today: string; timezone: string }) {
   const [data, setData] = useState<RunnerPayload | null>(null);
   const [error, setError] = useState('');
-  const [selected, setSelected] = useState(today);
   const [week, setWeek] = useState(() => mondayOf(today));
-  const [picked, setPicked] = useState(false);
-  const [chosenRound, setChosenRound] = useState<string | null>(null);
+  const [focus, setFocus] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer | null>(null);
-  const [visiting, setVisiting] = useState<string | null>(null);
+  const [visiting, setVisiting] = useState<{ roundId: string; businessId: string } | null>(null);
   const [toast, setToast] = useState('');
   const [confirming, setConfirming] = useState<{ title: string; text: string; run: () => void } | null>(null);
-  // The order the runner has just dragged into place, held only until the server answers.
   const [pending, setPending] = useState<{ roundId: string; items: RunnerItem[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const toastTimer = useRef<number>(0);
-  const drawerRef = useRef<HTMLElement>(null);
-  // Something typed into the drawer and not yet saved. A tap on the backdrop with a half-filled
-  // pickup in front of you should not throw it away without asking.
+  const sheetRef = useRef<HTMLElement>(null);
   const unsaved = useRef(false);
 
   const say = useCallback((text: string) => {
@@ -88,7 +55,13 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
-  /** Close the drawer — asking first where there is unsaved work in it. */
+  const load = useCallback(() => {
+    setError('');
+    return getRunnerRoutes().then(setData)
+      .catch(e => setError(e instanceof Error ? e.message : 'We couldn’t open your routes.'));
+  }, []);
+  useEffect(() => { void load(); }, [load]);
+
   const closeDrawer = useCallback(() => {
     if (!unsaved.current) { setDrawer(null); return; }
     setConfirming({
@@ -97,62 +70,69 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
       run: () => { unsaved.current = false; setConfirming(null); setDrawer(null); },
     });
   }, []);
-  // The keyboard goes into the drawer, stays there while it is open, and comes back out to
-  // whatever opened it.
-  useFocusTrap(!!drawer, drawerRef, closeDrawer);
-  // A panel that has just opened has nothing unsaved in it yet.
+  useFocusTrap(!!drawer, sheetRef, closeDrawer);
   useEffect(() => { unsaved.current = false; }, [drawer]);
 
-  const load = useCallback(() => {
-    setError('');
-    return getRunnerRoutes().then(setData)
-      .catch(e => setError(e instanceof Error ? e.message : 'We couldn’t open your routes.'));
-  }, []);
-  useEffect(() => { void load(); }, [load]);
-
-  // The day that opens is the one with work on it: today where there is a route, else the next
-  // one booked, else the most recent. Only once, so it never steals the day a runner picked.
-  useEffect(() => {
-    if (!data || picked) return;
-    const dates = data.routes.map(r => r.date).sort();
-    const day = dates.includes(today) ? today : dates.find(d => d > today) ?? dates.at(-1) ?? today;
-    setSelected(day); setWeek(mondayOf(day)); setPicked(true); setChosenRound(null);
-  }, [data, picked, today]);
-
-  const onThisDay = useMemo(
-    () => (data?.routes ?? []).filter(r => r.date === selected),
-    [data, selected]);
-  // Two rounds can be booked on one day. The first is opened, and the others are offered rather
-  // than hidden — which is what taking routes.find() did.
-  const route = onThisDay.find(r => r.id === chosenRound) ?? onThisDay[0] ?? null;
-  const items = pending && route && pending.roundId === route.id ? pending.items : route?.items ?? [];
-
-  // Which round each recorded visit belongs to. Worked out across every route at once, because
-  // the same business can be on more than one of them and a visit belongs to exactly one.
+  // Which round each visit belongs to, worked out across every route at once: the same business
+  // can be on more than one, and a visit belongs to exactly one.
   const attributed = useMemo(
     () => attributeVisits(data?.routes ?? [], data?.visits ?? []),
     [data]);
 
-  const plan = useMemo(() => route
-    ? planRoute({ ...route, items }, data?.visits ?? [], {
-        clinic: data?.clinic ?? null, today, attributed,
-        // The practice's clock. A phone set to another zone would otherwise mark the wrong
-        // stop as the one somebody should be standing in front of.
-        nowMinutes: minutesNowIn(timezone) ?? undefined,
-      })
-    : null, [route, items, data, today, attributed, timezone]);
+  const itemsOf = useCallback((route: RunnerRoute) =>
+    pending && pending.roundId === route.id ? pending.items : route.items, [pending]);
 
-  const done = useMemo(() => new Set((plan?.items ?? []).filter(i => i.done).map(i => refOf(i.item))), [plan]);
+  const planOf = useCallback((route: RunnerRoute): DayPlan => {
+    const plan = planRoute({ ...route, items: itemsOf(route) }, data?.visits ?? [], {
+      clinic: data?.clinic ?? null, today, attributed,
+      nowMinutes: minutesNowIn(timezone) ?? undefined,
+    });
+    return {
+      route, items: plan.items, startsAt: plan.startsAt,
+      totalMinutes: plan.totalMinutes, completed: plan.completed,
+    };
+  }, [data, today, attributed, timezone, itemsOf]);
 
-  /** Put a route the server has just returned back into the week, and drop any optimistic order. */
+  const fullPlanOf = useCallback((route: RunnerRoute) => planRoute(
+    { ...route, items: itemsOf(route) }, data?.visits ?? [], {
+      clinic: data?.clinic ?? null, today, attributed,
+      nowMinutes: minutesNowIn(timezone) ?? undefined,
+    }), [data, today, attributed, timezone, itemsOf]);
+
+  const plansFor = useCallback((day: string) =>
+    (data?.routes ?? []).filter(route => route.date === day).map(planOf), [data, planOf]);
+
+  const days = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(week, index)), [week]);
+
+  // The day a runner is most likely to want open: the one they focused, else today, else the
+  // next day this week with work on it.
+  const liveDay = useMemo(() => {
+    if (focus) return focus;
+    const withWork = days.filter(day => (data?.routes ?? []).some(route => route.date === day));
+    return withWork.includes(today) ? today : withWork.find(day => day >= today) ?? withWork[0] ?? null;
+  }, [focus, days, data, today]);
+
+  const livePlans = liveDay ? plansFor(liveDay) : [];
+  // The first round of that day with something still to do. That is where "next stop" goes.
+  const runningPair = livePlans
+    .map(plan => ({ route: plan.route, full: fullPlanOf(plan.route) }))
+    .find(pair => pair.full.next) ?? null;
+  const running = runningPair?.full ?? null;
+  const runningRoute = runningPair?.route ?? null;
+
+  const routeById = useCallback((id: string) => (data?.routes ?? []).find(route => route.id === id) ?? null, [data]);
+  const entryOf = useCallback((roundId: string, key: string) => {
+    const route = routeById(roundId);
+    return route ? fullPlanOf(route).items.find(entry => refOf(entry.item) === key) ?? null : null;
+  }, [routeById, fullPlanOf]);
+
   const replace = useCallback((saved: RunnerRoute) => {
     setData(current => current && {
-      ...current, routes: current.routes.map(r => r.id === saved.id ? saved : r),
+      ...current, routes: current.routes.map(route => route.id === saved.id ? saved : route),
     });
     setPending(null);
   }, []);
 
-  /** Every write goes through here: optimistic where it has an order to show, rolled back on failure. */
   const write = useCallback(async (action: () => Promise<{ route: RunnerRoute }>, success: string) => {
     setBusy(true);
     try {
@@ -165,925 +145,379 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
       if (e instanceof RouteChanged) {
         if (e.route) replace(e.route); else await load();
         say(e.message);
-      } else {
-        say(e instanceof Error ? e.message : 'That change could not be saved.');
-      }
+      } else say(e instanceof Error ? e.message : 'That change could not be saved.');
       return false;
     } finally { setBusy(false); }
   }, [replace, say, load]);
 
-  const commitOrder = useCallback(async (next: RunnerItem[]) => {
+  /** Put one stop at a new index in its round. The same call from a drag and from the menu. */
+  const move = useCallback(async (roundId: string, key: string, toIndex: number) => {
+    const route = routeById(roundId);
     if (!route) return;
-    setPending({ roundId: route.id, items: next });
-    await write(() => reorderRoute(route.id, next.map(item => ({ kind: item.kind, id: item.id })), route.revision),
-      'Order saved. The times have been worked out again.');
-  }, [route, write]);
+    const items = itemsOf(route);
+    const from = items.findIndex(item => refOf(item) === key);
+    const to = Math.max(0, Math.min(items.length - 1, toIndex));
+    if (from < 0 || to === from) return;
+    const done = new Set(fullPlanOf(route).items.filter(entry => entry.done).map(entry => refOf(entry.item)));
+    const blocked = (item: RunnerItem) => item.locked || done.has(refOf(item));
+    if (blocked(items[from]) || blocked(items[to])) {
+      say('A stop you have finished, or one your office fixed in place, stays where it is.');
+      return;
+    }
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    for (let index = 0; index < items.length; index++) {
+      if (items[index].locked && refOf(next[index]) !== refOf(items[index])) return;
+    }
+    const was = items.filter(item => done.has(refOf(item))).map(refOf).join('|');
+    if (was !== next.filter(item => done.has(refOf(item))).map(refOf).join('|')) return;
 
-  // ── The guided visit takes the whole screen, and comes back here ──────────
-  if (visiting && route && plan) {
-    const at = plan.items.findIndex(i => i.item.kind === 'business' && i.item.business.id === visiting);
-    const after = plan.items.slice(at + 1).find(i => !i.done);
-    const save = async (draft: VisitSubmission) => {
-      const result = await recordRunnerVisit({
-        roundId: route.id,
-        businessId: draft.businessId, visitedOn: draft.visitedOn, spokeWith: draft.spokeWith,
-        contactRole: draft.contactRole, outcome: draft.outcome,
-        dropped: draft.dropped ?? { flyers: 0, treats: 0, cards: 0 },
-        note: draft.note, nextAction: draft.nextAction, followUpOn: draft.followUpOn,
-        clientRef: draft.clientRef,
-      });
-      if (result.route) replace(result.route);
-      return { visit: result.visit, business: result.business };
-    };
-    return <main className="rr-wrap">
-      <div className="plan-b rr-visit">
-        <GuidedVisit
-          businessId={visiting}
-          today={today}
-          staffName={data?.runner.name ?? null}
-          load={id => getRunnerBusiness(route.id, id)}
-          save={save}
-          materials={{ remaining: route.remaining, confirmed: route.supplies.packed !== null }}
-          onClose={() => { setVisiting(null); void load(); }}
-          onNext={after ? () => {
-            // Whatever is actually next: another door, or the bakery between here and it.
-            if (after.item.kind === 'business') setVisiting(after.item.business.id);
-            else { setVisiting(null); setDrawer({ kind: 'collect', pickupId: after.item.id }); }
-          } : undefined}
-          nextLabel={after ? `Next: ${itemName(after.item)}` : undefined}/>
-      </div>
-    </main>;
+    setPending({ roundId, items: next });
+    await write(() => reorderRoute(roundId, next.map(item => ({ kind: item.kind, id: item.id })), route.revision),
+      'Order saved. The times have been worked out again.');
+  }, [routeById, itemsOf, fullPlanOf, write, say]);
+
+  /** Opening a stop: a business into its drawer, a pickup into collecting or editing it. */
+  const openStop = useCallback((roundId: string, entry: PlannedItem) => {
+    const key = refOf(entry.item);
+    if (entry.item.kind === 'business') setDrawer({ kind: 'stop', roundId, key });
+    else if (entry.item.pickup.status === 'collected') setDrawer({ kind: 'pickup', roundId, pickupId: entry.item.id });
+    else setDrawer({ kind: 'collect', roundId, key });
+  }, []);
+
+  /** The checkmark saves a real visit outcome; a pickup keeps its collection workflow. */
+  const checkStop = useCallback((roundId: string, entry: PlannedItem) => {
+    if (entry.done) return;
+    const route = routeById(roundId);
+    if (route && route.date > today) {
+      say(`This round is scheduled for ${longDate(route.date)}. You cannot record its visit early.`);
+      return;
+    }
+    if (entry.item.kind === 'pickup') { openStop(roundId, entry); return; }
+    setDrawer({ kind: 'quick', roundId, key: refOf(entry.item) });
+  }, [openStop, routeById, today, say]);
+
+  /** Where to go now: the next unfinished stop of the day being run. */
+  const goNext = useCallback(() => {
+    if (!running || !runningRoute) return;
+    const next = running.next!;
+    if (next.item.kind === 'business') setVisiting({ roundId: runningRoute.id, businessId: next.item.business.id });
+    else openStop(runningRoute.id, next);
+  }, [running, runningRoute, openStop]);
+
+  // ── The guided visit takes the screen, and comes back to the day ──────────
+  if (visiting) {
+    const route = routeById(visiting.roundId);
+    const plan = route ? fullPlanOf(route) : null;
+    if (route && plan) {
+      const at = plan.items.findIndex(i => i.item.kind === 'business' && i.item.business.id === visiting.businessId);
+      const after = plan.items.slice(at + 1).find(i => !i.done);
+      const save = async (draft: VisitSubmission) => {
+        const result = await recordRunnerVisit({
+          roundId: route.id,
+          businessId: draft.businessId, visitedOn: draft.visitedOn, spokeWith: draft.spokeWith,
+          contactRole: draft.contactRole, outcome: draft.outcome,
+          dropped: draft.dropped ?? { flyers: 0, treats: 0, cards: 0 },
+          note: draft.note, nextAction: draft.nextAction, followUpOn: draft.followUpOn,
+          clientRef: draft.clientRef,
+        });
+        if (result.route) replace(result.route);
+        return { visit: result.visit, business: result.business };
+      };
+      return <main className="rr-main">
+        <div className="plan-b rr-visit">
+          <GuidedVisit
+            businessId={visiting.businessId}
+            today={today}
+            staffName={data?.runner.name ?? null}
+            load={id => getRunnerBusiness(route.id, id)}
+            save={save}
+            materials={{ remaining: route.remaining, confirmed: route.supplies.packed !== null }}
+            onClose={() => { setVisiting(null); setFocus(route.date); void load(); }}
+            onNext={after ? () => {
+              if (after.item.kind === 'business') setVisiting({ roundId: route.id, businessId: after.item.business.id });
+              else { setVisiting(null); setFocus(route.date); openStop(route.id, after); }
+            } : undefined}
+            nextLabel={after ? `Next: ${itemName(after.item)}` : undefined}/>
+        </div>
+      </main>;
+    }
   }
 
-  const days = Array.from({ length: 7 }, (_, index) => addDays(week, index));
+  const drawerRoute = drawer ? routeById(drawer.roundId) : null;
 
-  return <main className="rr-wrap">
-    {/* The week is the screen. Above it: what this is, and the one thing a runner adds. */}
-    <div className="rr-title">
-      <h1>My routes<span>.</span></h1>
-      <button className="rr-btn rr-btn-primary" disabled={!route}
-        onClick={() => setDrawer({ kind: 'pickup' })}>
-        <Icon name="plus" size={15}/>Add pickup
-      </button>
-    </div>
+  return <>
+    <main className="rr-main">
+      {error && <div className="rr-state" role="alert">
+        <h2>We couldn’t open your routes.</h2>
+        <p>{error}</p>
+        <button className="rr-btn rr-btn-primary" onClick={() => void load()}>Try again</button>
+      </div>}
 
-    {error && <div className="rr-state" role="alert">
-      <h2>We couldn’t open your routes.</h2>
-      <p>{error}</p>
-      <button className="rr-btn rr-btn-primary" onClick={() => void load()}>Try again</button>
-    </div>}
+      {!error && !data && <div aria-busy="true" style={{ display: 'grid', gap: 11 }}>
+        <div className="rr-skel" style={{ maxWidth: 260, height: 38 }}/>
+        <div className="rr-skel rr-skel-day"/>
+        <p className="rr-sr" role="status">Opening your routes.</p>
+      </div>}
 
-    {!error && !data && <div aria-busy="true">
-      <div className="rr-skel" style={{ maxWidth: 260 }}/>
-      <div className="rr-skel rr-skel-big"/>
-      <div className="rr-skel rr-skel-big"/>
-      <p className="rr-sr" role="status">Opening your routes.</p>
-    </div>}
-
-    {!error && data && <>
-      <p className="rr-line">
-        {!route || !plan
-          ? <span>{selected === today ? 'Nothing assigned today' : `Nothing assigned for ${shortDate(selected)}`}</span>
-          : <>
-              <span><b>{plan.items.length}</b> stops</span>
-              <span><b>{plan.completed}</b> done</span>
-              <span>finish about <b>{clockOf(plan.endsAt)}</b></span>
-              <span>{route.supplies.packed
-                ? <>left: <b>{Math.max(0, route.remaining.flyers)}</b> flyers · <b>{Math.max(0, route.remaining.treats)}</b> treats · <b>{Math.max(0, route.remaining.cards)}</b> cards</>
-                : <>supplies <b>not confirmed</b></>}</span>
-            </>}
-      </p>
-
-      <section className="rr-week" aria-labelledby="rr-week-title">
+      {!error && data && focus === null && <>
         <div className="rr-week-head">
-          <div>
-            <h2 id="rr-week-title">{weekLabel(week)}</h2>
-            <p>Pick a day to see the route assigned to it</p>
+          <div className="rr-week-row">
+            <div className="rr-week-nav">
+              <button className="rr-nav-btn" aria-label="The week before"
+                onClick={() => setWeek(addDays(week, -7))}><Icon name="back" size={19}/></button>
+              <h1 className="rr-week-title">{weekLabel(week)}</h1>
+              <button className="rr-nav-btn" aria-label="The week after"
+                onClick={() => setWeek(addDays(week, 7))}><Icon name="arrow" size={19}/></button>
+            </div>
+            <div className="rr-today-btn" style={{ display: 'flex', gap: 7 }}>
+              <button className="rr-btn rr-btn-outline" style={{ height: 34, fontSize: 13 }}
+                onClick={() => setWeek(mondayOf(today))}>Today</button>
+              {/* Never silently put a pickup on the wrong round when one day has two. */}
+              <button className="rr-btn rr-btn-primary" style={{ height: 34, fontSize: 13 }}
+                disabled={!livePlans.length}
+                onClick={() => {
+                  if (livePlans.length === 1) setDrawer({ kind: 'pickup', roundId: livePlans[0].route.id });
+                  else if (liveDay) setFocus(liveDay);
+                }}>
+                <Icon name="plus" size={15}/>{livePlans.length > 1 ? 'Choose round' : 'Add pickup'}
+              </button>
+            </div>
           </div>
-          <div className="rr-week-nav">
-            <button className="rr-btn rr-btn-outline rr-btn-sm" aria-label="The week before"
-              onClick={() => { const back = addDays(week, -7); setWeek(back); setSelected(back); }}>
-              <Icon name="back" size={15}/>
-            </button>
-            <button className="rr-btn rr-btn-outline rr-btn-sm"
-              onClick={() => { setSelected(today); setWeek(mondayOf(today)); }}>Today</button>
-            <button className="rr-btn rr-btn-outline rr-btn-sm" aria-label="The week after"
-              onClick={() => { const on = addDays(week, 7); setWeek(on); setSelected(on); }}>
-              <Icon name="arrow" size={15}/>
-            </button>
-          </div>
+          <p className="rr-hint">{liveDay && livePlans.length
+            ? <>{liveDay === today ? 'Today' : longDate(liveDay)}: <b>{livePlans.reduce((n, p) => n + p.items.length, 0)}</b> stops
+                {' · '}<b>{livePlans.reduce((n, p) => n + p.completed, 0)}</b> completed
+                {' · '}<b>{durationLabel(livePlans.reduce((n, p) => n + p.totalMinutes, 0))}</b> estimated</>
+            : 'Nothing assigned this week. Pick a day to look at another one.'}</p>
         </div>
-        <div className="rr-week-grid">
-          {days.map(day => <Day key={day} day={day} today={today} current={day === selected}
-            routes={data.routes.filter(r => r.date === day)}
-            visits={data.visits} attributed={attributed}
-            onPick={() => { setSelected(day); setPicked(true); setChosenRound(null); }}/>)}
-        </div>
-      </section>
 
-      <div className="rr-work">
-        <section className="rr-panel" aria-labelledby="rr-route-title">
-          <div className="rr-panel-head">
-            <div>
-              <p className="rr-eyebrow" style={{ color: 'var(--green)' }}>Assigned itinerary</p>
-              <h2 id="rr-route-title" style={{ marginTop: 7 }}>{longDate(selected)}</h2>
-              <p className="rr-sub">{route
-                ? `${data.practice} · assigned to ${route.staff || data.runner.name || 'you'}`
-                : 'No route is assigned for this day'}</p>
-            </div>
-            <span className={`rr-tag ${route ? 'rr-tag-green' : 'rr-tag-gray'}`}>
-              {route ? (plan && plan.completed === plan.items.length && plan.items.length ? 'Finished' : route.status === 'done' ? 'Done' : 'Assigned') : 'No route'}
-            </span>
-          </div>
+        <RunnerWeek days={days} today={today} liveDay={liveDay} plansFor={plansFor} busy={busy}
+          practice={data.practice}
+          onOpenDay={day => setFocus(day)}
+          onOpen={openStop}
+          onQuick={checkStop}
+          onMove={(roundId, key, index) => void move(roundId, key, index)}/>
+      </>}
 
-          {onThisDay.length > 1 && <div className="rr-round-pick" role="tablist" aria-label="Rounds booked for this day">
-            {onThisDay.map((other, index) => <button key={other.id} role="tab"
-              aria-selected={other.id === route?.id}
-              className={other.id === route?.id ? 'is-current' : ''}
-              onClick={() => setChosenRound(other.id)}>
-              Round {index + 1}<small>{other.items.length} stops</small>
-            </button>)}
-          </div>}
+      {!error && data && focus !== null && <FocusedDay
+        day={focus} today={today} practice={data.practice} busy={busy}
+        plans={plansFor(focus)} fullPlanOf={fullPlanOf}
+        onBack={() => setFocus(null)}
+        onOpen={openStop}
+        onQuick={checkStop}
+        onMove={(roundId, key, index) => void move(roundId, key, index)}
+        onSupplies={roundId => setDrawer({ kind: 'supplies', roundId })}
+        onAddPickup={roundId => setDrawer({ kind: 'pickup', roundId })}
+        onNext={goNext}/>}
+    </main>
 
-          {!route || !plan ? <div className="rr-empty">
-            <Icon name="calendar" size={35}/>
-            <h3>Nothing assigned for this day</h3>
-            <p>Your office assigns the businesses on a route. When a day is assigned to you it
-              appears here, with the stops in order and the script for every conversation.</p>
-          </div> : <>
-            {/* One action on this panel: where to go now. */}
-            <div className="rr-headline">
-              <span className="rr-facts">{clockOf(plan.startsAt)} – {clockOf(plan.endsAt)}</span>
-              {plan.next
-                ? <button className="rr-btn rr-btn-primary" onClick={() => openStop(plan.next!, setVisiting, setDrawer)}>
-                    {plan.completed ? `Next: ${itemName(plan.next.item)}` : 'Start the route'}
-                    <Icon name="arrow" size={15}/>
-                  </button>
-                : <span className="rr-tag rr-tag-green">Route finished</span>}
-            </div>
-
-            <div className="rr-progress-wrap">
-              <div className="rr-progress" role="img"
-                aria-label={`${plan.completed} of ${plan.items.length} stops finished`}>
-                <i style={{ width: `${plan.items.length ? (plan.completed / plan.items.length) * 100 : 0}%` }}/>
-              </div>
-              <div className="rr-progress-foot">
-                <span>{plan.completed} of {plan.items.length} finished</span>
-                <span>{Math.round((plan.completed / Math.max(1, plan.items.length)) * 100)}%</span>
-              </div>
-            </div>
-
-            <Itinerary
-              plan={plan} items={items} done={done} busy={busy}
-              origin={data.clinic?.label ?? data.practice}
-              onMove={commitOrder}
-              onOpen={item => openStop(item, setVisiting, setDrawer)}
-              onEdit={pickupId => setDrawer({ kind: 'pickup', pickupId })}/>
-
-            <div className="rr-footnote">
-              <span>Times are estimates, not driving directions.</span>
-              <button className="rr-link" onClick={() => setDrawer({ kind: 'timing' })}>Where they come from</button>
-              <button className="rr-link" onClick={() => void copyItinerary(route, plan, data, say)}>Copy route</button>
-              <button className="rr-link" onClick={() => window.print()}>Print</button>
-            </div>
-          </>}
-        </section>
-
-        <aside className="rr-side">
-          <section className="rr-panel" aria-labelledby="rr-supplies-title">
-            <div className="rr-panel-head">
-              <div>
-                <h3 id="rr-supplies-title">What to bring</h3>
-                <p className="rr-sub">{route?.supplies.packed
-                  ? `Load confirmed by ${route.supplies.packedBy || 'you'}`
-                  : 'Confirm your load before recording anything dropped'}</p>
-              </div>
-              <span className="rr-tag rr-tag-gold">Supplies</span>
-            </div>
-            {!route ? <p className="rr-note-inline">Pick a day with a route to check its supplies.</p> : <>
-              <table className="rr-bring">
-                <thead>
-                  <tr><th scope="col"><span className="rr-sr">Material</span></th>
-                    <th scope="col">Given</th><th scope="col">Picked up</th>
-                    <th scope="col">Dropped</th><th scope="col">Left</th></tr>
-                </thead>
-                <tbody>
-                  {SUPPLIES.map(supply => <tr key={supply.key}>
-                    <th scope="row">{supply.label}</th>
-                    <td>{route.supplies.planned[supply.key]}</td>
-                    <td>{route.collected[supply.key] || '—'}</td>
-                    <td>{route.dropped[supply.key] || '—'}</td>
-                    <td className="rr-bring-left">{route.supplies.packed
-                      ? Math.max(0, route.remaining[supply.key]) : '—'}</td>
-                  </tr>)}
-                </tbody>
-              </table>
-              <div className="rr-panel-actions">
-                <button className={`rr-btn ${route.supplies.packed ? 'rr-btn-white' : 'rr-btn-dark'}`}
-                  onClick={() => setDrawer({ kind: 'supplies' })}>
-                  {route.supplies.packed ? 'Change what you packed' : 'Confirm what you packed'}
-                </button>
-              </div>
-            </>}
-          </section>
-
-          {plan && (plan.warnings.length > 0 || true) && <section className="rr-panel">
-            {plan.warnings.map(warning => <p className="rr-warning" key={warning}>
-              <Icon name="warn" size={15}/>{warning}
-            </p>)}
-            <details className="rr-details">
-              <summary>The day in figures</summary>
-              <div className="rr-summary">
-                {([
-                  ['Leave at', clockOf(plan.startsAt)],
-                  ['Estimated finish', clockOf(plan.endsAt)],
-                  ['Business visits', String(plan.items.filter(i => i.item.kind === 'business').length)],
-                  ['Pickup stops', String(plan.items.filter(i => i.item.kind === 'pickup').length)],
-                  ['At stops', durationLabel(plan.onSiteMinutes)],
-                  ['Travel allowance', durationLabel(plan.travelMinutes)],
-                  ['Waiting for a pickup', durationLabel(plan.waitMinutes)],
-                ] as const).map(([label, value]) => <div className="rr-summary-line" key={label}>
-                  <span>{label}</span><b>{value}</b>
-                </div>)}
-              </div>
-            </details>
-          </section>}
-        </aside>
-      </div>
-
-    </>}
-
-    {/* ON A PHONE the next stop follows you down the page. The week has to be at the top — it is
-        how a day is chosen — so the one action that matters is pinned to the bottom instead of
-        being scrolled past. It is the same action as the one on the panel; only one shows. */}
-    {route && plan?.next && !drawer && <div className="rr-next-bar">
-      <button className="rr-btn rr-btn-primary" onClick={() => openStop(plan.next!, setVisiting, setDrawer)}>
-        {plan.completed ? `Next: ${itemName(plan.next.item)}` : 'Start the route'}
-        <Icon name="arrow" size={16}/>
+    {/* On a phone the next stop follows you down the page. */}
+    {running && !drawer && !visiting && <div className="rr-next">
+      <button className="rr-btn rr-btn-primary" onClick={goNext}>
+        {running.completed ? `Next: ${itemName(running.next!.item)}` : 'Start the route'}
+        <Icon name="arrow" size={17}/>
       </button>
     </div>}
 
-    {/* The drawer: one panel, whichever job is in hand. */}
     <div className={`rr-backdrop ${drawer ? 'is-open' : ''}`} onClick={closeDrawer}/>
-    <aside ref={drawerRef} tabIndex={-1}
-      className={`rr-drawer ${drawer ? 'is-open' : ''}`} role="dialog" aria-modal={drawer ? true : undefined}
-      aria-hidden={drawer ? undefined : true} aria-labelledby="rr-drawer-title">
-      {drawer && route && <>
-        {drawer.kind === 'pickup' && <PickupPanel
-          route={route}
-          pickupId={drawer.pickupId}
-          busy={busy}
+    <aside ref={sheetRef} tabIndex={-1} aria-labelledby="rr-sheet-title"
+      className={`rr-sheet ${drawer ? 'is-open' : ''}`} role="dialog"
+      aria-modal={drawer ? true : undefined} aria-hidden={drawer ? undefined : true}>
+      {drawer && drawerRoute && <>
+        {drawer.kind === 'stop' && (() => {
+          const entry = entryOf(drawer.roundId, drawer.key);
+          return entry ? <StopDrawer roundId={drawer.roundId} entry={entry}
+            materials={drawerRoute.supplies.packed ?? drawerRoute.supplies.planned}
+            onClose={closeDrawer}
+            onQuick={() => { if (!entry.done) setDrawer({ kind: 'quick', roundId: drawer.roundId, key: drawer.key }); }}
+            onStart={() => {
+              if (entry.item.kind !== 'business') return;
+              setDrawer(null);
+              setVisiting({ roundId: drawer.roundId, businessId: entry.item.business.id });
+            }}/> : null;
+        })()}
+
+        {drawer.kind === 'quick' && (() => {
+          const entry = entryOf(drawer.roundId, drawer.key);
+          if (!entry || entry.item.kind !== 'business' || entry.done) return null;
+          const routeId = drawer.roundId;
+          const businessId = entry.item.business.id;
+          return <QuickResultDrawer entry={entry} today={today} busy={busy}
+            remaining={drawerRoute.remaining} packed={drawerRoute.supplies.packed !== null}
+            onDirty={() => { unsaved.current = true; }} onClose={closeDrawer}
+            onSave={async quick => {
+              setBusy(true);
+              try {
+                const saved = await recordRunnerVisit({
+                  roundId: routeId, businessId, visitedOn: today,
+                  spokeWith: quick.spokeWith, contactRole: '', outcome: quick.outcome,
+                  dropped: quick.dropped, note: quick.note, nextAction: quick.nextAction,
+                  followUpOn: quick.followUpOn, clientRef: quick.clientRef,
+                });
+                setData(current => current && ({
+                  ...current,
+                  routes: saved.route ? current.routes.map(route => route.id === saved.route!.id ? saved.route! : route) : current.routes,
+                  visits: current.visits.some(visit => visit.id === saved.visit.id)
+                    ? current.visits : [saved.visit, ...current.visits],
+                }));
+                unsaved.current = false;
+                setDrawer(null);
+                say(`Checked off: ${runnerOutcomeLabel(saved.visit.outcome, saved.visit.outcomeLabel)}.`);
+              } finally { setBusy(false); }
+            }}/>
+        })()}
+
+        {drawer.kind === 'collect' && (() => {
+          const entry = entryOf(drawer.roundId, drawer.key);
+          if (!entry || entry.item.kind !== 'pickup') return null;
+          const pickupId = entry.item.id;
+          return <CollectDrawer entry={entry} busy={busy}
+            onClose={closeDrawer}
+            onEdit={() => setDrawer({ kind: 'pickup', roundId: drawer.roundId, pickupId })}
+            onCollect={async collected => {
+              const saved = await write(
+                () => collectPickup(drawer.roundId, pickupId, drawerRoute.revision, collected),
+                'Picked up. Those supplies are in your car.');
+              if (!saved) return;
+              setDrawer(null);
+              const plan = fullPlanOf(drawerRoute);
+              const at = plan.items.findIndex(entryAt => refOf(entryAt.item) === refOf(entry.item));
+              const after = at < 0 ? undefined : plan.items.slice(at + 1).find(entryAt => !entryAt.done);
+              if (after?.item.kind === 'business') {
+                setVisiting({ roundId: drawer.roundId, businessId: after.item.business.id });
+              }
+            }}/>;
+        })()}
+
+        {drawer.kind === 'pickup' && <PickupDrawer
+          route={drawerRoute} pickupId={drawer.pickupId} busy={busy}
           onClose={closeDrawer}
           onDirty={() => { unsaved.current = true; }}
           onSave={async draft => {
-            const saved = await write(() => savePickup(route.id, route.revision, draft),
+            const saved = await write(() => savePickup(drawerRoute.id, drawerRoute.revision, draft),
               drawer.pickupId ? 'Pickup updated.' : 'Pickup added. Drag it into position.');
             if (saved) { unsaved.current = false; setDrawer(null); }
           }}
           onRemove={() => setConfirming({
             title: 'Remove this pickup?',
-            text: 'Only the pickup comes off the route. Your assigned businesses and every visit you have recorded stay exactly as they are.',
+            text: 'Only the pickup comes off the route. Your assigned businesses and every visit you have recorded stay as they are.',
             run: () => {
-              setConfirming(null); setDrawer(null);
-              void write(() => removePickup(route.id, drawer.pickupId!, route.revision), 'Pickup removed.');
+              setConfirming(null); unsaved.current = false; setDrawer(null);
+              void write(() => removePickup(drawerRoute.id, drawer.pickupId!, drawerRoute.revision), 'Pickup removed.');
             },
           })}/>}
-        {drawer.kind === 'collect' && <CollectPanel
-          route={route}
-          pickupId={drawer.pickupId}
-          busy={busy}
+
+        {drawer.kind === 'supplies' && <SuppliesDrawer
+          route={drawerRoute} busy={busy}
           onClose={closeDrawer}
           onDirty={() => { unsaved.current = true; }}
-          onEdit={() => { unsaved.current = false; setDrawer({ kind: 'pickup', pickupId: drawer.pickupId }); }}
-          onCollect={async collected => {
-            const saved = await write(() => collectPickup(route.id, drawer.pickupId, route.revision, collected),
-              'Picked up. Those supplies are in your car.');
-            if (!saved) return;
-            unsaved.current = false;
-            setDrawer(null);
-            // On to whatever is actually next. Collecting is a stop like any other, and the
-            // point of finishing one is being pointed at the following one.
-            const at = plan?.items.findIndex(i => refOf(i.item) === `pickup:${drawer.pickupId}`) ?? -1;
-            const after = at < 0 ? undefined : plan?.items.slice(at + 1).find(i => !i.done);
-            if (after?.item.kind === 'business') setVisiting(after.item.business.id);
-          }}/>}
-        {drawer.kind === 'supplies' && <SuppliesPanel
-          route={route} busy={busy} onClose={closeDrawer}
-          onDirty={() => { unsaved.current = true; }}
-          onSave={async supplies => {
-            const saved = await write(() => confirmPacked(route.id, supplies, route.revision),
+          onSave={async packed => {
+            const saved = await write(() => confirmPacked(drawerRoute.id, packed, drawerRoute.revision),
               'Supplies confirmed.');
             if (saved) { unsaved.current = false; setDrawer(null); }
           }}/>}
-        {drawer.kind === 'timing' && plan && <TimingPanel
-          route={route} plan={plan} onClose={closeDrawer}/>}
       </>}
     </aside>
 
     <div className={`rr-toast ${toast ? 'is-open' : ''}`} role="status">{toast}</div>
 
-    {confirming && <div className="rr-modal-backdrop">
-      <div className="rr-modal" role="alertdialog" aria-modal="true" aria-labelledby="rr-confirm-title">
-        <h2 id="rr-confirm-title">{confirming.title}</h2>
+    {confirming && <div className="rr-dialog-backdrop">
+      <div className="rr-dialog" role="alertdialog" aria-modal="true" aria-labelledby="rr-confirm">
+        <h2 id="rr-confirm">{confirming.title}</h2>
         <p>{confirming.text}</p>
-        <div className="rr-modal-actions">
-          <button className="rr-btn rr-btn-white" onClick={() => setConfirming(null)}>Cancel</button>
-          <button className="rr-btn rr-btn-dark" onClick={confirming.run}>Continue</button>
+        <div className="rr-dialog-actions">
+          <button className="rr-btn rr-btn-outline" onClick={() => setConfirming(null)}>Cancel</button>
+          <button className="rr-btn rr-btn-primary" onClick={confirming.run}>Continue</button>
         </div>
       </div>
     </div>}
-  </main>;
+  </>;
 }
 
-/**
- * A business opens into its guided visit; a pickup opens into collecting it. Editing a pickup
- * is a different button, because arriving at one and changing your mind about one are different
- * things to be doing on a pavement.
- */
-function openStop(item: PlannedItem, visit: (id: string) => void, drawer: (value: Drawer) => void) {
-  if (item.item.kind === 'business') visit(item.item.business.id);
-  else drawer({ kind: item.item.pickup.status === 'collected' ? 'pickup' : 'collect', pickupId: item.item.id });
-}
-
-
-/** One day in the week strip. Touch-friendly, and it says what is on the day without opening it. */
-function Day({ day, today, current, routes, visits, attributed, onPick }: {
-  day: string; today: string; current: boolean; routes: RunnerRoute[]; visits: Visit[];
-  attributed: Map<string, Attribution>; onPick: () => void;
+/** ONE DAY, FULL WIDTH — the same cards, bigger, for a runner who is actually out. */
+function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onOpen, onQuick, onMove,
+  onSupplies, onAddPickup, onNext }: {
+  day: string; today: string; practice: string; busy: boolean;
+  plans: DayPlan[];
+  fullPlanOf: (route: RunnerRoute) => ReturnType<typeof planRoute>;
+  onBack: () => void;
+  onOpen: (roundId: string, entry: PlannedItem) => void;
+  onQuick: (roundId: string, entry: PlannedItem) => void;
+  onMove: (roundId: string, key: string, index: number) => void;
+  onSupplies: (roundId: string) => void;
+  onAddPickup: (roundId: string) => void;
+  onNext: () => void;
 }) {
-  const plans = routes.map(route => planRoute(route, visits, { today, attributed }));
-  const stops = routes.reduce((total, route) => total + route.items.length, 0);
+  const stops = plans.reduce((total, plan) => total + plan.items.length, 0);
   const done = plans.reduce((total, plan) => total + plan.completed, 0);
   const minutes = plans.reduce((total, plan) => total + plan.totalMinutes, 0);
-  const shown = routes.flatMap(route => route.items).slice(0, 3);
-  return <button type="button" className={`rr-day ${current ? 'is-current' : ''}`}
-    aria-pressed={current} onClick={onPick}>
-    <span className="rr-day-top">
-      <strong>{shortDate(day).replace(',', '')}</strong>
-      <b>{routes.length ? stops : '–'}</b>
-    </span>
-    <span className="rr-day-list">
-      {!routes.length ? <span className="rr-day-empty">No route assigned</span> : <>
-        {shown.map(item => <span key={refOf(item)}
-          className={`rr-day-item ${item.kind === 'pickup' ? 'is-pickup' : ''}`}>
-          {item.kind === 'pickup' ? `↳ ${item.pickup.title}` : item.business.name}
-        </span>)}
-        {stops > 3 && <span className="rr-day-more">+{stops - 3} more</span>}
-      </>}
-    </span>
-    <span className="rr-day-foot">
-      <span>{routes.length
-        ? `${done} done${routes.length > 1 ? ` · ${routes.length} routes` : ''}`
-        : day === today ? 'Today' : 'No route'}</span>
-      <span>{routes.length ? durationLabel(minutes) : '—'}</span>
-    </span>
-  </button>;
-}
-
-/**
- * ARRIVING AT A PICKUP. What to collect, where, by when — and the counts confirmed as they go
- * in the car, because what was ordered and what the bakery actually had are different numbers.
- */
-function CollectPanel({ route, pickupId, busy, onClose, onEdit, onCollect, onDirty }: {
-  route: RunnerRoute; pickupId: string; busy: boolean;
-  onClose: () => void; onEdit: () => void; onCollect: (collected: Supplies) => void;
-  onDirty: () => void;
-}) {
-  const found = route.items.find(item => item.kind === 'pickup' && item.id === pickupId);
-  const pickup = found?.kind === 'pickup' ? found.pickup : null;
-  const [form, setForm] = useState<Record<keyof Supplies, string>>(() => ({
-    flyers: String(pickup?.supplies.flyers ?? 0),
-    treats: String(pickup?.supplies.treats ?? 0),
-    cards: String(pickup?.supplies.cards ?? 0),
-  }));
-  const [failed, setFailed] = useState('');
-  if (!pickup) return null;
-
-  function submit() {
-    const value: Supplies = {
-      flyers: Number(form.flyers), treats: Number(form.treats), cards: Number(form.cards),
-    };
-    for (const supply of SUPPLIES) {
-      const count = value[supply.key];
-      if (!Number.isInteger(count) || count < 0 || count > 10000) {
-        return setFailed(`${supply.label}: enter a whole number from 0 to 10000.`);
-      }
-    }
-    setFailed('');
-    onCollect(value);
-  }
+  const first = plans[0];
+  const full = first ? fullPlanOf(first.route) : null;
 
   return <>
-    <div className="rr-drawer-head">
+    <div className="rr-focus-head">
       <div>
-        <p className="rr-eyebrow" style={{ color: '#6e8875' }}>Pickup stop</p>
-        <h2 id="rr-drawer-title">{pickup.title}</h2>
-        <small>{PICKUP_LABEL[pickup.kind]} · {pickup.windowStart}–{pickup.windowEnd}</small>
-      </div>
-      <button className="rr-btn rr-btn-white rr-btn-icon" aria-label="Close" onClick={onClose}>
-        <Icon name="close" size={16}/>
-      </button>
-    </div>
-    <div className="rr-drawer-scroll">
-      <div className="rr-card">
-        <h3>Where</h3>
-        <p>{pickup.address}</p>
-        <div className="rr-stop-actions">
-          <a className="rr-btn rr-btn-sm rr-btn-white" target="_blank" rel="noreferrer noopener"
-            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(pickup.address)}&travelmode=driving`}>
-            <Icon name="map" size={13}/>Directions
-          </a>
-        </div>
-      </div>
-
-      <div className="rr-card">
-        <h3>What to collect</h3>
-        <p>{pickup.items || 'Nothing was written down for this pickup.'}</p>
-        {pickup.reference && <p>Under {pickup.reference}.</p>}
-        {pickup.note && <p>{pickup.note}</p>}
-      </div>
-
-      {pickup.status === 'collected' ? <p className="rr-notice">
-        Already collected. What you confirmed is counted in your supplies.
-      </p> : <>
-        <p className="rr-section-title">What you actually came away with</p>
-        <div className="rr-grid">
-          {SUPPLIES.map(supply => <div className="rr-field" key={supply.key}>
-            <label htmlFor={`rr-got-${supply.key}`}>{supply.label}</label>
-            <input id={`rr-got-${supply.key}`} type="number" inputMode="numeric" min={0} max={10000}
-              value={form[supply.key]}
-              onChange={event => { onDirty(); setForm(current => ({ ...current, [supply.key]: event.target.value })); }}/>
-          </div>)}
-        </div>
-        <p className="rr-hint">These start at what you said you were collecting. Change them to
-          what is really in the car — that is what your remaining supplies are counted from.</p>
-      </>}
-      {failed && <p className="rr-error" role="alert">{failed}</p>}
-    </div>
-    <div className="rr-drawer-foot">
-      <button className="rr-btn rr-btn-white" onClick={onEdit} disabled={pickup.status === 'collected'}>
-        Edit pickup
-      </button>
-      <button className="rr-btn rr-btn-primary" onClick={submit}
-        disabled={busy || pickup.status === 'collected'}>
-        {busy ? 'Saving…' : 'Mark picked up'}
-      </button>
-    </div>
-  </>;
-}
-
-/**
- * THE ITINERARY, draggable. Pointer events rather than HTML5 drag-and-drop, because this is used
- * on a phone and HTML5 dragging does not exist there. Move up / Move down do the same job from a
- * keyboard, and a stop that is finished or fixed in place refuses to move either way.
- */
-function Itinerary({ plan, items, done, busy, origin, onMove, onOpen, onEdit }: {
-  plan: ReturnType<typeof planRoute>; items: RunnerItem[]; done: Set<string>; busy: boolean;
-  origin: string;
-  onMove: (next: RunnerItem[]) => void;
-  onOpen: (item: PlannedItem) => void;
-  onEdit: (pickupId: string) => void;
-}) {
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [target, setTarget] = useState<{ key: string; after: boolean } | null>(null);
-  const drag = useRef<{ key: string; x: number; y: number; moved: boolean } | null>(null);
-
-  const move = (key: string, to: number) => {
-    const next = moveTo(items, done, key, to);
-    if (next) onMove(next); 
-  };
-
-  const finish = () => {
-    const current = drag.current;
-    drag.current = null;
-    setDragging(null);
-    const landing = target;
-    setTarget(null);
-    if (!current?.moved || !landing) return;
-    const from = items.findIndex(item => refOf(item) === current.key);
-    const onto = items.findIndex(item => refOf(item) === landing.key);
-    if (from < 0 || onto < 0) return;
-    let to = onto + (landing.after ? 1 : 0);
-    if (from < to) to--;
-    move(current.key, to);
-  };
-
-  return <ol className="rr-stops"
-    onPointerMove={event => {
-      const current = drag.current;
-      if (!current) return;
-      if (Math.abs(event.clientY - current.y) + Math.abs(event.clientX - current.x) > 6) {
-        current.moved = true;
-        setDragging(current.key);
-      }
-      if (!current.moved) return;
-      const under = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-stop]');
-      const key = under?.getAttribute('data-stop') ?? null;
-      if (!key || key === current.key || done.has(key)) { setTarget(null); return; }
-      const box = under!.getBoundingClientRect();
-      setTarget({ key, after: event.clientY > box.top + box.height / 2 });
-    }}
-    onPointerUp={finish} onPointerCancel={finish}>
-    <li className="rr-stop is-origin">
-      <span className="rr-index"><Icon name="home" size={14}/></span>
-      <div className="rr-stop-body">
-        <div className="rr-stop-top"><strong>Leave the practice</strong>
-          <span className="rr-time">{clockOf(plan.startsAt)}</span></div>
-        <p className="rr-where">{origin}</p>
-      </div>
-    </li>
-    {plan.items.map((entry, index) => {
-      const key = refOf(entry.item);
-      const fixed = entry.item.locked || entry.done;
-      const pickup = entry.item.kind === 'pickup' ? entry.item.pickup : null;
-      return <li key={key} data-stop={key}
-        className={`rr-stop ${pickup ? 'is-pickup' : ''} ${entry.done ? 'is-done' : ''}
-          ${dragging === key ? 'is-dragging' : ''} ${target?.key === key ? 'is-target' : ''}`}>
-        <button type="button" className="rr-grip" disabled={fixed || busy}
-          aria-label={`Drag ${itemName(entry.item)} to reorder it`}
-          onPointerDown={event => {
-            if (fixed || busy) return;
-            event.preventDefault();
-            (event.target as HTMLElement).setPointerCapture(event.pointerId);
-            drag.current = { key, x: event.clientX, y: event.clientY, moved: false };
-          }}>
-          <Icon name="grip" size={16}/>
+        <button className="rr-btn rr-btn-ghost" style={{ paddingLeft: 0, height: 28 }} onClick={onBack}>
+          <Icon name="back" size={15}/>Back to the week
         </button>
-        <span className="rr-index">
-          {entry.done ? <Icon name="check" size={14}/> : pickup ? <Icon name="box" size={14}/> : index + 1}
-        </span>
-        <div className="rr-stop-body">
-          <div className="rr-stop-top">
-            <strong>{itemName(entry.item)}</strong>
-            <span className="rr-time">{entry.item.kind === 'business' && !entry.measured && !entry.done
-              ? `~${clockOf(entry.arriveAt)}` : clockOf(entry.arriveAt)}</span>
-          </div>
-          <p className="rr-where">{itemAddress(entry.item)}</p>
+        <h1 className="rr-focus-title">{day === today ? 'Today' : longDate(day)}</h1>
+        <p className="rr-focus-sub">{plans.length
+          ? `${practice} · assigned to ${first.route.staff || 'you'}`
+          : 'Nothing assigned for this day'}</p>
+      </div>
+      {plans.length > 0 && <div className="rr-focus-actions">
+        {plans.length === 1 && <>
+          <button className="rr-btn rr-btn-outline" onClick={() => onSupplies(first.route.id)}>
+            <Icon name="box" size={15}/>Supplies
+          </button>
+          <button className="rr-btn rr-btn-outline" onClick={() => onAddPickup(first.route.id)}>
+            <Icon name="plus" size={15}/>Add pickup
+          </button>
+        </>}
+        {full?.next && <button className="rr-btn rr-btn-primary" onClick={onNext}>
+          {full.completed ? 'Next stop' : 'Start the route'}<Icon name="arrow" size={16}/>
+        </button>}
+      </div>}
+    </div>
 
-          {/* One status, and only where it is worth saying. */}
-          {(entry.done || entry.late > 0 || entry.item.locked || pickup) && <div className="rr-meta">
-            {entry.done && <span className="rr-tag rr-tag-green">
-              {pickup ? 'Picked up' : entry.visit?.outcomeLabel ?? 'Visited'}
-            </span>}
-            {!entry.done && pickup && <span className="rr-tag rr-tag-gold">
-              Pickup {pickup.windowStart}–{pickup.windowEnd}
-            </span>}
-            {entry.late > 0 && <span className="rr-tag rr-tag-red">Window missed</span>}
-            {entry.item.locked && <span className="rr-tag rr-tag-gray">Fixed</span>}
-          </div>}
-
-          {/* The one thing to do here. Directions sits beside it, because it is the other. */}
-          <div className="rr-stop-actions">
-            <button className={`rr-btn rr-btn-sm ${entry.done ? 'rr-btn-white' : 'rr-btn-subtle'}`}
-              onClick={() => onOpen(entry)} disabled={busy && !entry.done}>
-              {pickup
-                ? (pickup.status === 'collected' ? 'Open the pickup' : 'Collect')
-                : entry.done ? 'Open the visit' : 'Start visit'}
-              {!entry.done && <Icon name="arrow" size={13}/>}
-            </button>
-            <a className="rr-btn rr-btn-sm rr-btn-white" href={directionsTo(entry.item)}
-              target="_blank" rel="noreferrer noopener" aria-label={`Directions to ${itemName(entry.item)}`}>
-              <Icon name="map" size={13}/>Directions
-            </a>
+    {plans.length === 0
+      ? <div className="rr-state">
+          <h2>No route for this day.</h2>
+          <p>Your office assigns the businesses on a route. When a day is assigned to you it
+            appears here, with the stops in order and the script for every conversation.</p>
+        </div>
+      : <>
+          <p className="rr-hint">
+            <b>{stops}</b> stops · <b>{done}</b> completed · <b>{durationLabel(minutes)}</b> estimated
+            {full && <> · leave at <b>{clockOf(full.startsAt)}</b></>}
+          </p>
+          <div className="rr-progress" role="img" aria-label={`${done} of ${stops} stops finished`}>
+            <i style={{ width: `${stops ? (done / stops) * 100 : 0}%` }}/>
           </div>
 
-          <details className="rr-details rr-stop-details">
-            <summary>Details</summary>
-            <ul>
-              {entry.item.kind === 'business' && <li>{entry.item.business.category}</li>}
-              {pickup && <li>{PICKUP_LABEL[pickup.kind]}</li>}
-              <li>{entry.minutes} min at the stop · {entry.measured
-                ? `${entry.travel} min drive, from the distance`
-                : `${entry.travel} min travel allowance`}</li>
-              {entry.wait > 0 && <li>{entry.wait} min waiting for the window to open</li>}
-              {pickup?.items && <li>To collect: {pickup.items}{pickup.reference ? ` · ${pickup.reference}` : ''}</li>}
-              {pickup?.note && <li>{pickup.note}</li>}
-              {pickup?.collected && <li>Collected: {pickup.collected.flyers} flyers ·
-                {' '}{pickup.collected.treats} treats · {pickup.collected.cards} cards</li>}
-              {entry.visit && <li>{entry.visit.spokeWith ? `Spoke with ${entry.visit.spokeWith}` : 'Nobody recorded'}
-                {entry.visit.materials ? ` · ${entry.visit.materials} materials dropped` : ''}</li>}
-              {entry.attribution === 'inferred' && <li className="rr-inferred">
-                This visit does not say which route it was on. It has been matched to this one
-                because it is the last route before it that had this business on it.
-              </li>}
-              {entry.item.kind === 'business' && entry.item.business.demo === 1 && <li>Illustrative business.</li>}
-              {pickup && pickup.status !== 'collected' && <li>
-                <button className="rr-link" onClick={() => onEdit(pickup.id)}>Edit this pickup</button>
-              </li>}
-            </ul>
-          </details>
-        </div>
-        <div className="rr-move">
-          <button aria-label={`Move ${itemName(entry.item)} up`} disabled={index === 0 || fixed || busy}
-            onClick={() => move(key, index - 1)}><Icon name="up" size={14}/></button>
-          <button aria-label={`Move ${itemName(entry.item)} down`}
-            disabled={index === plan.items.length - 1 || fixed || busy}
-            onClick={() => move(key, index + 1)}><Icon name="down" size={14}/></button>
-        </div>
-      </li>;
-    })}
-  </ol>;
-}
+          {full?.warnings.map(warning => <p className="rr-warn" key={warning}>
+            <Icon name="warn" size={15}/>{warning}
+          </p>)}
 
-/** The same rules the server applies, so a move it would refuse is never offered. */
-function moveTo(items: RunnerItem[], done: Set<string>, key: string, to: number) {
-  const at = items.findIndex(item => refOf(item) === key);
-  if (at < 0 || to < 0 || to >= items.length || at === to) return null;
-  const blocked = (item: RunnerItem) => item.locked || done.has(refOf(item));
-  if (blocked(items[at]) || blocked(items[to])) return null;
-  const next = [...items];
-  const [moved] = next.splice(at, 1);
-  next.splice(to, 0, moved);
-  for (let index = 0; index < items.length; index++) {
-    if (items[index].locked && refOf(next[index]) !== refOf(items[index])) return null;
-  }
-  const was = items.filter(item => done.has(refOf(item))).map(refOf).join('|');
-  if (was !== next.filter(item => done.has(refOf(item))).map(refOf).join('|')) return null;
-  return next;
-}
-
-/** Add or change a pickup. The one place a runner puts something of their own on a route. */
-function PickupPanel({ route, pickupId, busy, onClose, onSave, onRemove, onDirty }: {
-  route: RunnerRoute; pickupId?: string; busy: boolean;
-  onClose: () => void; onSave: (draft: PickupDraft & { pickupId?: string }) => void;
-  onRemove: () => void; onDirty: () => void;
-}) {
-  const existing = pickupId
-    ? route.items.find(item => item.kind === 'pickup' && item.id === pickupId)
-    : undefined;
-  const pickup = existing?.kind === 'pickup' ? existing.pickup : null;
-  const [form, setForm] = useState<PickupDraft>(() => ({
-    kind: pickup?.kind ?? 'treats',
-    title: pickup?.title ?? '', address: pickup?.address ?? '',
-    windowStart: pickup?.windowStart ?? '09:00', windowEnd: pickup?.windowEnd ?? '09:30',
-    minutes: pickup?.minutes ?? 10, items: pickup?.items ?? '',
-    reference: pickup?.reference ?? '', note: pickup?.note ?? '',
-    supplies: pickup?.supplies ?? { flyers: 0, treats: 0, cards: 0 },
-  }));
-  const [failed, setFailed] = useState('');
-  const collected = pickup?.status === 'collected';
-  const set = <K extends keyof PickupDraft>(key: K, value: PickupDraft[K]) => {
-    onDirty();
-    setForm(current => ({ ...current, [key]: value }));
-  };
-  const supply = (key: keyof Supplies, value: string) => {
-    onDirty();
-    setForm(current => ({
-      ...current, supplies: { ...(current.supplies as Supplies), [key]: Number(value) || 0 },
-    }));
-  };
-
-  function submit() {
-    if (!form.title.trim()) return setFailed('Give the pickup a location name.');
-    if (form.address.trim().length < 8) return setFailed('Give the pickup a full street address.');
-    if (form.windowEnd <= form.windowStart) return setFailed('The pickup window has to open before it closes.');
-    setFailed('');
-    onSave({ ...form, pickupId });
-  }
-
-  return <>
-    <div className="rr-drawer-head">
-      <div>
-        <p className="rr-eyebrow" style={{ color: '#6e8875' }}>Route logistics</p>
-        <h2 id="rr-drawer-title">{pickup ? 'Edit pickup' : 'Add a pickup'}</h2>
-        <small>Put a food or supply stop anywhere in your day</small>
-      </div>
-      <button className="rr-btn rr-btn-white rr-btn-icon" aria-label="Close" onClick={onClose}>
-        <Icon name="close" size={16}/>
-      </button>
-    </div>
-    <div className="rr-drawer-scroll">
-      <p className="rr-notice">A pickup is yours: you add it, you move it, you mark it collected.
-        It is not a referral business, it never joins your practice’s business list, and it changes
-        nothing about who you were assigned to visit.</p>
-      {collected && <p className="rr-notice is-warn">This pickup has been collected, so it stays as
-        it is. What it was carrying is counted in your supplies.</p>}
-
-      <div className="rr-field">
-        <label htmlFor="rr-kind">What are you collecting?</label>
-        <select id="rr-kind" value={form.kind} disabled={collected}
-          onChange={event => set('kind', event.target.value as PickupKind)}>
-          {(Object.keys(PICKUP_LABEL) as PickupKind[]).map(kind =>
-            <option key={kind} value={kind}>{PICKUP_LABEL[kind]}</option>)}
-        </select>
-      </div>
-      <div className="rr-field">
-        <label htmlFor="rr-title">Location name</label>
-        <input id="rr-title" maxLength={100} value={form.title} disabled={collected}
-          placeholder="Bakery on Main" onChange={event => set('title', event.target.value)}/>
-      </div>
-      <div className="rr-field">
-        <label htmlFor="rr-address">Street address</label>
-        <input id="rr-address" maxLength={250} value={form.address} disabled={collected}
-          placeholder="Street, city, state, ZIP" onChange={event => set('address', event.target.value)}/>
-      </div>
-      <div className="rr-grid">
-        <div className="rr-field">
-          <label htmlFor="rr-from">Window opens</label>
-          <input id="rr-from" type="time" value={form.windowStart} disabled={collected}
-            onChange={event => set('windowStart', event.target.value)}/>
-        </div>
-        <div className="rr-field">
-          <label htmlFor="rr-to">Window closes</label>
-          <input id="rr-to" type="time" value={form.windowEnd} disabled={collected}
-            onChange={event => set('windowEnd', event.target.value)}/>
-        </div>
-      </div>
-      <div className="rr-field">
-        <label htmlFor="rr-minutes">Time at the pickup</label>
-        <select id="rr-minutes" value={form.minutes} disabled={collected}
-          onChange={event => set('minutes', Number(event.target.value))}>
-          {[5, 10, 15, 20, 30, 45].map(minutes =>
-            <option key={minutes} value={minutes}>{minutes} minutes</option>)}
-        </select>
-      </div>
-      <div className="rr-field">
-        <label htmlFor="rr-items">What to collect</label>
-        <input id="rr-items" maxLength={400} value={form.items} disabled={collected}
-          placeholder="4 dozen cookies" onChange={event => set('items', event.target.value)}/>
-      </div>
-      <div className="rr-field">
-        <label htmlFor="rr-reference">Order name or reference</label>
-        <input id="rr-reference" maxLength={120} value={form.reference} disabled={collected}
-          placeholder="Under Alexis · order 4821" onChange={event => set('reference', event.target.value)}/>
-      </div>
-
-      <p className="rr-section-title">What it adds to your supplies</p>
-      <div className="rr-grid">
-        {SUPPLIES.map(item => <div className="rr-field" key={item.key}>
-          <label htmlFor={`rr-supply-${item.key}`}>{item.label}</label>
-          <input id={`rr-supply-${item.key}`} type="number" inputMode="numeric" min={0} max={10000}
-            disabled={collected} value={(form.supplies as Supplies)[item.key]}
-            onChange={event => supply(item.key, event.target.value)}/>
-        </div>)}
-      </div>
-      <p className="rr-hint">Leave these at zero where the pickup is not flyers, treats or cards.
-        They are added to what you are carrying once you mark it picked up.</p>
-
-      <div className="rr-field">
-        <label htmlFor="rr-note">Pickup instructions</label>
-        <textarea id="rr-note" maxLength={900} value={form.note} disabled={collected}
-          placeholder="Ask at the counter, park at the back" onChange={event => set('note', event.target.value)}/>
-      </div>
-
-      {failed && <p className="rr-error" role="alert">{failed}</p>}
-      {pickup && !collected && <button className="rr-btn rr-btn-white" onClick={onRemove} disabled={busy}>
-        Remove this pickup
-      </button>}
-    </div>
-    <div className="rr-drawer-foot">
-      <button className="rr-btn rr-btn-white" onClick={onClose}>Cancel</button>
-      <button className="rr-btn rr-btn-primary" onClick={submit} disabled={busy || collected}>
-        {busy ? 'Saving…' : pickup ? 'Save changes' : 'Add pickup'}
-      </button>
-    </div>
+          <div className="rr-focus-list">
+            {plans.map((plan, index) => <div key={plan.route.id}>
+              {plans.length > 1 && <div className="rr-round-toolbar">
+                <strong>Round {index + 1} · {clockOf(plan.startsAt)}</strong>
+                <div className="rr-round-toolbar-actions">
+                  <button className="rr-btn rr-btn-outline" onClick={() => onSupplies(plan.route.id)}>
+                    <Icon name="box" size={15}/>Supplies
+                  </button>
+                  <button className="rr-btn rr-btn-outline" onClick={() => onAddPickup(plan.route.id)}>
+                    <Icon name="plus" size={15}/>Add pickup
+                  </button>
+                </div>
+              </div>}
+              <RoundStops plan={plan} large label={null} dragKey={null} dropAt={null} busy={busy}
+                onOpen={entry => onOpen(plan.route.id, entry)}
+                onQuick={entry => onQuick(plan.route.id, entry)} onMove={onMove}/>
+            </div>)}
+          </div>
+        </>}
   </>;
 }
-
-/** Confirm the load. The runner's own count, which the office's allocation does not overwrite. */
-function SuppliesPanel({ route, busy, onClose, onSave, onDirty }: {
-  route: RunnerRoute; busy: boolean; onClose: () => void;
-  onSave: (supplies: Supplies) => void; onDirty: () => void;
-}) {
-  const start = route.supplies.packed ?? route.supplies.planned;
-  const [form, setForm] = useState<Record<keyof Supplies, string>>({
-    flyers: String(start.flyers), treats: String(start.treats), cards: String(start.cards),
-  });
-  const [failed, setFailed] = useState('');
-
-  function submit() {
-    const value: Supplies = {
-      flyers: Number(form.flyers), treats: Number(form.treats), cards: Number(form.cards),
-    };
-    for (const supply of SUPPLIES) {
-      const count = value[supply.key];
-      if (!Number.isInteger(count) || count < 0 || count > 10000) {
-        return setFailed(`${supply.label}: enter a whole number from 0 to 10000.`);
-      }
-      if (count + route.collected[supply.key] < route.dropped[supply.key]) {
-        return setFailed(`${supply.label}: you have already recorded ${route.dropped[supply.key]} dropped on this route, so you cannot confirm fewer than that.`);
-      }
-    }
-    setFailed('');
-    onSave(value);
-  }
-
-  return <>
-    <div className="rr-drawer-head">
-      <div>
-        <p className="rr-eyebrow" style={{ color: '#6e8875' }}>What to bring</p>
-        <h2 id="rr-drawer-title">Confirm your load</h2>
-        <small>What you actually have in the car</small>
-      </div>
-      <button className="rr-btn rr-btn-white rr-btn-icon" aria-label="Close" onClick={onClose}>
-        <Icon name="close" size={16}/>
-      </button>
-    </div>
-    <div className="rr-drawer-scroll">
-      <p className="rr-notice">The assigned quantities come from your office. Count what you are
-        really carrying and confirm that — a short box is worth saying, and you can change this
-        later. Never record materials you do not have.</p>
-      {SUPPLIES.map(supply => <div className="rr-field" key={supply.key}>
-        <label htmlFor={`rr-packed-${supply.key}`}>
-          {supply.label} · assigned {route.supplies.planned[supply.key]}
-        </label>
-        <input id={`rr-packed-${supply.key}`} type="number" inputMode="numeric" min={0} max={10000}
-          value={form[supply.key]}
-          onChange={event => { onDirty(); setForm(current => ({ ...current, [supply.key]: event.target.value })); }}/>
-        {route.dropped[supply.key] > 0 && <p className="rr-hint">
-          {route.dropped[supply.key]} already recorded as dropped on this route.
-        </p>}
-      </div>)}
-      {failed && <p className="rr-error" role="alert">{failed}</p>}
-    </div>
-    <div className="rr-drawer-foot">
-      <button className="rr-btn rr-btn-white" onClick={onClose}>Cancel</button>
-      <button className="rr-btn rr-btn-primary" onClick={submit} disabled={busy}>
-        {busy ? 'Saving…' : 'Confirm packed'}
-      </button>
-    </div>
-  </>;
-}
-
-/**
- * WHERE THE TIMES COME FROM. The standalone planner let a runner move the start time; here the
- * start is the office's commitment, so this panel explains the arithmetic instead of offering to
- * change it. Reordering the stops is how a runner changes their day.
- */
-function TimingPanel({ route, plan, onClose }: {
-  route: RunnerRoute; plan: NonNullable<ReturnType<typeof planRoute>>; onClose: () => void;
-}) {
-  return <>
-    <div className="rr-drawer-head">
-      <div>
-        <p className="rr-eyebrow" style={{ color: '#6e8875' }}>Route timing</p>
-        <h2 id="rr-drawer-title">Where these times come from</h2>
-        <small>{longDate(route.date)}</small>
-      </div>
-      <button className="rr-btn rr-btn-white rr-btn-icon" aria-label="Close" onClick={onClose}>
-        <Icon name="close" size={16}/>
-      </button>
-    </div>
-    <div className="rr-drawer-scroll">
-      <p className="rr-notice">Your start time and your stops are set by your office. You decide the
-        order you drive them in and where your pickups go, and the times below are worked out again
-        every time you move something.</p>
-      <div className="rr-card">
-        <h3>Leaving</h3>
-        <p>Booked for {route.start}, and {plan.opening.closed
-          ? `${WEEKDAY[plan.opening.weekday]} is a day the practice is closed, so nothing holds it later.`
-          : plan.opening.heldBack
-            ? `held to ${clockOf(plan.startsAt)} because the practice opens then.`
-            : `that is when this route starts.`}</p>
-      </div>
-      <div className="rr-card">
-        <h3>Travel</h3>
-        <p>A leg between two stops we have map positions for is estimated from the distance between
-          them, stretched for roads. Every other leg — a pickup, or a business with no map position
-          — is allowed {TRAVEL_ALLOWANCE} minutes. Neither is a routed drive time: this portal has
-          no navigation provider, so check the road before you set off.</p>
-      </div>
-      <div className="rr-card">
-        <h3>At each stop</h3>
-        <p>A business visit is allowed {plan.items.find(i => i.item.kind === 'business')?.minutes ?? 20} minutes.
-          A pickup takes the time you gave it, plus any wait for its window to open.</p>
-      </div>
-      {plan.warnings.length > 0 && <>
-        <p className="rr-section-title">Worth knowing</p>
-        {plan.warnings.map(warning => <p className="rr-warning" key={warning}>
-          <Icon name="warn" size={15}/>{warning}
-        </p>)}
-      </>}
-    </div>
-    <div className="rr-drawer-foot">
-      <button className="rr-btn rr-btn-white" onClick={onClose}>Close</button>
-    </div>
-  </>;
-}
-
-/** The day as text, for a runner who would rather keep it in their own notes app. */
-async function copyItinerary(route: RunnerRoute | null, plan: ReturnType<typeof planRoute> | null,
-  data: RunnerPayload | null, say: (text: string) => void) {
-  if (!route || !plan) return;
-  const lines = [
-    `Our Wellness Network · ${data?.practice ?? ''}`.trim(),
-    `${longDate(route.date)} · ${route.staff || data?.runner.name || ''}`.trim(),
-    `Leave ${clockOf(plan.startsAt)} · estimated finish ${clockOf(plan.endsAt)}`,
-    `Travel allowance ${durationLabel(plan.travelMinutes)} (an estimate, not a routed drive)`,
-    route.supplies.packed
-      ? `Carrying: ${route.supplies.packed.flyers} flyers, ${route.supplies.packed.treats} treats, ${route.supplies.packed.cards} referral cards`
-      : `Assigned: ${route.supplies.planned.flyers} flyers, ${route.supplies.planned.treats} treats, ${route.supplies.planned.cards} referral cards (not confirmed packed)`,
-    '',
-    ...plan.items.map((entry, index) => [
-      `${index + 1}. ${clockOf(entry.arriveAt)} — ${itemName(entry.item)}`,
-      `   ${itemAddress(entry.item)}`,
-      `   ${entry.minutes} min${entry.item.kind === 'pickup' ? ` · window ${entry.item.pickup.windowStart}–${entry.item.pickup.windowEnd}` : ''}`,
-    ].join('\n')),
-  ];
-  try {
-    await navigator.clipboard.writeText(lines.join('\n'));
-    say('Route copied.');
-  } catch { say('This browser would not let us copy. Use Print instead.'); }
-}
-
-export { isoOf };
