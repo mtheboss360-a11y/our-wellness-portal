@@ -68,7 +68,7 @@ function SignIn({ config }: { config: PublicPortal }) {
         <h1 id="welcome-title">Welcome back.</h1>
         <form onSubmit={submit}>
           <div className="field"><label htmlFor="username">Username</label><input id="username" name="username" type="text" required autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="yourclinic" value={email} onChange={event => setEmail(event.target.value)} disabled={busy}/></div>
-          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="text" required autoComplete="current-password" spellCheck={false} autoCapitalize="none" placeholder="Your password" value={password} onChange={event => setPassword(event.target.value)} disabled={busy}/></div>
+          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" required autoComplete="current-password" spellCheck={false} autoCapitalize="none" placeholder="Your password" value={password} onChange={event => setPassword(event.target.value)} disabled={busy}/></div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="signin-actions">
             <button className="signin-button" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}{!busy && <Icon name="arrow" size={18}/>}</button>
