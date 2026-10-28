@@ -28,6 +28,7 @@ if (!/^[a-z0-9-]{3,80}$/.test(clinicId)) throw new Error('Provide --clinic clini
 if (!username) throw new Error('Provide --username.');
 if (!displayName) throw new Error('Provide --name "Alexis": the name the portal greets them by.');
 if (!password) throw new Error('Set INITIAL_PASSWORD. The password is yours to choose.');
+if (password.length < 12) throw new Error('Use at least 12 characters. A short password on an internet-facing portal is guessed, not cracked.');
 
 const store = openStore(resolve(process.env.DATABASE_PATH ?? 'var/portal.sqlite'), false);
 try {

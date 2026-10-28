@@ -35,6 +35,7 @@ const password = process.env.INITIAL_PASSWORD ?? '';
 if (!/^[a-z0-9-]{3,80}$/.test(clinicId)) throw new Error('--clinic must be a slug: lower case, digits and dashes.');
 if (!username) throw new Error('--username is required.');
 if (!password) throw new Error('Set INITIAL_PASSWORD. The password is yours to choose; nothing here invents one.');
+if (password.length < 12) throw new Error('Use at least 12 characters. A short password on an internet-facing portal is guessed, not cracked.');
 if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('--lat and --lng must be numbers. A negative longitude needs the equals sign: --lng=-88.1520');
 if (!Number.isFinite(radius) || radius <= 0) throw new Error('--radius must be a positive number of miles.');
 
