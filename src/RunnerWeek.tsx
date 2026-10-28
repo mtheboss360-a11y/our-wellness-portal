@@ -63,9 +63,18 @@ export function StopCard({ entry, roundId, dragging, busy, onOpen, onQuick, onMo
   return <article
     className={`rr-card ${entry.item.kind === 'pickup' ? 'is-pickup' : ''} ${entry.done ? 'is-done' : ''} ${dragging ? 'is-source' : ''}`}
     data-stop={refOf(entry.item)} data-round={roundId}>
+    {/* Dragging is not the only way to move a stop, and on a phone in one hand it is the worst
+        one. The same handle takes the arrow keys, so the order can be changed by touching it
+        and nudging rather than by holding a 26px target steady down a scrolling column. */}
     <button className="rr-grip-btn rr-tile-wrap" disabled={fixed || busy}
-      aria-label={fixed ? `${name} cannot be moved` : `Drag ${name} to reorder it`}
-      data-grip={refOf(entry.item)}>
+      aria-label={fixed ? `${name} cannot be moved` : `Move ${name}: drag it, or use the arrow keys`}
+      data-grip={refOf(entry.item)}
+      onKeyDown={event => {
+        if (fixed || busy) return;
+        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        event.preventDefault();   // or the column scrolls instead of the stop moving
+        onMove(event.key === 'ArrowUp' ? -1 : 1);
+      }}>
       <span className="rr-tile"><Icon name={tileFor(entry)} size={large ? 16 : 14}/></span>
       {!fixed && <span className="rr-grip" aria-hidden="true"><Icon name="grip" size={14}/></span>}
     </button>
