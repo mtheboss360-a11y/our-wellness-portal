@@ -129,7 +129,7 @@
   color:var(--sage); padding:5px 0 1px }
 
 /* ── A stop ────────────────────────────────────────────────────────────── */
-.rr-card{ display:grid; grid-template-columns:auto 1fr auto; align-items:start; column-gap:8px;
+.rr-card{ display:grid; grid-template-columns:1fr auto; align-items:center; column-gap:8px;
   padding:9px 10px; border-radius:11px; background:var(--ivory); color:var(--evergreen);
   text-align:left; width:100%; box-shadow:0 1px 3px rgba(0,0,0,.12); position:relative;
   transition:box-shadow 150ms,opacity 150ms }
@@ -144,27 +144,26 @@
 .rr-card.is-pickup .rr-tile{ background:#f3e6c4; color:#7a5f20 }
 .rr-card.is-done .rr-tile{ background:#dfe8dc; color:#4a6a57 }
 .rr-card.is-origin .rr-tile{ background:rgba(255,255,255,.14); color:#fff }
-.rr-grip-btn{ position:relative; width:26px; height:26px; padding:0; border-radius:7px;
-  touch-action:none; flex-shrink:0; cursor:grab }
-/* The tile is 26px because that is the size the icon wants. The part you can GRAB is not the
-   same thing: this stretches the hit area to the card's full height and past its left padding,
-   about 44px square, without moving a pixel of the layout. A handle you have to hit exactly
-   is a handle people conclude is not there. */
-.rr-grip-btn::after{ content:''; position:absolute; inset:-9px -8px -9px -10px }
-.rr-grip-btn:active{ cursor:grabbing }
-.rr-grip-btn:disabled{ cursor:default }
-.rr-grip-btn:disabled::after{ content:none }
-.rr-grip{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-  border-radius:7px; background:rgba(255,255,255,.92); color:#6b7a70; opacity:0; transition:opacity 150ms }
-/* Revealed by the whole CARD, not by the 26px square inside it — you find out a stop can be
-   moved by approaching the stop, which is where the hand already is. */
-.rr-card:hover .rr-grip,.rr-grip-btn:hover .rr-grip,.rr-grip-btn:focus-visible .rr-grip{ opacity:1 }
-/* No hover to reveal it on a touch screen, so it simply stays. */
-@media (hover:none){ .rr-grip{ opacity:1 } }
+/* There is no handle. The card is the thing you pick up, so it carries the cursor that says
+   so, and the tile is back to being an icon rather than a target. A finished or locked stop
+   stays put and says so by not changing the cursor at all. */
+.rr-tile-wrap{ display:flex; flex-shrink:0 }
+.rr-card.is-movable{ cursor:grab }
+.rr-card.is-movable:active{ cursor:grabbing }
+.rr-card.is-source{ cursor:grabbing }
+/* The week scrolls sideways by swiping across these cards, and a stop is picked up by holding
+   one still for a moment first — so the browser keeps the pan and the drag waits its turn.
+   Taking the gesture outright here is what would make the list unscrollable on a phone. */
+.rr-card{ touch-action:pan-x pan-y }
+/* Nothing inside the card should start its own text selection mid-drag. */
+.rr-card.is-movable .rr-card-title,.rr-card.is-movable .rr-card-note{ user-select:none }
 .rr-card-main{ min-width:0; text-align:left; display:block }
+/* The name is the whole card now, so it gets the room the tile and the time used to take:
+   three lines instead of two, and a hyphen rather than a mid-word cut, because a runner
+   standing at a door reads the name to know they are at the right one. */
 .rr-card-title{ display:block; font-size:13.5px; font-weight:600; line-height:1.3;
-  overflow-wrap:break-word; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-  overflow:hidden }
+  overflow-wrap:break-word; hyphens:auto; display:-webkit-box; -webkit-line-clamp:3;
+  -webkit-box-orient:vertical; overflow:hidden }
 .rr-card-note{ display:block; margin-top:3px; font-size:11.5px; color:#6f7d72;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums }
 .rr-card-note b{ color:#2b5a40; font-weight:700 }
@@ -326,7 +325,7 @@ textarea.rr-input{ min-height:84px; resize:vertical }
 @media print{
   .rr{ background:#fff !important; color:#000 }
   .rr-top,.rr-tools,.rr-nav,.rr-next,.rr-sheet,.rr-backdrop,.rr-toast,.rr-nav-btn,
-  .rr-today-btn,.rr-card-menu,.rr-grip-btn{ display:none !important }
+  .rr-today-btn,.rr-card-menu{ display:none !important }
   .rr-main{ padding:0; max-width:none }
   .rr-week-title,.rr-hint,.rr-day-name,.rr-day-total{ color:#000 !important }
   .rr-grid{ grid-auto-flow:row; grid-template-columns:repeat(7,1fr); overflow:visible }
