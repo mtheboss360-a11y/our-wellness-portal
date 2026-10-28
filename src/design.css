@@ -1374,7 +1374,9 @@
   /* One width for every card. A flex item that clamps its lines reports its longest WORD as
      its minimum width, so an auto-sized card collapsed around names like "Harbor Row
      Fitness". A fixed width also keeps the cards from implying one business matters more. */
-  width:160px; padding:9px 14px; justify-content:center; text-align:center;
+  /* One height as well as one width: a one-line name and a two-line one made the ring
+     ragged, and the cards are meant to read as equals. */
+  width:160px; min-height:52px; padding:9px 14px; justify-content:center; text-align:center;
   background:var(--n-0);
   border:1px solid var(--n-200); border-radius:999px; box-shadow:var(--e-2);
   transform:translate(-50%,-50%) scale(.92); opacity:0;
