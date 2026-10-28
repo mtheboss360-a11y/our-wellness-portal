@@ -396,7 +396,7 @@ export function openRunner(db: DatabaseSync) {
    *   - the revision has to match, so the phone that saves second is told rather than obeyed.
    */
   function reorder(clinicId: string, roundId: string, order: ItemRef[], user: Who,
-    options: { revision?: number; completed?: Set<string> } = {}) {
+    options: { revision?: number } = {}) {
     const row = assertMine(clinicId, roundId, user);
     check(row, options.revision);
 
@@ -415,19 +415,16 @@ export function openRunner(db: DatabaseSync) {
       }
     }
 
-    // A FINISHED STOP KEEPS ITS PLACE, exactly — the same rule as a locked one. It used to be
-    // enough that the finished stops kept their order relative to each other, which let a single
-    // visited stop slide, and let an unvisited stop be dragged in front of stops already driven.
-    // A day that has partly happened is a record, and time only runs one way through it.
-    const done = options.completed ?? new Set<string>();
-    const finished = current.filter(item =>
-      (item.kind === 'business' && done.has(item.business.id)) ||
-      (item.kind === 'pickup' && item.pickup.status === 'collected'));
-    for (const item of finished) {
-      if (sent.indexOf(key(item)) !== current.findIndex(c => key(c) === key(item))) {
-        throw new Error('A stop you have already finished cannot be moved out of the order it happened in.');
-      }
-    }
+    // A FINISHED STOP CAN BE MOVED. This used to be refused, on the reasoning that a day which
+    // has partly happened is a record and time runs one way through it. It is the wrong reading
+    // of what this column is: the position of a card is the PLAN for the day, not the account of
+    // it. When a visit happened is on the visit, with its own date; when a pickup was collected
+    // is on the pickup. Neither is touched by moving a card, so nothing here can rewrite history.
+    //
+    // What it was costing was real: a supplies pickup ticked off on the way out could not then
+    // be put at the top of the round where it belongs, and a stop checked off early pinned the
+    // whole order around it. The office's lock above is the one thing that still holds a stop
+    // in place, because somebody chose that deliberately and can unchoose it.
 
     begin();
     try {

@@ -23,17 +23,16 @@ function fixture() {
   return { store, ids, roundId: round.id, who };
 }
 
-test('completed business stops cannot be displaced by a pending stop', () => {
-  const { store, ids, roundId, who } = fixture();
+test('a completed stop can be displaced by a pending one', () => {
+  const { store, roundId, who } = fixture();
   try {
     const current = store.runner.round('hyline', roundId)!;
     const refs = current.items.map(item => ({ kind: item.kind, id: item.id }));
-    assert.throws(() => store.runner.reorder('hyline', roundId,
-      [refs[1], refs[0], refs[2], refs[3]], who, { completed: new Set([ids.A]) }),
-      /already finished/);
-    assert.deepEqual(store.runner.reorder('hyline', roundId,
-      [refs[0], refs[2], refs[1], refs[3]], who, { completed: new Set([ids.A]) })
-      .items.map(item => item.id), [refs[0].id, refs[2].id, refs[1].id, refs[3].id]);
+    // Swapping a finished stop with the one behind it used to throw. A runner who ticked a
+    // stop off early should not have the rest of the day pinned around it.
+    const moved = store.runner.reorder('hyline', roundId, [refs[1], refs[0], refs[2], refs[3]], who);
+    assert.deepEqual(moved.items.map(item => item.id),
+      [refs[1].id, refs[0].id, refs[2].id, refs[3].id]);
   } finally { store.close(); }
 });
 

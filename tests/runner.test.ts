@@ -265,7 +265,7 @@ test('a stop the office locked keeps its place', () => {
   store.close();
 });
 
-test('a visit already recorded stays in its exact position while unvisited stops may move', () => {
+test('a stop already visited can still be moved, because position is the plan not the record', () => {
   const store = world();
   const round = booked(store, ['Karve Pilates', 'Yoga Cave', 'Salon Fluxx', 'Upscale Male']);
   const me = who(store, 'alexis', 'Alexis');
@@ -274,21 +274,18 @@ test('a visit already recorded stays in its exact position while unvisited stops
     businessId: id['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27', spokeWith: 'Owner',
     contactRole: 'Owner', outcome: 'interested', materials: 0, note: '', nextAction: '', followUpOn: null,
   });
-  store.outreach.recordVisit('hyline', {
-    businessId: id['Yoga Cave'], staff: 'Alexis', visitedOn: '2026-10-27', spokeWith: '',
-    contactRole: '', outcome: 'materials', materials: 0, note: '', nextAction: '', followUpOn: null,
-  });
-  const completed = new Set([id['Karve Pilates'], id['Yoga Cave']]);
   const items = store.runner.round('hyline', round)!.items.map(i => ({ kind: i.kind, id: i.id }));
-  assert.throws(() => store.runner.reorder('hyline', round, [items[1], items[0], items[2], items[3]], me, { completed }),
-    /already finished/);
-  // The old rule preserved only the ORDER of completed visits; it wrongly let a pending
-  // business jump in front of a completed one. Finished stops stay in their actual slots.
-  assert.throws(() => store.runner.reorder('hyline', round, [items[2], items[0], items[1], items[3]], me, { completed }),
-    /already finished/);
-  // Future unvisited stops can still swap without displacing completed stops.
-  const ok = store.runner.reorder('hyline', round, [items[0], items[1], items[3], items[2]], me, { completed });
-  assert.equal(ok.items[2].id, items[3].id);
+
+  // The visited stop moves out of first place, and a pending one takes it. This was refused
+  // before, on the reasoning that the order was a record of the day. It is not: the visit
+  // carries its own date, which is what says when it happened.
+  const moved = store.runner.reorder('hyline', round, [items[1], items[0], items[2], items[3]], me);
+  assert.deepEqual(moved.items.map(i => i.id), [items[1].id, items[0].id, items[2].id, items[3].id]);
+
+  // And the visit itself is untouched by having been moved.
+  const visits = store.outreach.visits('hyline', id['Karve Pilates']);
+  assert.equal(visits.length, 1, 'moving a card does not add or drop a visit');
+  assert.equal(visits[0].visitedOn, '2026-10-27', 'nor change when it happened');
   store.close();
 });
 
@@ -316,12 +313,15 @@ test('a business visited on an earlier round can still be moved on a later one',
     assert.deepEqual(store.runner.round('hyline', friday)!.items.map(i =>
       i.kind === 'business' ? i.business.name : ''), ['Salon Fluxx', 'Karve Pilates']);
 
-    // Tuesday's own finished stop is still held in place.
+    // And Tuesday's own visited stop moves as well. The visit is the record of what happened;
+    // the order of the cards is the plan, and a plan can be rearranged after the fact.
     const tue = store.runner.round('hyline', tuesday)!;
     const swap = [tue.items[1], tue.items[0]].map(item => ({ kind: item.kind, id: item.id }));
-    const refused = await fetch(base + '/api/runner/order', { method: 'POST', headers,
+    const moved = await fetch(base + '/api/runner/order', { method: 'POST', headers,
       body: JSON.stringify({ roundId: tuesday, order: swap, revision: tue.revision }) });
-    assert.equal(refused.status, 403);
+    assert.equal(moved.status, 200);
+    assert.deepEqual(store.runner.round('hyline', tuesday)!.items.map(i =>
+      i.kind === 'business' ? i.business.name : ''), ['Yoga Cave', 'Karve Pilates']);
   } finally {
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     store.close();

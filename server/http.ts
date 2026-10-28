@@ -217,17 +217,11 @@ export function createPortalServer(options: Options) {
             const input = reorderRouteInput.safeParse(await readBody());
             if (!input.success) { json(response, 400, { error: 'That new order could not be read.' }); return; }
             try {
-              // A business may appear on more than one round. A visit to it on an older
-              // round must not freeze the same business when assigned as a follow-up later.
-              // Match each visit to exactly one round, using the same logic as the planner.
-              const myRounds = runner.assignedRounds(clinic.id, who);
-              const visits = visitsForAssignedRounds(myRounds);
-              const assigned = attributeVisits(myRounds, visits);
-              const completed = new Set(visits
-                .filter(v => assigned.get(v.id)?.roundId === input.data.roundId)
-                .map(v => v.businessId));
+              // Which stops are already done no longer changes what may be reordered, so it is
+              // not worked out here any more. A finished stop moves like any other; only a
+              // stop the office locked holds its place.
               sendRoute(runner.reorder(clinic.id, input.data.roundId, input.data.order, who, {
-                revision: input.data.revision, completed,
+                revision: input.data.revision,
               }));
             } catch (error) { refuse(error, input.data.roundId); }
             return;

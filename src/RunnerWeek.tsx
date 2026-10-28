@@ -55,7 +55,9 @@ export function StopCard({ entry, roundId, dragging, busy, onOpen, onQuick, onMo
   onMove: (by: -1 | 1) => void;
   large?: boolean;
 }) {
-  const fixed = entry.done || entry.item.locked;
+  // Only the office's lock holds a stop in place. A stop you have checked off still moves —
+  // where a card sits is the plan for the day, and the visit keeps its own date regardless.
+  const fixed = entry.item.locked;
   const name = itemName(entry.item);
   // The time, the tile and the "fixed by your office" line are deliberately not on the card.
   // A runner reads this column while walking: the name is what they are looking for and the
