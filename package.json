@@ -35,7 +35,8 @@
     "add-runner-login": "tsx scripts/add-runner-login.ts",
     "assign-round": "tsx scripts/assign-round.ts",
     "set-role": "tsx scripts/set-role.ts",
-    "claim-rounds": "tsx scripts/claim-rounds.ts"
+    "claim-rounds": "tsx scripts/claim-rounds.ts",
+    "remove-clinic": "tsx scripts/remove-clinic.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
