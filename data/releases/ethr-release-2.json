@@ -1,0 +1,110 @@
+{
+  "id": "ethr-release-2",
+  "name": "Release 2 — five independent gyms where student athletes train",
+  "notes": [
+    "These came from the portal's own Places discovery run for ethr-lab on 2026-10-28, which returned 127 businesses within the practice's radius. Names and addresses are Google's, not typed from memory.",
+    "Chains and franchises were excluded by name, and so were the two park district facilities, which are public bodies rather than privately owned businesses. Private ownership is a judgement from the name and the single location; it has not been checked against a filing.",
+    "NOT VERIFIED: whether any of these is open to partnering. Nobody has spoken to them. All five start at 'new', and an unknown is not a partnership.",
+    "Patriot 2.0 had only 3 Google reviews at the time of discovery. That is a thin signal — it may be new, or small. Worth a look from the pavement before a long pitch.",
+    "No websites: discovery did not return one for these five, so the field is left out rather than guessed. No coordinates either — geocode-release resolves them and refuses any match that disagrees with the street number or the town.",
+    "Scripts name equipment and session length only. Nothing claims what cryotherapy, compression or red light does to a body, and nobody is paid per referral.",
+    "The offer is ETHR's own wording, unchanged: 'Your first visit for $25: cryotherapy, compression or red light' and 'A free cryotherapy session at ETHR LAB, every month'."
+  ],
+  "businesses": [
+    {
+      "name": "Glass Court Swim & Fitness",
+      "category": "Swim and fitness club",
+      "address": "830 E Roosevelt Rd, Lombard, IL 60148",
+      "talkingPoint": "A swim club — the one place on this list where student athletes come with their parents and train year round.",
+      "script": {
+        "opening": "Hi, I'm here on behalf of ETHR LAB, a wellness studio in Oakbrook Terrace. We're introducing ourselves to the independent clubs around here. Is the manager or whoever handles partnerships about?",
+        "introduction": "ETHR LAB is at 1S550 IL-83, Unit A2, in Oakbrook Terrace, about fifteen minutes away. We have a whole-body cryotherapy chamber — a session is about three minutes — a Ballancer Pro compression suit, and red light.",
+        "value": "Your swimmers are in the water most days of the week, and a lot of them are student athletes swimming through a school season. We'd like to offer your members their first visit for $25: cryotherapy, compression or red light. Your coaches and staff get a free cryotherapy session at ETHR LAB every month. We'd point people here too — we don't have a pool, you do.",
+        "ask": "Could I leave brochures where the parents wait, and would the manager be open to a short chat another day?",
+        "objections": {
+          "busy": "No problem — I'll leave these at the desk. Is there a quieter hour to catch the manager?",
+          "notInterested": "Understood, thanks for your time. I'll leave a brochure in case it's useful later.",
+          "alreadyPartnered": "Good to hear, and we're not asking you to drop anything. It's a $25 first visit for your members and a free monthly session for your staff. I'll leave a brochure."
+        },
+        "closing": "Thanks very much. I'll note that we spoke and we'll check back in a few weeks.",
+        "followUp": "Hi, I came by a few weeks ago for ETHR LAB, the studio on Route 83 in Oakbrook Terrace. Wanted to see whether the brochures were any use to the swim parents."
+      }
+    },
+    {
+      "name": "Rising Goddess Fitness",
+      "category": "Fitness studio",
+      "address": "204 E Chicago Ave, Westmont, IL 60559",
+      "talkingPoint": "An independent Westmont studio with a steady following — close to Bellbar, so the two can be walked in one go.",
+      "script": {
+        "opening": "Hi, I'm with ETHR LAB, a wellness and aesthetics studio over in Oakbrook Terrace. We're introducing ourselves to independent studios in Westmont. Is the owner in today?",
+        "introduction": "We're on Route 83 in Oakbrook Terrace. A whole-body cryotherapy chamber, about three minutes a session, a Ballancer Pro compression suit, and red light.",
+        "value": "Your members train regularly, and the younger ones are often fitting it around a school season. Their first visit with us is $25 — cryotherapy, compression or red light — and you and your instructors get a free cryotherapy session every month. We'd send people your way too; we don't run classes, you do.",
+        "ask": "Could I leave a few brochures at the front, and would you be open to us doing the same for you?",
+        "objections": {
+          "busy": "Of course — I'll leave these here. When's the slowest hour to come back?",
+          "notInterested": "That's completely fine. Thanks for hearing me out.",
+          "alreadyPartnered": "Makes sense. Nothing exclusive on our side — a $25 first visit for your members and a free monthly session for your instructors."
+        },
+        "closing": "Appreciate your time. I'll make a note and we'll follow up before long.",
+        "followUp": "Hi, I stopped in a while back for ETHR LAB in Oakbrook Terrace. Just checking whether the brochures are still there and whether the owner has a minute."
+      }
+    },
+    {
+      "name": "i.e. Fitness",
+      "category": "Fitness gym",
+      "address": "416 E Ogden Ave, Westmont, IL 60559",
+      "talkingPoint": "Independent Westmont gym on Ogden with a strong local following — a short hop from Rising Goddess and Bellbar.",
+      "script": {
+        "opening": "Hi, I'm here for ETHR LAB, a wellness studio in Oakbrook Terrace. We're introducing ourselves to the independent gyms in Westmont. Is the owner around?",
+        "introduction": "ETHR LAB is at 1S550 IL-83, Unit A2, Oakbrook Terrace. We have a whole-body cryotherapy chamber — about three minutes a session — a Ballancer Pro compression suit, and red light.",
+        "value": "Your members and the student athletes training with you can have their first visit for $25: cryotherapy, compression or red light. Your trainers get a free cryotherapy session at ETHR LAB every month. And we'd refer our clients to you — we don't do training, you do.",
+        "ask": "Could we leave some brochures at the desk, and would the owner be open to a short conversation?",
+        "objections": {
+          "busy": "Totally understand — I'll leave these. Is there a better time of day?",
+          "notInterested": "No problem at all. Thanks for your time.",
+          "alreadyPartnered": "Fair enough. We're not after anything exclusive — a $25 first visit for your members and a free monthly session for your trainers."
+        },
+        "closing": "Thanks a lot. I'll record that we spoke and we'll check back in.",
+        "followUp": "Hi, I came by for ETHR LAB a few weeks ago — the studio on Route 83. Wanted to see whether anyone's taken up the $25 first visit."
+      }
+    },
+    {
+      "name": "W3Body, A Women's Training Gym",
+      "category": "Women's training gym",
+      "address": "1042 S York St, Elmhurst, IL 60126",
+      "talkingPoint": "A women's training gym in Elmhurst — girls' school teams and their mothers train in places like this.",
+      "script": {
+        "opening": "Hi, I'm with ETHR LAB, a wellness and aesthetics studio in Oakbrook Terrace. We're introducing ourselves to independent gyms in Elmhurst. Is the owner free for a minute?",
+        "introduction": "We're on Route 83 in Oakbrook Terrace. A whole-body cryotherapy chamber, about three minutes a session, a Ballancer Pro compression suit, and red light.",
+        "value": "Your members train seriously, and some will be student athletes training around a school season. Their first visit is $25 — cryotherapy, compression or red light — and your coaches get a free cryotherapy session at ETHR LAB every month. We'd point our clients here too.",
+        "ask": "Could I leave brochures where your members will see them, and would the owner be open to a short chat?",
+        "objections": {
+          "busy": "No problem — I'll leave these with you. Is there a quieter time to catch the owner?",
+          "notInterested": "That's fine, thanks for your time.",
+          "alreadyPartnered": "Understood. Nothing exclusive here — a $25 first visit for your members and a free monthly session for your coaches."
+        },
+        "closing": "Thanks very much. I'll log that we spoke today.",
+        "followUp": "Hi, I visited a few weeks back for ETHR LAB in Oakbrook Terrace. Just following up on whether the brochures were useful."
+      }
+    },
+    {
+      "name": "Patriot 2.0",
+      "category": "Fitness center",
+      "address": "645 IL-83, Elmhurst, IL 60126",
+      "talkingPoint": "On Route 83, the same road as ETHR — the closest of these five by road. Small and fairly new, so ask what they do before pitching.",
+      "script": {
+        "opening": "Hi, I'm from ETHR LAB — we're further down Route 83 in Oakbrook Terrace. We're introducing ourselves to the independent gyms on this road. Is the owner here?",
+        "introduction": "ETHR LAB is at 1S550 IL-83, Unit A2. A whole-body cryotherapy chamber, about three minutes a session, a Ballancer Pro compression suit, and red light.",
+        "value": "We're close enough that your members could stop in on the way home. Their first visit is $25 — cryotherapy, compression or red light — and your staff get a free cryotherapy session every month. Since we're both on this road, sending people each other's way costs neither of us anything.",
+        "ask": "Could I leave brochures at the desk, and could you tell me a bit about who trains here so we point the right people your way?",
+        "objections": {
+          "busy": "Of course — I'll leave these. Is there a better time of day?",
+          "notInterested": "No problem at all. Thanks for your time.",
+          "alreadyPartnered": "Fair enough. Nothing exclusive — a $25 first visit for your members and a free monthly session for your staff."
+        },
+        "closing": "Appreciate it. I'll note our conversation and we'll check back in.",
+        "followUp": "Hi, I stopped by for ETHR LAB a few weeks back — we're down the road on 83. Wanted to see whether the brochures have moved."
+      }
+    }
+  ]
+}
