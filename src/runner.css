@@ -137,7 +137,7 @@
 .rr-tile{ width:26px; height:26px; display:flex; align-items:center; justify-content:center;
   border-radius:7px; flex-shrink:0; background:#e4ece2; color:#2b5a40 }
 .rr-card.is-pickup .rr-tile{ background:#f3e6c4; color:#7a5f20 }
-.rr-card.is-done .rr-tile{ background:#2b5a40; color:#fff }
+.rr-card.is-done .rr-tile{ background:#dfe8dc; color:#4a6a57 }
 .rr-card.is-origin .rr-tile{ background:rgba(255,255,255,.14); color:#fff }
 .rr-grip-btn{ position:relative; width:26px; height:26px; padding:0; border-radius:7px;
   touch-action:none; flex-shrink:0; cursor:grab }
@@ -321,13 +321,18 @@ textarea.rr-input{ min-height:84px; resize:vertical }
 
 /* ── Quick stop check-off ────────────────────────────────────────────────── */
 .rr-card-actions{ display:flex; flex-direction:column; gap:3px; align-items:center; width:26px }
+/* An empty circle to tick, and a filled one once it is ticked. The two have to be told apart
+   at a glance on a phone, so one is an outline with a ghost of a tick in it and the other is
+   solid green — not two similar green squares. */
 .rr .rr-card-check,.rr .rr-card-done{ width:26px; height:26px; flex-shrink:0; display:flex;
-  align-items:center; justify-content:center; border-radius:7px; color:#2b5a40 }
-.rr .rr-card-check{ border:1px solid #bdd2c2; background:#eaf3e9 }
-.rr .rr-card-check:hover:not(:disabled){ background:#d5e8d8; color:#123f2a }
+  align-items:center; justify-content:center; border-radius:50% }
+.rr .rr-card-check{ border:1.5px solid #bdd2c2; background:transparent; color:#5f7a68 }
+.rr .rr-card-check svg{ opacity:.28; transition:opacity 150ms }
+.rr .rr-card-check:hover:not(:disabled){ border-color:#2b5a40; background:#eaf3e9; color:#123f2a }
+.rr .rr-card-check:hover:not(:disabled) svg,.rr .rr-card-check:focus-visible svg{ opacity:1 }
 .rr .rr-card-check:focus-visible{ outline:2px solid #b38e43; outline-offset:2px }
 .rr .rr-card-done{ background:#286247; color:#fff }
-.rr .rr-card-check:disabled{ opacity:.5; cursor:default }
+.rr .rr-card-check:disabled{ opacity:.45; cursor:default }
 .rr-quick-results{ display:flex; flex-direction:column; gap:9px }
 .rr .rr-quick-choice{ display:flex; align-items:center; gap:12px; width:100%; min-height:66px;
   border:1px solid rgba(255,255,255,.24); border-radius:12px; padding:10px 12px;

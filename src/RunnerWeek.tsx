@@ -27,8 +27,10 @@ export type DayPlan = {
 
 export const refOf = (item: RunnerItem) => `${item.kind}:${item.id}`;
 
+// The tile says what KIND of stop this is and nothing else. Whether it is finished is said
+// once, on the right — a tick on both sides of the same card says the same thing twice.
 const tileFor = (entry: PlannedItem): IconName =>
-  entry.done ? 'check' : entry.item.kind === 'pickup' ? 'box' : 'shop';
+  entry.item.kind === 'pickup' ? 'box' : 'shop';
 
 /** What a card says under its name — the one thing worth knowing at a glance, or nothing. */
 function noteFor(entry: PlannedItem) {
