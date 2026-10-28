@@ -80,6 +80,20 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
     return { within: within.sort((a, b) => a.name.localeCompare(b.name)), unplaced };
   }, [data, radius]);
 
+  /**
+   * The round that is coming, and the businesses on it. "Coming" is today's round if there is
+   * one, otherwise the next one booked — never a round already walked, because the orbit is
+   * read before going out rather than afterwards. With nothing booked there is no split, and
+   * the orbit falls back to one ring of everybody.
+   */
+  const nextRound = useMemo(() => {
+    if (!data) return null;
+    return [...data.rounds].filter(r => r.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null;
+  }, [data, today]);
+  const onNextRound = useMemo(
+    () => new Set(nextRound?.stops.map(s => s.id) ?? []), [nextRound]);
+
   const month = useMemo(() => data ? staffMonth(data.visits, data.businesses, today) : null, [data, today]);
   const scheduled = useMemo(() => data
     ? [...data.rounds].sort((a, b) => b.date.localeCompare(a.date))
@@ -151,7 +165,14 @@ export default function OwnerDashboard({ clinicName, today, ownerName, onGo }: {
       </div>
       <div className="orb2-wrap">
         <ReferralOrbit practice={clinicName}
-          connections={connections.within.map(b => ({ id: b.id, name: b.name, demo: b.demo === 1 }))}/>
+          connections={connections.within.map(b => ({
+            id: b.id, name: b.name, demo: b.demo === 1,
+            group: nextRound ? (onNextRound.has(b.id) ? 'routed' as const : 'waiting' as const) : undefined,
+          }))}
+          routedLabel={nextRound
+            ? (nextRound.date === today ? 'On today’s route' : `On the ${dayLabel(nextRound.date)} route`)
+            : undefined}
+          waitingLabel={nextRound ? 'Waiting for the next route' : undefined}/>
       </div>
     </section>
 

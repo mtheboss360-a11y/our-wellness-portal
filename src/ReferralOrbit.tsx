@@ -12,7 +12,13 @@
 // nothing has to be recomputed on resize.
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-export type Connection = { id: string; name: string; demo: boolean };
+/**
+ * `group` is how the office has divided the network: the businesses on the round that is
+ * coming, and the ones still waiting for a round after it. It is optional — a practice that
+ * has booked nothing passes none, and the orbit lays out exactly as it did before.
+ */
+export type ConnectionGroup = 'routed' | 'waiting';
+export type Connection = { id: string; name: string; demo: boolean; group?: ConnectionGroup };
 
 /**
  * How many cards each ring carries, and how wide each ring is, as percentages of the stage.
@@ -29,7 +35,7 @@ const RINGS = [
 ] as const;
 const CAPACITY = RINGS.reduce((total, ring) => total + ring.max, 0);
 
-type Placed = { connection: Connection; x: number; y: number; delay: number };
+type Placed = { connection: Connection; x: number; y: number; delay: number; ring: number };
 
 /**
  * The SVG the lines are drawn in. It is stretched to the stage (preserveAspectRatio="none"),
@@ -65,16 +71,12 @@ function evenlySpaced(count: number, rx: number, ry: number, from: number): numb
   return out;
 }
 
-/** Lay the connections out from the inside ring outwards, each ring starting at the top. */
-function place(shown: Connection[]): Placed[] {
-  // A small network looks lost on two rings, so it uses the outer one alone.
-  const rings = shown.length <= RINGS[1].max
-    ? [{ items: shown, rx: shown.length <= 4 ? 33 : RINGS[1].rx, ry: shown.length <= 4 ? 30 : RINGS[1].ry, offset: 0 }]
-    : [{ items: shown.slice(0, RINGS[0].max), ...RINGS[0], offset: 0 },
-       { items: shown.slice(RINGS[0].max), ...RINGS[1], offset: 1 }];
+type Ring = { items: Connection[]; rx: number; ry: number; offset: number };
 
+function lay(rings: Ring[]): Placed[] {
   const out: Placed[] = [];
-  for (const ring of rings) {
+  rings.forEach((ring, index) => {
+    if (!ring.items.length) return;
     // Start at the top, and put the outer ring half a step out of phase with the inner one
     // so a card never sits directly outside another.
     const from = -Math.PI / 2 + (ring.offset ? Math.PI / ring.items.length : 0);
@@ -85,10 +87,39 @@ function place(shown: Connection[]): Placed[] {
         x: 50 + Math.cos(angles[i]) * ring.rx,
         y: 50 + Math.sin(angles[i]) * ring.ry,
         delay: 0.1 + out.length * 0.03,
+        ring: index,
       });
     });
-  }
+  });
   return out;
+}
+
+/**
+ * Lay the connections out from the inside ring outwards, each ring starting at the top.
+ * Exported for the tests: which ring a card lands on is the whole meaning of the split, and
+ * that is worth holding still.
+ */
+export function place(shown: Connection[]): Placed[] {
+  const routed = shown.filter(c => c.group === 'routed');
+  const waiting = shown.filter(c => c.group === 'waiting');
+
+  // When the office has split the network into the round that is coming and the rest, the two
+  // ride their own rings — the round on the inside, nearer the practice, which is the whole
+  // point of looking at this screen before walking out of the door. It only holds while the
+  // round fits the inner ring; beyond that the split would lie about which card is which, so
+  // the plain layout takes over and the legend is not drawn.
+  if (routed.length && waiting.length && routed.length <= RINGS[0].max) {
+    return lay([
+      { items: routed, rx: RINGS[0].rx, ry: RINGS[0].ry, offset: 0 },
+      { items: waiting.slice(0, RINGS[1].max), rx: RINGS[1].rx, ry: RINGS[1].ry, offset: 1 },
+    ]);
+  }
+
+  // A small network looks lost on two rings, so it uses the outer one alone.
+  return shown.length <= RINGS[1].max
+    ? lay([{ items: shown, rx: shown.length <= 4 ? 33 : RINGS[1].rx, ry: shown.length <= 4 ? 30 : RINGS[1].ry, offset: 0 }])
+    : lay([{ items: shown.slice(0, RINGS[0].max), ...RINGS[0], offset: 0 },
+           { items: shown.slice(RINGS[0].max), ...RINGS[1], offset: 1 }]);
 }
 
 /** Whether this reader has asked for less motion. Read once, then kept in step with the setting. */
@@ -106,14 +137,23 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
-export default function ReferralOrbit({ practice, connections }: {
+export default function ReferralOrbit({ practice, connections, routedLabel, waitingLabel }: {
   practice: string; connections: Connection[];
+  /** What the two rings are called. Both are needed before the legend is drawn. */
+  routedLabel?: string; waitingLabel?: string;
 }) {
   const stillness = usePrefersReducedMotion();
   const shown = useMemo(() => connections.slice(0, CAPACITY), [connections]);
   const placed = useMemo(() => place(shown), [shown]);
   const hidden = connections.length - shown.length;
   const samples = shown.filter(c => c.demo).length;
+
+  // The legend is drawn only when the layout actually split, so it can never name two rings
+  // that are not there. `place` decides that, and this reads its answer rather than repeating
+  // the condition and risking the two drifting apart.
+  const onInner = placed.filter(p => p.ring === 0 && p.connection.group === 'routed').length;
+  const onOuter = placed.filter(p => p.ring === 1 && p.connection.group === 'waiting').length;
+  const split = Boolean(routedLabel && waitingLabel && onInner > 0 && onOuter > 0);
 
   // The cards begin gathered at the practice and travel out to their places. The flag flips
   // one frame after mount, so the browser has a start position to animate away from.
@@ -142,6 +182,11 @@ export default function ReferralOrbit({ practice, connections }: {
   return <div className="orb2">
     <p className="orb2-eyebrow">Referral connections{samples > 0 && ' · includes sample data'}</p>
 
+    {split && <p className="orb2-legend">
+      <span className="orb2-key orb2-key-routed" aria-hidden="true"/>{routedLabel} ({onInner})
+      <span className="orb2-key orb2-key-waiting" aria-hidden="true"/>{waitingLabel} ({onOuter})
+    </p>}
+
     <div className="orb2-stage">
       {/* The path they ride. Decorative: every name is in the list beside it. */}
       {/* The loop: thin layered lines rather than one band, so it reads as a path the cards
@@ -155,7 +200,7 @@ export default function ReferralOrbit({ practice, connections }: {
         <ellipse className="orb2-ring-line" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[1])}/>
         <ellipse className="orb2-ring-sage" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[1], 0.955)}/>
         {/* The inner path exists only when there are cards on it. */}
-        {placed.length > RINGS[1].max &&
+        {placed.some(p => p.ring === 0) &&
           <ellipse className="orb2-ring-faint" cx={VB.w / 2} cy={VB.h / 2} {...svgRing(RINGS[0])}/>}
       </svg>
 
@@ -165,13 +210,18 @@ export default function ReferralOrbit({ practice, connections }: {
 
       <ul className="orb2-list">
         {placed.map(({ connection, x, y, delay }) => <li key={connection.id}
-          className={`orb2-card${out ? ' is-out' : ''}`}
+          className={`orb2-card${out ? ' is-out' : ''}${split && connection.group ? ` orb2-card-${connection.group}` : ''}`}
           // Until it travels out, a card sits on the practice in the middle of the stage.
           // The two positions are percentages of the same box, so the move scales with it.
           style={{ left: out ? `${x}%` : '50%', top: out ? `${y}%` : '50%',
             transitionDelay: stillness ? '0ms' : `${delay}s` }}>
           <span className="orb2-name" title={connection.name}>{connection.name}</span>
           {connection.demo && <span className="sr-only"> (sample)</span>}
+          {/* The rings carry meaning once the layout splits, and a ring is not readable
+              aloud. The same fact goes on the card as words. */}
+          {split && connection.group && <span className="sr-only">
+            {' '}({connection.group === 'routed' ? routedLabel : waitingLabel})
+          </span>}
         </li>)}
       </ul>
     </div>
