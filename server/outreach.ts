@@ -329,11 +329,22 @@ export function openOutreach(db: DatabaseSync) {
     if (!OUTCOMES[input.outcome]) throw new Error('That is not an outcome we record.');
 
     const id = input.clientRef ? `v_${input.clientRef}` : `v_${randomUUID()}`;
-    const already = db.prepare('SELECT id FROM visits WHERE id=? AND clinic_id=?').get(id, clinicId);
+    const already = db.prepare(`SELECT business_id,round_id,recorded_by FROM visits
+      WHERE id=? AND clinic_id=?`).get(id, clinicId) as {
+      business_id: string; round_id: string | null; recorded_by: string | null;
+    } | undefined;
     if (already) {
-      // The same submission arriving twice — a double tap, a retry on a bad signal. The visit
-      // that was saved is returned whole, breakdown included, and nothing is written again.
-      return { visit: visits(clinicId, input.businessId).find(v => v.id === id)!, business: target };
+      // A retry may reuse its reference, but may not use a saved reference to read another
+      // person's visit or silently credit a different stop. Idempotency is scoped to the
+      // original business, round and author; it is not a general lookup by clientRef.
+      if (already.business_id !== input.businessId ||
+          already.round_id !== (input.roundId ?? null) ||
+          already.recorded_by !== (input.recordedBy ?? null)) {
+        throw new Error('That submission reference has already been used for another visit.');
+      }
+      const prior = visits(clinicId, input.businessId).find(v => v.id === id);
+      if (!prior) throw new Error('The earlier visit could not be retrieved.');
+      return { visit: prior, business: target };
     }
 
     // THE TOTAL IS THE SUM OF ITS PARTS where the parts were counted. A caller cannot send a

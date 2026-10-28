@@ -343,3 +343,15 @@ textarea.rr-input{ min-height:84px; resize:vertical }
 .rr-quick-supplies{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; padding:12px 0 }
 .rr-quick-supplies .rr-field-label{ font-size:11px; color:var(--sage) }
 @media (max-width:380px){ .rr-quick-supplies{ grid-template-columns:1fr } }
+
+/* A day with two rounds gets a small bar per round rather than one set of controls that
+   silently belongs to the first. The bar is ivory, so the outline buttons on it take the
+   evergreen ink — white on ivory is the bug this replaces. */
+.rr-round-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px;
+  flex-wrap:wrap; margin:16px 0 8px; padding:9px 12px; border-radius:12px;
+  background:rgba(249,247,240,.94); color:var(--evergreen); font-size:13px }
+.rr-round-toolbar strong{ font-weight:700 }
+.rr-round-toolbar-actions{ display:flex; gap:8px; flex-wrap:wrap }
+.rr .rr-round-toolbar .rr-btn{ font-size:12px; height:32px; padding:0 11px }
+.rr .rr-round-toolbar .rr-btn-outline{ border-color:#cdd8cc; color:var(--evergreen) }
+.rr .rr-round-toolbar .rr-btn-outline:hover{ background:#eef1ea }

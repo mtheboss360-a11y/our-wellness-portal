@@ -265,9 +265,9 @@ test('a stop the office locked keeps its place', () => {
   store.close();
 });
 
-test('a visit already recorded cannot be reordered out of the sequence it happened in', () => {
+test('a visit already recorded stays in its exact position while unvisited stops may move', () => {
   const store = world();
-  const round = booked(store, ['Karve Pilates', 'Yoga Cave', 'Salon Fluxx']);
+  const round = booked(store, ['Karve Pilates', 'Yoga Cave', 'Salon Fluxx', 'Upscale Male']);
   const me = who(store, 'alexis', 'Alexis');
   const id = ids(store, 'hyline');
   store.outreach.recordVisit('hyline', {
@@ -280,17 +280,15 @@ test('a visit already recorded cannot be reordered out of the sequence it happen
   });
   const completed = new Set([id['Karve Pilates'], id['Yoga Cave']]);
   const items = store.runner.round('hyline', round)!.items.map(i => ({ kind: i.kind, id: i.id }));
-  assert.throws(() => store.runner.reorder('hyline', round, [items[1], items[0], items[2]], me, { completed }),
+  assert.throws(() => store.runner.reorder('hyline', round, [items[1], items[0], items[2], items[3]], me, { completed }),
     /already finished/);
-  // Nor can an unvisited stop be put in front of ones already driven: the two finished stops
-  // hold positions one and two, and the only stop still to do is the one that can move.
-  assert.throws(() => store.runner.reorder('hyline', round, [items[2], items[0], items[1]], me, { completed }),
+  // The old rule preserved only the ORDER of completed visits; it wrongly let a pending
+  // business jump in front of a completed one. Finished stops stay in their actual slots.
+  assert.throws(() => store.runner.reorder('hyline', round, [items[2], items[0], items[1], items[3]], me, { completed }),
     /already finished/);
-  // Where nothing on the round is finished, the same move is fine.
-  const fresh = booked(store, ['Karve Pilates', 'Yoga Cave', 'Salon Fluxx'], 'Alexis', '2026-11-03');
-  const open = store.runner.round('hyline', fresh)!.items.map(i => ({ kind: i.kind, id: i.id }));
-  const moved = store.runner.reorder('hyline', fresh, [open[2], open[0], open[1]], me);
-  assert.equal(moved.items[0].id, open[2].id);
+  // Future unvisited stops can still swap without displacing completed stops.
+  const ok = store.runner.reorder('hyline', round, [items[0], items[1], items[3], items[2]], me, { completed });
+  assert.equal(ok.items[2].id, items[3].id);
   store.close();
 });
 
@@ -485,6 +483,14 @@ test('the planner records one visit, with the total it adds up to, and a retry a
     assert.equal(store.outreach.visits('hyline').length, 1, 'a second tap did not write a second visit');
     assert.deepEqual(store.runner.droppedOnRound('hyline', round), { flyers: 6, treats: 2, cards: 1 });
 
+    // Using a fresh reference on a completed stop is not a second legitimate visit. It must
+    // not consume supplies again or overwrite the outcome of the original check-off.
+    const duplicate = await fetch(base + '/api/runner/visit', { method: 'POST', headers,
+      body: JSON.stringify({ ...draft, clientRef: 'differentcheck1' }) });
+    assert.equal(duplicate.status, 409);
+    assert.match((await duplicate.json() as { error: string }).error, /already has a recorded visit/);
+    assert.equal(store.outreach.visits('hyline').length, 1);
+
     // Dropping more than is in the car is refused, and the business is still only visited once.
     const greedy = await fetch(base + '/api/runner/visit', { method: 'POST', headers, body: JSON.stringify({
       ...draft, businessId: ids(store, 'hyline')['Yoga Cave'], clientRef: 'zzzz1111yyyy',
@@ -549,4 +555,94 @@ test('a reorder sent against an old revision comes back with the current route, 
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     store.close();
   }
+});
+
+
+test('the runner route feed does not expose unrelated visits by another runner to the same business', async () => {
+  const store = world();
+  const alexisRound = booked(store, ['Karve Pilates', 'Yoga Cave'], 'Alexis', '2026-10-27');
+  const jordanRound = booked(store, ['Karve Pilates'], 'Jordan', '2026-10-29', 'jordan');
+  const theirVisit = recorded(store, jordanRound, 'Karve Pilates', 'Jordan', '2026-10-29',
+    { flyers: 3, treats: 0, cards: 0 });
+  const server = createPortalServer({ store, origin: 'http://portal.test', secure: false, root: process.cwd() });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const signin = store.signIn('alexis', 'runner-pw', '127.0.0.1');
+    const cookie = `owo-local-session=${signin.token}`;
+    const response = await fetch(`${base}/api/runner/routes`, { headers: { Cookie: cookie } });
+    assert.equal(response.status, 200);
+    const payload = await response.json() as { routes: Array<{ id: string }>; visits: Array<{ id: string }>; materials: Record<string, unknown> };
+    assert.deepEqual(payload.routes.map(r => r.id), [alexisRound]);
+    assert.equal(payload.visits.some(v => v.id === theirVisit.visit.id), false,
+      'another employee’s visit must not be shipped with the route simply because the business matches');
+    assert.equal(payload.materials[theirVisit.visit.id], undefined,
+      'the other employee’s materials breakdown must not leak either');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    store.close();
+  }
+});
+
+test('clientRef retries are scoped to the original business, round, and recorder', () => {
+  const store = world();
+  const first = booked(store, ['Karve Pilates', 'Yoga Cave']);
+  const second = booked(store, ['Karve Pilates'], 'Jordan', '2026-10-29', 'jordan');
+  const draft = {
+    businessId: ids(store, 'hyline')['Karve Pilates'], staff: 'Alexis', visitedOn: '2026-10-27',
+    spokeWith: '', contactRole: '', outcome: 'interested' as const, materials: 0, note: '',
+    nextAction: '', followUpOn: null, clientRef: 'retrysame001', roundId: first,
+    recordedBy: userId(store, 'alexis'), dropped: { flyers: 0, treats: 0, cards: 0 },
+  };
+  const stored = store.outreach.recordVisit('hyline', draft);
+  assert.equal(store.outreach.recordVisit('hyline', draft).visit.id, stored.visit.id);
+  assert.throws(() => store.outreach.recordVisit('hyline', { ...draft,
+    businessId: ids(store, 'hyline')['Yoga Cave'] }), /already been used for another visit/);
+  assert.throws(() => store.outreach.recordVisit('hyline', { ...draft, roundId: second }),
+    /already been used for another visit/);
+  assert.throws(() => store.outreach.recordVisit('hyline', { ...draft, recordedBy: userId(store, 'jordan') }),
+    /already been used for another visit/);
+  assert.equal(store.outreach.visits('hyline').length, 1);
+  store.close();
+});
+
+test('runner cannot mark a future round complete by recording a past visit', async () => {
+  const store = world();
+  const round = booked(store, ['Karve Pilates'], 'Alexis', '2026-11-05');
+  const server = createPortalServer({ store, origin: 'http://portal.test', secure: false, root: process.cwd() });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const login = store.signIn('alexis', 'runner-pw', '127.0.0.1');
+    const cookie = `owo-local-session=${login.token}`;
+    const response = await fetch(`${base}/api/runner/visit`, { method: 'POST',
+      headers: { Cookie: cookie, Origin: 'http://portal.test', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roundId: round, businessId: ids(store, 'hyline')['Karve Pilates'],
+        visitedOn: '2026-10-27', outcome: 'partner', dropped: { flyers: 0, treats: 0, cards: 0 },
+        clientRef: 'earlyvisit001' }),
+    });
+    assert.equal(response.status, 400);
+    assert.match((await response.json() as { error: string }).error, /before its assigned route date/);
+    assert.equal(store.outreach.visits('hyline').length, 0);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    store.close();
+  }
+});
+
+
+test('retrying a collected pickup with its old revision is safe and does not add supplies twice', () => {
+  const store = world();
+  const round = booked(store, ['Karve Pilates']);
+  const user = who(store, 'alexis', 'Alexis');
+  const added = store.runner.addPickup('hyline', round, PICKUP, user);
+  const pickup = added.items.find(i => i.kind === 'pickup')!;
+  const actual = { flyers: 0, treats: 36, cards: 0 };
+  const completed = store.runner.collectPickup('hyline', round, pickup.id, user,
+    { revision: added.revision, collected: actual });
+  const retry = store.runner.collectPickup('hyline', round, pickup.id, user,
+    { revision: added.revision, collected: actual });
+  assert.equal(retry.revision, completed.revision, 'no second update on a retried confirmation');
+  assert.deepEqual(store.runner.collectedSupplies('hyline', round), actual);
+  store.close();
 });

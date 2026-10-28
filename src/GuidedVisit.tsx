@@ -18,6 +18,7 @@ import {
   type Supplies,
 } from './lib/api';
 import { Icon } from './Icons';
+import { positionOf } from './lib/route-math';
 
 /**
  * A visit as it leaves this screen. `dropped` is the breakdown behind the materials total, sent
@@ -45,7 +46,7 @@ const OUTCOMES: Array<{ id: Outcome; label: string; hint: string }> = [
   { id: 'closed', label: 'Business closed', hint: 'Gone, or shut for good.' },
 ];
 
-const directionsTo = (b: Business) => b.lat !== null && b.lng !== null
+const directionsTo = (b: Business) => positionOf(b) !== null
   ? `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}&travelmode=driving`
   : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.address)}&travelmode=driving`;
 

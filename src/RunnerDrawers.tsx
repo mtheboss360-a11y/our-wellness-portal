@@ -12,7 +12,7 @@ import {
 } from './lib/api';
 import { QUICK_RESULTS, quickOutcomeFor, defaultReturnDate, runnerOutcomeLabel, type QuickResult } from './lib/runner-outcomes';
 import type { Outcome } from './lib/api';
-import { clockOf, itemAddress, itemName, type PlannedItem } from './lib/route-math';
+import { clockOf, itemAddress, itemName, positionOf, type PlannedItem } from './lib/route-math';
 
 export const SUPPLIES: Array<{ key: keyof Supplies; label: string }> = [
   { key: 'flyers', label: 'Flyers' },
@@ -72,7 +72,7 @@ export function StopDrawer({ roundId, entry, materials, onClose, onStart, onQuic
     <div className="rr-sheet-body">
       <dl className="rr-dl">
         <dt>Address</dt><dd>{business.address}</dd>
-        <dt>{entry.done ? 'Visited' : 'Arrive about'}</dt><dd>{clockOf(entry.arriveAt)}</dd>
+        <dt>Estimated arrival</dt><dd>{clockOf(entry.arriveAt)}</dd>
         <dt>Relationship</dt><dd>{STAGE_LABEL[business.stage]}</dd>
         <dt>Carrying</dt><dd>{materials.flyers} flyers · {materials.treats} treats · {materials.cards} cards</dd>
       </dl>
@@ -119,16 +119,16 @@ export function StopDrawer({ roundId, entry, materials, onClose, onStart, onQuic
       </p>}
     </div>
     <div className="rr-sheet-foot">
-      <a className="rr-btn rr-btn-outline" href={directionsTo(business.lat !== null && business.lng !== null
+      <a className="rr-btn rr-btn-outline" href={directionsTo(positionOf(business)
         ? `${business.lat},${business.lng}` : business.address)} target="_blank" rel="noreferrer noopener">
         <Icon name="map" size={16}/>Directions
       </a>
       {!entry.done && <button className="rr-btn rr-btn-primary" onClick={onQuick}>
         <Icon name="check" size={16}/>Check off stop
       </button>}
-      <button className="rr-btn rr-btn-outline" onClick={onStart}>
-        {entry.done ? 'Open the visit' : 'Guided visit'}<Icon name="arrow" size={16}/>
-      </button>
+      {!entry.done && <button className="rr-btn rr-btn-outline" onClick={onStart}>
+        Guided visit<Icon name="arrow" size={16}/>
+      </button>}
     </div>
   </>;
 }

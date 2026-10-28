@@ -189,9 +189,14 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
   /** The checkmark saves a real visit outcome; a pickup keeps its collection workflow. */
   const checkStop = useCallback((roundId: string, entry: PlannedItem) => {
     if (entry.done) return;
+    const route = routeById(roundId);
+    if (route && route.date > today) {
+      say(`This round is scheduled for ${longDate(route.date)}. You cannot record its visit early.`);
+      return;
+    }
     if (entry.item.kind === 'pickup') { openStop(roundId, entry); return; }
     setDrawer({ kind: 'quick', roundId, key: refOf(entry.item) });
-  }, [openStop]);
+  }, [openStop, routeById, today, say]);
 
   /** Where to go now: the next unfinished stop of the day being run. */
   const goNext = useCallback(() => {
@@ -269,11 +274,14 @@ export default function MyRoutes({ today, timezone }: { today: string; timezone:
             <div className="rr-today-btn" style={{ display: 'flex', gap: 7 }}>
               <button className="rr-btn rr-btn-outline" style={{ height: 34, fontSize: 13 }}
                 onClick={() => setWeek(mondayOf(today))}>Today</button>
-              {/* The one Add pickup on the week: it goes on the day being run. */}
+              {/* Never silently put a pickup on the wrong round when one day has two. */}
               <button className="rr-btn rr-btn-primary" style={{ height: 34, fontSize: 13 }}
                 disabled={!livePlans.length}
-                onClick={() => livePlans[0] && setDrawer({ kind: 'pickup', roundId: livePlans[0].route.id })}>
-                <Icon name="plus" size={15}/>Add pickup
+                onClick={() => {
+                  if (livePlans.length === 1) setDrawer({ kind: 'pickup', roundId: livePlans[0].route.id });
+                  else if (liveDay) setFocus(liveDay);
+                }}>
+                <Icon name="plus" size={15}/>{livePlans.length > 1 ? 'Choose round' : 'Add pickup'}
               </button>
             </div>
           </div>
@@ -459,12 +467,14 @@ function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onO
           : 'Nothing assigned for this day'}</p>
       </div>
       {plans.length > 0 && <div className="rr-focus-actions">
-        <button className="rr-btn rr-btn-outline" onClick={() => onSupplies(first.route.id)}>
-          <Icon name="box" size={15}/>Supplies
-        </button>
-        <button className="rr-btn rr-btn-outline" onClick={() => onAddPickup(first.route.id)}>
-          <Icon name="plus" size={15}/>Add pickup
-        </button>
+        {plans.length === 1 && <>
+          <button className="rr-btn rr-btn-outline" onClick={() => onSupplies(first.route.id)}>
+            <Icon name="box" size={15}/>Supplies
+          </button>
+          <button className="rr-btn rr-btn-outline" onClick={() => onAddPickup(first.route.id)}>
+            <Icon name="plus" size={15}/>Add pickup
+          </button>
+        </>}
         {full?.next && <button className="rr-btn rr-btn-primary" onClick={onNext}>
           {full.completed ? 'Next stop' : 'Start the route'}<Icon name="arrow" size={16}/>
         </button>}
@@ -491,12 +501,22 @@ function FocusedDay({ day, today, practice, busy, plans, fullPlanOf, onBack, onO
           </p>)}
 
           <div className="rr-focus-list">
-            {plans.map((plan, index) => <RoundStops key={plan.route.id} plan={plan} large
-              label={plans.length > 1 ? `Round ${index + 1} · ${clockOf(plan.startsAt)}` : null}
-              dragKey={null} dropAt={null} busy={busy}
-              onOpen={entry => onOpen(plan.route.id, entry)}
-              onQuick={entry => onQuick(plan.route.id, entry)}
-              onMove={onMove}/>)}
+            {plans.map((plan, index) => <div key={plan.route.id}>
+              {plans.length > 1 && <div className="rr-round-toolbar">
+                <strong>Round {index + 1} · {clockOf(plan.startsAt)}</strong>
+                <div className="rr-round-toolbar-actions">
+                  <button className="rr-btn rr-btn-outline" onClick={() => onSupplies(plan.route.id)}>
+                    <Icon name="box" size={15}/>Supplies
+                  </button>
+                  <button className="rr-btn rr-btn-outline" onClick={() => onAddPickup(plan.route.id)}>
+                    <Icon name="plus" size={15}/>Add pickup
+                  </button>
+                </div>
+              </div>}
+              <RoundStops plan={plan} large label={null} dragKey={null} dropAt={null} busy={busy}
+                onOpen={entry => onOpen(plan.route.id, entry)}
+                onQuick={entry => onQuick(plan.route.id, entry)} onMove={onMove}/>
+            </div>)}
           </div>
         </>}
   </>;
