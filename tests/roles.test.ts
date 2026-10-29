@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer as createNetServer } from 'node:net';
 import { openStore } from '../server/store.ts';
 import { createPortalServer } from '../server/http.ts';
 import type { Script } from '../server/outreach.ts';
@@ -33,9 +34,14 @@ async function portal() {
     script: script(),
   }], false);
 
-  // The origin check compares against a configured value, so the server is started on a known
-  // port and told that is where it lives.
-  const port = 4300 + Math.floor(Math.random() * 400);
+  // Let the OS choose an unused port; a guessed range can collide when tests run together.
+  const probe = createNetServer();
+  await new Promise<void>((resolve, reject) => {
+    probe.once('error', reject);
+    probe.listen(0, '127.0.0.1', resolve);
+  });
+  const port = (probe.address() as import('node:net').AddressInfo).port;
+  await new Promise<void>((resolve, reject) => probe.close(error => error ? reject(error) : resolve()));
   const base = `http://127.0.0.1:${port}`;
   const server = createPortalServer({ store, origin: base, secure: false, root: dir });
   await new Promise<void>(done => server.listen(port, '127.0.0.1', done));
